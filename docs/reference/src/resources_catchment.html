@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Catchment — Reading List</title>
+<style>
+  @page { size: A4; margin: 14mm 17mm 14mm 17mm; }
+  body { font-family: Georgia, "Times New Roman", serif; color: #1a1a1a; font-size: 9.6pt; line-height: 1.38; margin: 0; }
+  h1 { font-size: 23pt; margin: 0 0 4px; line-height: 1.15; }
+  .subtitle { font-style: italic; color: #444; font-size: 12pt; margin: 0 0 6px; }
+  .meta { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #666; font-size: 8.5pt; margin: 0 0 10px; padding-bottom: 10px; border-bottom: 2.5px solid #1a1a1a; }
+  .callout { background: #f5f6f8; border-left: 5px solid #555; padding: 10px 14px; margin: 14px 0 10px; }
+  .path { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 9pt; border: 1px solid #ddd; background: #fafafa; padding: 9px 14px; margin: 0 0 18px; }
+  h2 { font-size: 14pt; margin: 16px 0 7px; padding-bottom: 4px; border-bottom: 1px solid #bbb; break-after: avoid; }
+  h2 .num { color: #888; font-size: 10pt; font-weight: normal; }
+  h2 .gloss { font-size: 9pt; color: #555; }
+  .item { margin: 0 0 7px 22px; break-inside: avoid; }
+  .item .t { font-weight: bold; }
+  .item .by { color: #444; }
+  .item .why { font-style: italic; color: #222; display: block; }
+  .item .url { font-family: Menlo, Consolas, monospace; font-size: 8pt; color: #1a4fa0; display: block; }
+  .tag { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 7.5pt; background: #fdf3c4; color: #6b5300; padding: 1px 4px; border-radius: 2px; }
+  .notes p { margin: 0 0 8px 22px; }
+  .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 8.5pt; color: #555; }
+</style>
+</head>
+<body>
+<h1>Catchment — Reading List</h1>
+<p class="subtitle">A curated, verified reading list — to turn open data into a demand map, a reach table and a defensible plan for where the next dark stores should go.</p>
+<p class="meta">Companion to the <i>Catchment</i> project · Oct 2026 · every link verified against primary sources · old foundations + current (2023–26) work</p>
+
+<div class="callout"><b>How to use this.</b> You don't need all of it. Read §1–2 for stage 0 (demand), §3 for stage 1 (reach), and §4–5 for stage 2 (the CP-SAT plan and its greedy baseline). §8 is the reference for stage 3 (API and map), §6–7 give the domain and the industry context and the dated store counts for the competitor layer, §9 is a lookup table, and §10 is for the later ops simulator. Operations research, retail geography and q-commerce are the new ground here, so §4 and §6 come first within their stages; you already know CP-SAT mechanics, GIS and MapLibre, so those entries are short.</div>
+<div class="path"><b>Suggested path (≈4 weeks of evenings, alongside the roadmap):</b> Week 1 — §1 H3 and MAUP, §2 WorldPop, night lights and Overture, while building stage 0 → Week 2 — §3 OSRM, OSM quality in India and the travel-time error papers, for stage 1 → Week 3 — §4 Church &amp; ReVelle, Huff and the competitive-location overview, then §5 the CP-SAT primer and greedy guarantees, for stage 2 → Week 4 — §8 serving stack, §6 for sourcing competitor counts, §7 for one engineering post, then §10 when the first cut ships.</div>
+
+<h2><span class="num">1 —</span> H3 &amp; Spatial Indexing <span class="gloss">(the unit demand is counted in)</span></h2>
+<div class="item">
+  <span class="t">H3: Uber's Hexagonal Hierarchical Spatial Index</span> — <span class="by">Brodsky, Uber Engineering blog (2018)</span>
+  <span class="why">The original statement of why hexagons (one neighbour distance, 12 pentagons, approximate parent-child nesting); read it before you pick the working resolution.</span>
+  <span class="url">uber.com/blog/h3/</span>
+</div>
+<div class="item">
+  <span class="t">H3 Documentation: Introduction and Resolution Table</span> — <span class="by">Uber / h3geo.org</span>
+  <span class="why">Cell areas and edge lengths per resolution, plus the traversal and polyfill calls you will use to hex the Gurugram + South Delhi polygon.</span>
+  <span class="url">h3geo.org/docs</span>
+</div>
+<div class="item">
+  <span class="t">Rectangular and Hexagonal Grids Used for Observation, Experiment and Simulation in Ecology</span> — <span class="by">Birch, Oom &amp; Beecham, Ecological Modelling 206(3-4) (2007)</span> <span class="tag">paywalled</span>
+  <span class="why">The neutral, non-Uber argument for hexagons (uniform adjacency, less edge bias) and where squares still win; it backs your CONTEXT.md choice of "hex".</span>
+  <span class="url">doi.org/10.1016/j.ecolmodel.2007.03.041</span>
+</div>
+<div class="item">
+  <span class="t">The Modifiable Areal Unit Problem in Multivariate Statistical Analysis</span> — <span class="by">Fotheringham &amp; Wong, Environment and Planning A 23(7) (1991)</span> <span class="tag">paywalled</span>
+  <span class="why">Shows that results change with zone size and shape; the reason to test two H3 resolutions and report how the plan moves, not just pick one.</span>
+  <span class="url">doi.org/10.1068/a231025</span>
+</div>
+
+<h2><span class="num">2 —</span> Building a Demand Surface <span class="gloss">(population, affluence, activity; every factor a labelled assumption)</span></h2>
+<div class="item">
+  <span class="t">WorldPop, Open Data for Spatial Demography</span> — <span class="by">Tatem, Scientific Data 4 (2017)</span>
+  <span class="why">What the WorldPop grids are, how they are produced and what their uncertainty is; the base of your demand formula.</span>
+  <span class="url">doi.org/10.1038/sdata.2017.4</span>
+</div>
+<div class="item">
+  <span class="t">Disaggregating Census Data for Population Mapping Using Random Forests with Remotely-Sensed and Ancillary Data</span> — <span class="by">Stevens, Gaughan, Linard &amp; Tatem, PLOS ONE 10(2) (2015)</span>
+  <span class="why">The method behind WorldPop's top-down grids; explains why 100 m cells are modelled, not counted, so hex totals inherit that error.</span>
+  <span class="url">doi.org/10.1371/journal.pone.0107042</span>
+</div>
+<div class="item">
+  <span class="t">Spatially Disaggregated Population Estimates in the Absence of National Population and Housing Census Data</span> — <span class="by">Wardrop, Jochem, Bird, Chamberlain et al., PNAS 115(14) (2018)</span>
+  <span class="why">The bottom-up counterpart to Stevens; useful for judging how far to trust any single population layer.</span>
+  <span class="url">doi.org/10.1073/pnas.1715305115</span>
+</div>
+<div class="item">
+  <span class="t">Generating Surface Models of Population Using Dasymetric Mapping</span> — <span class="by">Mennis, The Professional Geographer 55(1) (2003)</span> <span class="tag">paywalled</span>
+  <span class="why">The classic dasymetric idea: redistribute counts onto the cells where people actually live; you do a version of this when you weight population by buildings.</span>
+  <span class="url">doi.org/10.1111/0033-0124.10042</span>
+</div>
+<div class="item">
+  <span class="t">Annual Time Series of Global VIIRS Nighttime Lights Derived from Monthly Averages: 2012 to 2019</span> — <span class="by">Elvidge, Zhizhin, Ghosh, Hsu &amp; Taneja, Remote Sensing 13(5) (2021)</span>
+  <span class="why">The method paper for the VIIRS product you use as an affluence proxy, with its filtering and its limits.</span>
+  <span class="url">doi.org/10.3390/rs13050922</span>
+</div>
+<div class="item">
+  <span class="t">Which Night Lights Data Should We Use in Economics, and Where?</span> — <span class="by">Gibson, Olivia, Boe-Gibson &amp; Li, J. Development Economics 149 (2021)</span> <span class="tag">paywalled</span>
+  <span class="why">Compares VIIRS and the older DMSP lights as a stand-in for economic activity, and says where each breaks down, notably at fine scale and in dense cities.</span>
+  <span class="url">doi.org/10.1016/j.jdeveco.2020.102602</span>
+</div>
+<div class="item">
+  <span class="t">Microestimates of Wealth for All Low- and Middle-Income Countries</span> — <span class="by">Chi, Fang, Chatterjee &amp; Blumenstock, PNAS 119(3) (2022)</span>
+  <span class="why">The Meta Relative Wealth Index method, a satellite-and-ML affluence layer to compare your night-light proxy against (data licence still unchecked).</span>
+  <span class="url">doi.org/10.1073/pnas.2113658119</span>
+</div>
+<div class="item">
+  <span class="t">Overture Maps Places Guide</span> — <span class="by">Overture Maps Foundation</span>
+  <span class="why">Schema, categories and confidence scores for the places layer; read before choosing which categories count as commercial activity and as candidate-site evidence.</span>
+  <span class="url">docs.overturemaps.org/guides/places/</span>
+</div>
+
+<h2><span class="num">3 —</span> Road Networks &amp; Travel Time <span class="gloss">(reach: how long a rider really takes)</span></h2>
+<div class="item">
+  <span class="t">Contraction Hierarchies: Faster and Simpler Hierarchical Routing in Road Networks</span> — <span class="by">Geisberger, Sanders, Schultes &amp; Delling, WEA 2008</span> <span class="tag">paywalled</span>
+  <span class="why">The algorithm OSRM's fast mode is built on; explains why a site-by-hex matrix is cheap to compute after a one-off preprocessing step.</span>
+  <span class="url">doi.org/10.1007/978-3-540-68552-4_24</span>
+</div>
+<div class="item">
+  <span class="t">Real-Time Routing with OpenStreetMap Data</span> — <span class="by">Luxen &amp; Vetter, ACM SIGSPATIAL (2011)</span> <span class="tag">paywalled</span>
+  <span class="why">The OSRM paper itself: what it computes, what it ignores (live traffic), and how it is fed by OSM.</span>
+  <span class="url">doi.org/10.1145/2093973.2094062</span>
+</div>
+<div class="item">
+  <span class="t">Route Planning in Transportation Networks</span> — <span class="by">Bast, Delling, Goldberg, Müller-Hannemann et al., arXiv (2015)</span>
+  <span class="why">The survey of speed-up techniques (CH, hub labels, and others); read the sections on one-to-many and matrix queries for your travel-time table.</span>
+  <span class="url">arxiv.org/abs/1504.05140</span>
+</div>
+<div class="item">
+  <span class="t">OSRM Profiles</span> — <span class="by">Project OSRM (GitHub docs)</span>
+  <span class="why">How a profile turns OSM tags into speeds and penalties; this is where a two-wheeler profile and its default speeds live, and what you would edit.</span>
+  <span class="url">github.com/Project-OSRM/osrm-backend/blob/master/docs/profiles.md</span>
+</div>
+<div class="item">
+  <span class="t">OpenStreetMap Data as a Basis for Routing: How Well Does It Really Work?</span> — <span class="by">Herfort &amp; Würzler, HeiGIT write-up of a FOSSGIS 2026 talk (Apr 2026)</span>
+  <span class="why">Reports that max-speed tags are only about 1.9% complete on one Indian corridor, so engines fall back on defaults; a direct warning for free-flow times in India (talk write-up, not peer-reviewed).</span>
+  <span class="url">heigit.org/openstreetmap-data-as-a-basis-for-routing-how-well-does-it-really-work/</span>
+</div>
+<div class="item">
+  <span class="t">Study of Travel Time Variability Using Two-Wheeler Probe Data: An Indian Experience</span> — <span class="by">Chepuri, Wagh, Arkatkar &amp; Joshi, Proc. ICE Transport 171(4) (2018)</span> <span class="tag">paywalled</span>
+  <span class="why">GPS-instrumented two-wheeler runs in Surat; one of the few Indian two-wheeler travel-time datasets, a sanity check for your congestion multiplier.</span>
+  <span class="url">doi.org/10.1680/jtran.16.00101</span>
+</div>
+<div class="item">
+  <span class="t">A Comparison of Travel Time Data from Open Source Routing Machine (OSRM) and Uber</span> — <span class="by">Ghanem &amp; Rabalert, ACM SIGSPATIAL Workshop on Spatial Intelligence for Smart and Connected Communities (2025)</span> <span class="tag">paywalled</span>
+  <span class="why">A direct OSRM-against-traffic-data comparison; the closest published precedent for the spot-check error you will report (title as in Crossref; ACM page is bot-blocked).</span>
+  <span class="url">doi.org/10.1145/3764924.3770898</span>
+</div>
+<div class="item">
+  <span class="t">Using Desktop GIS for the Investigation of Accessibility by Public Transport: An Isochrone Approach</span> — <span class="by">O'Sullivan, Morrison &amp; Shearer, Int. J. Geographical Information Science 14(1) (2000)</span> <span class="tag">paywalled</span>
+  <span class="why">The standard reference for network-time catchments rather than circles, which is your brief's central complaint about spreadsheets.</span>
+  <span class="url">doi.org/10.1080/136588100240976</span>
+</div>
+
+<h2><span class="num">4 —</span> Facility Location: The Classics <span class="gloss">(what a catchment, a cover and a rival mean)</span></h2>
+<div class="item">
+  <span class="t">Optimum Locations of Switching Centers and the Absolute Centers and Medians of a Graph</span> — <span class="by">Hakimi, Operations Research 12(3) (1964)</span> <span class="tag">paywalled</span>
+  <span class="why">The origin of the p-median and p-center problems; the baseline vocabulary for "choose N sites on a network".</span>
+  <span class="url">doi.org/10.1287/opre.12.3.450</span>
+</div>
+<div class="item">
+  <span class="t">The Maximal Covering Location Problem</span> — <span class="by">Church &amp; ReVelle, Papers of the Regional Science Association 32(1) (1974)</span> <span class="tag">paywalled</span>
+  <span class="why">Your model in its original form: choose p sites to maximise demand within a distance standard; short and readable.</span>
+  <span class="url">doi.org/10.1007/BF01942293</span>
+</div>
+<div class="item">
+  <span class="t">Capacitated Covering Models</span> — <span class="by">Current &amp; Storbeck, Environment and Planning B 15(2) (1988)</span> <span class="tag">paywalled</span>
+  <span class="why">Adds store capacity to the covering problem, which is the step from the textbook model to yours.</span>
+  <span class="url">doi.org/10.1068/b150153</span>
+</div>
+<div class="item">
+  <span class="t">Covering Problems in Facility Location: A Review</span> — <span class="by">Farahani, Asgari, Heidari, Hosseininia et al., Computers &amp; Industrial Engineering 62(1) (2012)</span> <span class="tag">paywalled</span>
+  <span class="why">A map of covering variants (partial, gradual, backup, capacitated); use it to name what you built and what you left out.</span>
+  <span class="url">doi.org/10.1016/j.cie.2011.08.020</span>
+</div>
+<div class="item">
+  <span class="t">Maximal Coverage Location Problem: Impacts, Significance, and Evolution</span> — <span class="by">Murray, International Regional Science Review 39(1) (2016)</span> <span class="tag">paywalled</span>
+  <span class="why">A modern retrospective on MCLP, including its known weaknesses (a hex is either covered or not); good for the honest-limitations section.</span>
+  <span class="url">doi.org/10.1177/0160017615600222</span>
+</div>
+<div class="item">
+  <span class="t">Defining and Estimating a Trading Area</span> — <span class="by">Huff, Journal of Marketing 28(3) (1964)</span> <span class="tag">paywalled</span>
+  <span class="why">The Huff model: a customer's chance of choosing a store rises with its attractiveness and falls with distance, divided across all rivals; the cleanest basis for splitting a shared catchment.</span>
+  <span class="url">doi.org/10.1177/002224296402800307</span>
+</div>
+<div class="item">
+  <span class="t">A New Set of Spatial-Interaction Models: The Theory of Competing Destinations</span> — <span class="by">Fotheringham, Environment and Planning A 15(1) (1983)</span> <span class="tag">paywalled</span>
+  <span class="why">Fixes a known flaw of gravity and Huff models (clustered stores are not independent); relevant when several of your stores sit close together.</span>
+  <span class="url">doi.org/10.1068/a150015</span>
+</div>
+<div class="item">
+  <span class="t">Static Competitive Facility Location: An Overview of Optimisation Approaches</span> — <span class="by">Plastria, European Journal of Operational Research 129(3) (2001)</span> <span class="tag">paywalled</span>
+  <span class="why">Where competitors, market share and cannibalisation enter the location problem, and why competitive models get hard; frames your synthetic competitor layer.</span>
+  <span class="url">doi.org/10.1016/s0377-2217(00)00169-7</span>
+</div>
+
+<h2><span class="num">5 —</span> Solving It: CP-SAT &amp; Greedy Guarantees <span class="gloss">(you know CP-SAT; this is for the covering structure and the baseline)</span></h2>
+<div class="item">
+  <span class="t">CP-SAT Solver</span> — <span class="by">OR-Tools, Google for Developers</span>
+  <span class="why">The official guide; skim the sections on Boolean indicators and objective bounds, then read solver logs, which tell you the optimality gap of each plan.</span>
+  <span class="url">developers.google.com/optimization/cp/cp_solver</span>
+</div>
+<div class="item">
+  <span class="t">The CP-SAT Primer</span> — <span class="by">Krupke, TU Braunschweig (GitHub)</span>
+  <span class="why">Practical modelling and tuning advice, including how CP-SAT compares with MIP solvers and what its parameters do; use it for the 10-second budget.</span>
+  <span class="url">github.com/d-krupke/cpsat-primer</span>
+</div>
+<div class="item">
+  <span class="t">An Analysis of Approximations for Maximizing Submodular Set Functions, I</span> — <span class="by">Nemhauser, Wolsey &amp; Fisher, Mathematical Programming 14(1) (1978)</span> <span class="tag">paywalled</span>
+  <span class="why">Proves greedy reaches at least (1 − 1/e), about 63%, of the optimum for max coverage; the theoretical floor your greedy baseline sits on.</span>
+  <span class="url">doi.org/10.1007/BF01588971</span>
+</div>
+<div class="item">
+  <span class="t">The Budgeted Maximum Coverage Problem</span> — <span class="by">Khuller, Moss &amp; Naor, Information Processing Letters 70(1) (1999)</span> <span class="tag">paywalled</span>
+  <span class="why">Greedy guarantees when each site has a cost; the nearest result to capacity-limited siting.</span>
+  <span class="url">doi.org/10.1016/S0020-0190(99)00031-9</span>
+</div>
+
+<h2><span class="num">6 —</span> Quick Commerce &amp; Dark Stores <span class="gloss">(the problem domain, from papers and company filings)</span></h2>
+<div class="item">
+  <span class="t">Heuristic for Optimisation of Dark Store Facility Locations for Quick Commerce Businesses</span> — <span class="by">Kewalramani &amp; Khadilkar, arXiv 2312.11494 (2023)</span>
+  <span class="why">The roadmap's second baseline: a heuristic for siting stores under a service radius and a daily order cap; a preprint, so read it critically.</span>
+  <span class="url">arxiv.org/abs/2312.11494</span>
+</div>
+<div class="item">
+  <span class="t">Winning the Race to Customers with Micro-Fulfillment Centers: An Approach for Network Planning in Quick Commerce</span> — <span class="by">Yang, Ostermeier &amp; Hübner, Central European J. Operations Research 32(2) (2024)</span> <span class="tag">paywalled</span>
+  <span class="why">A peer-reviewed network-planning model for q-commerce; compare its objective and constraints with yours.</span>
+  <span class="url">doi.org/10.1007/s10100-023-00893-x</span>
+</div>
+<div class="item">
+  <span class="t">Mitigating Disruption Impact in Q-Commerce Through Optimization of Dark Store Resilient Portfolio</span> — <span class="by">Raj, Das &amp; Sawik, Transportation Research Part E 205 (2026)</span> <span class="tag">paywalled</span>
+  <span class="why">Dark-store selection with disruption and backup stores; relevant to your congestion lever.</span>
+  <span class="url">doi.org/10.1016/j.tre.2025.104518</span>
+</div>
+<div class="item">
+  <span class="t">Dark Stores in the City of Light: Geographical and Transportation Impacts of 'Quick Commerce' in Paris</span> — <span class="by">Buldeo Rai, Mariquivoi, Schorung &amp; Dablanc, Research in Transportation Economics 100 (2023)</span> <span class="tag">paywalled</span>
+  <span class="why">An empirical look at where dark stores open and how they cluster in a real city, without operator data.</span>
+  <span class="url">doi.org/10.1016/j.retrec.2023.101333</span>
+</div>
+<div class="item">
+  <span class="t">Swiggy Annual Report FY 2024-25</span> — <span class="by">Swiggy Limited (2025)</span>
+  <span class="why">Primary source for Instamart store counts, store area and contribution margin; every competitor count you use should cite a document like this, with its date.</span>
+  <span class="url">swiggy.com/corporate/wp-content/uploads/2025/07/Swiggy-Annual-Report-FY-2024-25.pdf</span>
+</div>
+<div class="item">
+  <span class="t">Swiggy Quarterly Shareholder Letters (e.g. Q4 FY2026)</span> — <span class="by">Swiggy Limited (2024-26)</span>
+  <span class="why">Quarter-by-quarter store counts and unit economics, for the dated figures a synthetic competitor layer needs.</span>
+  <span class="url">swiggy.com/corporate/wp-content/uploads/2026/05/Q4-FY2026-Shareholder-letter.pdf</span>
+</div>
+<div class="item">
+  <span class="t">Eternal: Shareholders' Letter and Results</span> — <span class="by">Eternal Limited (Blinkit and Zomato)</span>
+  <span class="why">The index of Eternal's quarterly letters and results, where Blinkit store counts and margins are reported.</span>
+  <span class="url">eternal.com/investor-relations/results/</span>
+</div>
+
+<h2><span class="num">7 —</span> How Industry Builds This <span class="gloss">(engineering posts from real companies)</span></h2>
+<div class="item">
+  <span class="t">Next-Generation Optimization for Dasher Dispatch at DoorDash</span> — <span class="by">Jin, DoorDash Engineering (Feb 2020)</span>
+  <span class="why">Moves dispatch from one-to-one matching to a mixed-integer program that can build multi-order routes; the origin story for your later rider-batching stage.</span>
+  <span class="url">doordash.engineering/2020/02/28/next-generation-optimization-for-dasher-dispatch-at-doordash/</span>
+</div>
+<div class="item">
+  <span class="t">Using ML and Optimization to Solve DoorDash's Dispatch Problem</span> — <span class="by">Weinstein, DoorDash Engineering (Aug 2021)</span>
+  <span class="why">ML predicts how an order will unfold, then an optimisation layer assigns; shows how predicted times feed a solver, as your travel-time table feeds CP-SAT.</span>
+  <span class="url">doordash.engineering/2021/08/17/using-ml-and-optimization-to-solve-doordashs-dispatch-problem/</span>
+</div>
+<div class="item">
+  <span class="t">The Swiggy Delivery Challenge (Part One)</span> — <span class="by">Gupta, Swiggy Bytes (2018)</span>
+  <span class="why">Swiggy's own breakdown of delivery time into assignment delay, first mile and last mile, in an Indian operating context.</span>
+  <span class="url">bytes.swiggy.com/the-swiggy-delivery-challenge-part-one-6a2abb4f82f6</span>
+</div>
+<div class="item">
+  <span class="t">Pharos: Searching Nearby Drivers on Road Network at Scale</span> — <span class="by">Grab Engineering (2020)</span>
+  <span class="why">Nearest-by-road-time search rather than straight-line distance, at production scale; the engineering counterpart of your OSRM reach table.</span>
+  <span class="url">engineering.grab.com/pharos-searching-nearby-drivers-on-road-network-at-scale</span>
+</div>
+
+<h2><span class="num">8 —</span> The Serving Stack <span class="gloss">(API, map, hex layers)</span></h2>
+<div class="item">
+  <span class="t">FastAPI Documentation</span> — <span class="by">Ramírez</span>
+  <span class="why">Request models and start-up loading for POST /plan; the lifespan and background-task sections matter for holding the travel-time table in memory.</span>
+  <span class="url">fastapi.tiangolo.com</span>
+</div>
+<div class="item">
+  <span class="t">MapLibre GL JS Documentation</span> — <span class="by">MapLibre</span>
+  <span class="why">You know it from the rooftop project; here you need data-driven fill styling for hex choropleths and layer toggling for two scenarios side by side.</span>
+  <span class="url">maplibre.org/maplibre-gl-js/docs/</span>
+</div>
+<div class="item">
+  <span class="t">PMTiles Concepts</span> — <span class="by">Protomaps</span>
+  <span class="why">Single-file static vector tiles you already know; relevant if the demand and catchment layers are too big to ship as GeoJSON.</span>
+  <span class="url">docs.protomaps.com/pmtiles/</span>
+</div>
+<div class="item">
+  <span class="t">deck.gl H3HexagonLayer</span> — <span class="by">OpenJS Foundation / vis.gl</span>
+  <span class="why">Draws hexes straight from H3 indices, with no polygon geometry to ship; the lightest way to show demand per hex with MapLibre as the base map.</span>
+  <span class="url">deck.gl/docs/api-reference/geo-layers/h3-hexagon-layer</span>
+</div>
+<div class="item">
+  <span class="t">h3-js</span> — <span class="by">Uber (GitHub)</span>
+  <span class="why">H3 in the browser, for cell-to-boundary and hover lookups if you draw hexes with MapLibre alone.</span>
+  <span class="url">github.com/uber/h3-js</span>
+</div>
+<div class="item">
+  <span class="t">PostGIS Documentation</span> — <span class="by">PostGIS project</span>
+  <span class="why">Only if the area grows to all NCR and the travel-time table needs spatial queries rather than in-memory arrays; not needed for the first cut.</span>
+  <span class="url">postgis.net/documentation/</span>
+</div>
+
+<h2><span class="num">9 —</span> Datasets &amp; Tools Lookup <span class="gloss">(a table you will return to)</span></h2>
+<div class="item">
+  <span class="t">WorldPop</span> — <span class="by">University of Southampton, CC BY 4.0</span>
+  <span class="why">≈100 m population grids; the base demand layer.</span>
+  <span class="url">worldpop.org</span>
+</div>
+<div class="item">
+  <span class="t">VIIRS Nighttime Lights</span> — <span class="by">Earth Observation Group, Colorado School of Mines</span>
+  <span class="why">Annual and monthly composites for the affluence proxy; check the product page for terms and the version you use.</span>
+  <span class="url">eogdata.mines.edu/products/vnl/</span>
+</div>
+<div class="item">
+  <span class="t">Overture Maps Documentation</span> — <span class="by">Overture Maps Foundation</span>
+  <span class="why">Places, buildings and download tooling; per data-sources.md, Places carry CDLA-Permissive-2.0.</span>
+  <span class="url">docs.overturemaps.org</span>
+</div>
+<div class="item">
+  <span class="t">Geofabrik: India Extract</span> — <span class="by">Geofabrik GmbH (OSM, ODbL)</span>
+  <span class="why">The daily India OSM extract that you clip to the area before building the OSRM graph.</span>
+  <span class="url">download.geofabrik.de/asia/india.html</span>
+</div>
+<div class="item">
+  <span class="t">Continental-Scale Building Detection from High Resolution Satellite Imagery (Open Buildings)</span> — <span class="by">Sirko, Kashubin, Ritter, Annkah et al., arXiv 2107.12283 (2021)</span>
+  <span class="why">The paper for Google's Open Buildings dataset (CC BY 4.0), a built-up-density alternative to Overture buildings.</span>
+  <span class="url">arxiv.org/abs/2107.12283</span>
+</div>
+<div class="item">
+  <span class="t">Project OSRM</span> — <span class="by">OSRM project</span>
+  <span class="why">Routing engine docs: building the graph, running osrm-routed and the table service for many-to-many times.</span>
+  <span class="url">project-osrm.org</span>
+</div>
+<div class="item">
+  <span class="t">Osmium Tool</span> — <span class="by">Jochen Topf / OSM community</span>
+  <span class="why">Clipping the India extract to your area with a polygon before OSRM, as the roadmap's 8 GB machine requires.</span>
+  <span class="url">osmcode.org/osmium-tool/</span>
+</div>
+<div class="item">
+  <span class="t">h3-py Documentation</span> — <span class="by">Uber</span>
+  <span class="why">The Python H3 bindings (v4 API) used for the demand table and hex lookups.</span>
+  <span class="url">uber.github.io/h3-py/intro.html</span>
+</div>
+
+<h2><span class="num">10 —</span> Later: Ops Simulation &amp; Routing <span class="gloss">(rider batching, VRP and dispatch, for after the first cut)</span></h2>
+<div class="item">
+  <span class="t">Algorithms for the Vehicle Routing and Scheduling Problems with Time Window Constraints</span> — <span class="by">Solomon, Operations Research 35(2) (1987)</span> <span class="tag">paywalled</span>
+  <span class="why">Origin of the Solomon VRPTW instances; delivery promises are time windows, so this is your benchmark language.</span>
+  <span class="url">doi.org/10.1287/opre.35.2.254</span>
+</div>
+<div class="item">
+  <span class="t">Solomon Benchmark (VRPTW)</span> — <span class="by">SINTEF</span>
+  <span class="why">The instance files and best-known solutions, to test any routing code against before trusting it on your own data (page is bot-blocked).</span>
+  <span class="url">sintef.no/projectweb/top/vrptw/solomon-benchmark/</span>
+</div>
+<div class="item">
+  <span class="t">Hybrid Genetic Search for the CVRP: Open-Source Implementation and SWAP* Neighborhood</span> — <span class="by">Vidal, Computers &amp; Operations Research 140 (2022)</span> <span class="tag">paywalled</span>
+  <span class="why">The state-of-the-art heuristic that PyVRP builds on; read it to know what a good rider-routing solver looks like.</span>
+  <span class="url">doi.org/10.1016/j.cor.2021.105643</span>
+</div>
+<div class="item">
+  <span class="t">PyVRP: A High-Performance VRP Solver Package</span> — <span class="by">Wouda, Lan &amp; Kool, INFORMS J. Computing 36(4) (2024)</span>
+  <span class="why">A pip-installable VRP solver with time windows; the likeliest drop-in for rider batching in the simulator.</span>
+  <span class="url">doi.org/10.1287/ijoc.2023.0055</span>
+</div>
+<div class="item">
+  <span class="t">OR-Tools Routing Library</span> — <span class="by">Google for Developers</span>
+  <span class="why">Routing with time windows and capacities in the tool you already use; a second option next to PyVRP.</span>
+  <span class="url">developers.google.com/optimization/routing</span>
+</div>
+<div class="item">
+  <span class="t">The Meal Delivery Routing Problem</span> — <span class="by">Reyes, Erera, Savelsbergh, Sahasrabudhe &amp; O'Neil, Optimization Online (2018)</span>
+  <span class="why">Defines the dynamic courier-assignment problem on real restaurant-delivery data; the closest open formulation to instant-delivery dispatch (preprint; journal version not confirmed).</span>
+  <span class="url">optimization-online.org/2018/04/6571/</span>
+</div>
+<div class="item">
+  <span class="t">The Restaurant Meal Delivery Problem: Dynamic Pickup and Delivery with Deadlines and Random Ready Times</span> — <span class="by">Ulmer, Thomas, Campbell &amp; Woyak, Transportation Science 55(1) (2021)</span> <span class="tag">paywalled</span>
+  <span class="why">Handles uncertainty in preparation times; your picking stage is the same random ready time.</span>
+  <span class="url">doi.org/10.1287/trsc.2020.1000</span>
+</div>
+<div class="item">
+  <span class="t">Meituan's Real-Time Intelligent Dispatching Algorithms Build the World's Largest Minute-Level Delivery Network</span> — <span class="by">Liang, Luo, Duan, Li, Liao et al., INFORMS J. Applied Analytics 54(1) (2024)</span> <span class="tag">paywalled</span>
+  <span class="why">A practitioner account of minute-level dispatch at national scale, combining OR and ML; shows what the real system optimises.</span>
+  <span class="url">doi.org/10.1287/inte.2023.0084</span>
+</div>
+<div class="item">
+  <span class="t">SimPy Documentation</span> — <span class="by">SimPy team</span>
+  <span class="why">Process-based discrete-event simulation in Python; the natural engine for orders, picking and riders as event processes.</span>
+  <span class="url">simpy.readthedocs.io</span>
+</div>
+
+<h2><span class="num">*</span> What's Still Unverified</h2>
+<div class="notes">
+<p><b>Company figures:</b> store counts and margins in the Swiggy and Eternal documents were not read in full or checked against each other; reported counts vary by source and date, so record each number with its source and date, as data-sources.md already requires. Individual Eternal letters were not opened; only the results page was confirmed.</p>
+<p><b>arXiv 2312.11494:</b> found only as an arXiv preprint (a Research Square copy also exists); no peer-reviewed version was found.</p>
+<p><b>Reyes et al. (2018):</b> confirmed as an Optimization Online preprint; a journal version was not confirmed. A Transportation Science paper on the same problem is by different authors (Yildiz &amp; Savelsbergh, 2019) and is not listed.</p>
+<p><b>Ghanem &amp; Rabalert (2025):</b> bibliographic data confirmed via Crossref; the study area and findings were not read, so check them before citing the result.</p>
+<p><b>India two-wheeler speeds:</b> no confirmed city-level two-wheeler speed survey for Delhi NCR was found; the Surat study and the OSRM-versus-traffic comparison are the nearest sources, so the congestion multiplier remains an assumption to calibrate by your spot-check.</p>
+<p><b>Meta Relative Wealth Index:</b> the method paper is listed, but the dataset licence has not been checked.</p>
+</div>
+
+<p class="footer"><b>Every link verified to resolve against a primary source (Oct 2026).</b> DOI metadata (authors, year, venue) was checked against Crossref and arXiv records; web pages were fetched or confirmed by search. Bot blocks prevented direct fetches of the Uber blog (HTTP 406), the SINTEF Solomon pages (403), the DoorDash engineering posts (the doordash.engineering URLs redirect to a host that returns 403), the ACM Digital Library (403), the Swiggy Bytes host (connection timed out), and several publisher sites behind DOIs (Sage, T&amp;F, MDPI, INFORMS, PNAS and ACM return 403 to scripts; the DOIs themselves resolve and their metadata matches Crossref); the Uber, SINTEF, DoorDash and Swiggy Bytes posts were confirmed through search results, and the ACM paper through Crossref, and are kept. Yellow tags mark paywalled items. Corrected on the way: two DOIs first guessed wrongly (the Farahani covering review and the O'Sullivan isochrone paper) were replaced by the Crossref-confirmed ones. Dropped as unconfirmed or unusable: engineering posts from Zepto and Instacart (no primary post found), Swiggy Bytes ETA posts (no URL confirmed), the CP-SAT-LP paper (no DOI found), the Eternal annual report PDF (not located), a Sydney Google-versus-Uber travel-time comparison (not about routing engines), and all SEO and consultancy blogs on q-commerce. Companion document: <i>Location Intelligence &amp; Logistics — Foundations</i>.</p>
+</body>
+</html>

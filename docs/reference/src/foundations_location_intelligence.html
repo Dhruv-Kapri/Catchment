@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Location Intelligence &amp; Logistics — Foundations</title>
+<style>
+  @page { size: A4; margin: 14mm 17mm 14mm 17mm; }
+  body { font-family: Georgia, "Times New Roman", serif; color: #1a1a1a; font-size: 9.6pt; line-height: 1.38; margin: 0; }
+  h1 { font-size: 23pt; margin: 0 0 4px; line-height: 1.15; }
+  .subtitle { font-style: italic; color: #444; font-size: 12pt; margin: 0 0 6px; }
+  .meta { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #666; font-size: 8.5pt; margin: 0 0 10px; padding-bottom: 10px; border-bottom: 2.5px solid #1a1a1a; }
+  .callout { background: #f5f6f8; border-left: 5px solid #555; padding: 10px 14px; margin: 14px 0 10px; }
+  .path { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 9pt; border: 1px solid #ddd; background: #fafafa; padding: 9px 14px; margin: 0 0 18px; }
+  h2 { font-size: 14pt; margin: 16px 0 7px; padding-bottom: 4px; border-bottom: 1px solid #bbb; break-after: avoid; }
+  h2 .num { color: #888; font-size: 10pt; font-weight: normal; }
+  h2 .gloss { font-size: 9pt; color: #555; }
+  .item { margin: 0 0 7px 22px; break-inside: avoid; }
+  .item .t { font-weight: bold; }
+  .item .by { color: #444; }
+  .item .why { font-style: italic; color: #222; display: block; }
+  .item .url { font-family: Menlo, Consolas, monospace; font-size: 8pt; color: #1a4fa0; display: block; }
+  .tag { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 7.5pt; background: #fdf3c4; color: #6b5300; padding: 1px 4px; border-radius: 2px; }
+  .notes p { margin: 0 0 8px 22px; }
+  .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 8.5pt; color: #555; }
+</style>
+</head>
+
+<body>
+<h1>Location Intelligence &amp; Logistics — Foundations</h1>
+<p class="subtitle">The domain, not the project: how space, demand, optimisation and delivery economics fit together — plus things to read and follow casually.</p>
+<p class="meta">General-fluency primer · complements (does not repeat) the project reading list · Oct 2026 · every link verified against primary sources</p>
+
+<div class="callout"><b>What this is.</b> The project reading list covers the specific pipeline: H3, population rasters, OSRM, maximal-covering papers, CP-SAT, the quick-commerce papers and the serving stack. This one is for the field behind it: how spatial data behaves, how retail demand is modelled, how operations researchers think, how supply chains are costed, how site selection is done in industry, and how decision tools get built and explained. Nothing here duplicates that list. §1–3 are the ideas worth genuinely internalising; §4–6 are the wider landscape and craft; §7–8 are for relaxed, ongoing absorption.</div>
+<div class="path"><b>If you only do three things:</b> (1) read <b>Openshaw on MAUP</b> and <b>Roberts et al.</b> (§1) so you distrust per-zone numbers and random train/test splits; (2) read <b>Wilson on spatial interaction</b> (§2) and <b>Eppen on risk pooling</b> (§4) to get the two core mechanisms behind store networks; (3) read <b>Geoffrion on insight, not numbers</b> (§3) and the <b>Saltelli manifesto</b> (§6), then follow one or two sources from §8 (start with <b>weeklyOSM</b> or <b>MIT Supply Chain Frontiers</b>).</div>
+
+<h2><span class="num">1 —</span> Spatial Thinking <span class="gloss">(why places are not rows in a table)</span></h2>
+<div class="item">
+  <span class="t">A Computer Movie Simulating Urban Growth in the Detroit Region</span> — <span class="by">Waldo Tobler (1970), Economic Geography 46</span> <span class="tag">paywalled</span>
+  <span class="why">The home of the "first law of geography": near things are more related than distant things. Everything else in spatial statistics is a consequence or a qualification.</span>
+  <span class="url">doi.org/10.2307/143141</span>
+</div>
+<div class="item">
+  <span class="t">Tobler's First Law and Spatial Analysis</span> — <span class="by">Harvey Miller (2004), Annals of the AAG 94(2)</span> <span class="tag">paywalled</span>
+  <span class="why">A careful look at what the first law does and does not license, and why it underwrites interpolation, smoothing and spatial regression.</span>
+  <span class="url">doi.org/10.1111/j.1467-8306.2004.09402005.x</span>
+</div>
+<div class="item">
+  <span class="t">The Modifiable Areal Unit Problem (CATMOG 38)</span> — <span class="by">Stan Openshaw (1984), Geo Books, Concepts and Techniques in Modern Geography</span>
+  <span class="why">The short monograph that named the problem: change the zoning or the scale and the same data tells a different story. Read it before trusting any per-zone number.</span>
+  <span class="url">web.archive.org/web/2011/http://qmrg.org.uk/files/2008/11/38-maup-openshaw.pdf</span>
+</div>
+<div class="item">
+  <span class="t">Notes on continuous stochastic phenomena</span> — <span class="by">P. A. P. Moran (1950), Biometrika 37</span> <span class="tag">paywalled</span>
+  <span class="why">The original Moran's I paper: a single number for "are neighbours alike?". Short enough to read as a primary source.</span>
+  <span class="url">doi.org/10.1093/biomet/37.1-2.17</span>
+</div>
+<div class="item">
+  <span class="t">Local Indicators of Spatial Association: LISA</span> — <span class="by">Luc Anselin (1995), Geographical Analysis 27(2)</span>
+  <span class="why">Decomposes global autocorrelation into per-location hot spots, clusters and outliers. The basis of most "where is the cluster" maps.</span>
+  <span class="url">doi.org/10.1111/j.1538-4632.1995.tb00338.x</span>
+</div>
+<div class="item">
+  <span class="t">Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure</span> — <span class="by">Roberts et al. (2017), Ecography 40(8)</span> <span class="tag">paywalled</span>
+  <span class="why">Why random train/test splits flatter models on spatial data, and what blocked validation looks like. The cleanest statement of how spatial structure breaks i.i.d. assumptions.</span>
+  <span class="url">doi.org/10.1111/ecog.02881</span>
+</div>
+<div class="item">
+  <span class="t">The Uncertain Geographic Context Problem</span> — <span class="by">Mei-Po Kwan (2012), Annals of the AAG 102(5)</span> <span class="tag">paywalled</span>
+  <span class="why">MAUP's cousin: the area you assign to a person is a guess about the environment that actually affects them. Useful whenever a hexagon stands in for a catchment.</span>
+  <span class="url">doi.org/10.1080/00045608.2012.687349</span>
+</div>
+<h2><span class="num">2 —</span> Retail &amp; Urban Geography <span class="gloss">(how demand meets supply in space)</span></h2>
+<div class="item">
+  <span class="t">The Functional Bases of the Central Place Hierarchy</span> — <span class="by">Berry &amp; Garrison (1958), Economic Geography 34(2)</span> <span class="tag">paywalled</span>
+  <span class="why">Christaller's central place theory made empirical: thresholds, ranges of goods and why some stores cluster while others spread out.</span>
+  <span class="url">doi.org/10.2307/142299</span>
+</div>
+<div class="item">
+  <span class="t">Parameter Estimation for a Multiplicative Competitive Interaction Model</span> — <span class="by">Nakanishi &amp; Cooper (1974), Journal of Marketing Research 11(3)</span> <span class="tag">paywalled</span>
+  <span class="why">The MCI model: how to fit Huff-style share models from data with least squares. The statistical descendant most practitioners actually use.</span>
+  <span class="url">doi.org/10.2307/3151146</span>
+</div>
+<div class="item">
+  <span class="t">A Family of Spatial Interaction Models, and Associated Developments</span> — <span class="by">Alan Wilson (1971), Environment and Planning A 3(1)</span> <span class="tag">paywalled</span>
+  <span class="why">Derives gravity models from entropy maximisation and shows the origin-constrained, destination-constrained and doubly-constrained variants. The theoretical spine of spatial interaction.</span>
+  <span class="url">doi.org/10.1068/a030001</span>
+</div>
+<div class="item">
+  <span class="t">Measures of Spatial Accessibility to Health Care in a GIS Environment (two-step floating catchment area)</span> — <span class="by">Luo &amp; Wang (2003), Environment and Planning B 30(6)</span>
+  <span class="why">The supply-to-demand-ratio-within-a-catchment method, borrowed everywhere from health to retail. A clean way to think about capacity versus population.</span>
+  <span class="url">doi.org/10.1068/b29120</span>
+</div>
+<div class="item">
+  <span class="t">A universal model for mobility and migration patterns</span> — <span class="by">Simini, González, Maritan &amp; Barabási (2012), Nature 484</span>
+  <span class="why">The radiation model: an alternative to gravity that needs no fitted parameters. Good for seeing what gravity models quietly assume.</span>
+  <span class="url">doi.org/10.1038/nature10856</span>
+</div>
+<div class="item">
+  <span class="t">Introducing the "15-Minute City": Sustainability, Resilience and Place Identity in Future Post-Pandemic Cities</span> — <span class="by">Moreno, Allam, Chabaud, Gall &amp; Pratlong (2021), Smart Cities 4(1)</span>
+  <span class="why">The urbanist case for proximity as an organising principle. Instant delivery is the commercial mirror image of the same idea.</span>
+  <span class="url">doi.org/10.3390/smartcities4010006</span>
+</div>
+<h2><span class="num">3 —</span> Operations Research Thinking <span class="gloss">(modelling versus solving)</span></h2>
+<div class="item">
+  <span class="t">Model Building in Mathematical Programming (5th ed.)</span> — <span class="by">H. Paul Williams (2013), Wiley</span> <span class="tag">paywalled</span>
+  <span class="why">The standard book on formulation: how to turn a verbal problem into constraints and variables, including the tricks (big-M, logical conditions) that make integer models work.</span>
+  <span class="url">wiley.com (ISBN 978-1-118-44333-0)</span>
+</div>
+<div class="item">
+  <span class="t">Optimization Methods in Management Science (15.053)</span> — <span class="by">MIT Sloan, OpenCourseWare (Spring 2013)</span>
+  <span class="why">A free course built around modelling for managers: LP, sensitivity analysis and shadow prices (the intuition behind duality), integer programs and nonlinear models.</span>
+  <span class="url">ocw.mit.edu/courses/15-053-optimization-methods-in-management-science-spring-2013/</span>
+</div>
+<div class="item">
+  <span class="t">The Purpose of Mathematical Programming is Insight, Not Numbers</span> — <span class="by">Arthur Geoffrion (1976), Interfaces 7(1)</span> <span class="tag">paywalled</span>
+  <span class="why">The OR creed in six pages. A model is a way to understand trade-offs, not an oracle; the right output is a decision a manager can defend.</span>
+  <span class="url">doi.org/10.1287/inte.7.1.81</span>
+</div>
+<div class="item">
+  <span class="t">A Brief History of Linear and Mixed-Integer Programming Computation</span> — <span class="by">Robert E. Bixby (2012), Documenta Mathematica, Optimization Stories</span>
+  <span class="why">From simplex to branch-and-cut: why integer programs were once hopeless and what changed. Gives a feel for why some formulations solve in seconds and others never do.</span>
+  <span class="url">doi.org/10.4171/DMS/6/16</span>
+</div>
+<div class="item">
+  <span class="t">Heuristic "Optimization": Why, When, and How to Use It</span> — <span class="by">Zanakis &amp; Evans (1981), Interfaces 11(5)</span> <span class="tag">paywalled</span>
+  <span class="why">A level-headed account of when a heuristic is the right tool and how to judge it against exact methods.</span>
+  <span class="url">doi.org/10.1287/inte.11.5.84</span>
+</div>
+<div class="item">
+  <span class="t">Metaheuristics: the metaphor exposed</span> — <span class="by">Kenneth Sörensen (2015), International Transactions in Operational Research 22(1)</span>
+  <span class="why">A warning against metaphor-driven algorithms and for comparing heuristics on substance. Useful armour against hype.</span>
+  <span class="url">doi.org/10.1111/itor.12001</span>
+</div>
+<h2><span class="num">4 —</span> Supply Chain &amp; Last-Mile Fundamentals <span class="gloss">(the cost structure behind the map)</span></h2>
+<div class="item">
+  <span class="t">Supply Chain Management: Strategy, Planning, and Operation (7th ed.)</span> — <span class="by">Chopra &amp; Meindl (2019), Pearson</span> <span class="tag">paywalled</span>
+  <span class="why">The default textbook: network design, inventory, transportation, responsiveness versus efficiency. Chapters on network design and inventory pooling are the ones to read.</span>
+  <span class="url">pearson.com (Global Edition, ISBN 978-1-292-25789-1)</span>
+</div>
+<div class="item">
+  <span class="t">Supply Chain Management MicroMasters</span> — <span class="by">MIT Center for Transportation &amp; Logistics, MITx on edX</span>
+  <span class="why">The MIT SCM programme: free to audit the courses on supply chain analytics, design, fundamentals and dynamics.</span>
+  <span class="url">micromasters.mit.edu/scm/</span>
+</div>
+<div class="item">
+  <span class="t">Information Distortion in a Supply Chain: The Bullwhip Effect</span> — <span class="by">Lee, Padmanabhan &amp; Whang (1997), Management Science 43(4)</span> <span class="tag">paywalled</span>
+  <span class="why">Why small swings in retail demand become large swings upstream. Essential for understanding replenishment of fast-moving local inventory.</span>
+  <span class="url">doi.org/10.1287/mnsc.43.4.546</span>
+</div>
+<div class="item">
+  <span class="t">Effects of Centralization on Expected Costs in a Multi-Location Newsboy Problem</span> — <span class="by">Gary Eppen (1979), Management Science 25(5)</span> <span class="tag">paywalled</span>
+  <span class="why">The risk-pooling result: one central stock needs less safety inventory than many local ones, by roughly the square root of the number of locations. This is the tension every dark-store network manages.</span>
+  <span class="url">doi.org/10.1287/mnsc.25.5.498</span>
+</div>
+<div class="item">
+  <span class="t">Facility location and supply chain management: A review</span> — <span class="by">Melo, Nickel &amp; Saldanha-da-Gama (2009), European Journal of Operational Research 196(2)</span> <span class="tag">paywalled</span>
+  <span class="why">How location decisions couple with inventory, transport and capacity. The map of the literature between textbook network design and research models.</span>
+  <span class="url">doi.org/10.1016/j.ejor.2008.05.007</span>
+</div>
+<div class="item">
+  <span class="t">Last-mile delivery concepts: a survey from an operational research perspective</span> — <span class="by">Boysen, Fedtke &amp; Schwerdfeger (2021), OR Spectrum 43(1)</span>
+  <span class="why">A structured tour of last-mile options (vans, lockers, bikes, crowdsourcing, drones) and what each does to cost and service. Open access.</span>
+  <span class="url">doi.org/10.1007/s00291-020-00607-8</span>
+</div>
+<h2><span class="num">5 —</span> Location Intelligence as an Industry <span class="gloss">(how site selection is done in practice)</span></h2>
+<div class="item">
+  <span class="t">Methods for Determining Store Trade Areas, Market Penetration, and Potential Sales</span> — <span class="by">William Applebaum (1966), Journal of Marketing Research 3(2)</span> <span class="tag">paywalled</span>
+  <span class="why">The founding paper of the analog method: use data from existing stores to forecast new ones. Still the template for practical site-selection work.</span>
+  <span class="url">doi.org/10.2307/3150201</span>
+</div>
+<div class="item">
+  <span class="t">Retail Geography and Intelligent Network Planning</span> — <span class="by">Birkin, Clarke &amp; Clarke (2002), Wiley</span> <span class="tag">paywalled</span>
+  <span class="why">A practitioner-academic account of store-network planning: spatial interaction models, data, and how retailers use them in practice.</span>
+  <span class="url">wiley.com (ISBN 978-0-471-49803-2)</span>
+</div>
+<div class="item">
+  <span class="t">Original Huff Model (Business Analyst toolbox)</span> — <span class="by">Esri, ArcGIS Desktop 10.6 documentation (archived)</span>
+  <span class="why">How the dominant commercial GIS packages Huff's model: attractiveness, distance decay, output probabilities used to draw trade areas. See also the Huff calibration pages linked from it.</span>
+  <span class="url">desktop.arcgis.com/en/arcmap/10.6/tools/business-analyst-toolbox/original-huff-model.htm</span>
+</div>
+<div class="item">
+  <span class="t">ArcGIS Business Analyst documentation</span> — <span class="by">Esri</span>
+  <span class="why">The vocabulary of commercial site selection: drive-time trade areas, demographic enrichment, retail gap and competitor analysis. Skim for the concepts, not the buttons.</span>
+  <span class="url">doc.arcgis.com/en/business-analyst/web/</span>
+</div>
+<div class="item">
+  <span class="t">Linux Foundation announces Overture Maps Foundation to build interoperable open map data</span> — <span class="by">Linux Foundation (Dec 2022), press release</span>
+  <span class="why">Why Overture exists: a neutral, shared base map built from many sources, complementing OpenStreetMap rather than replacing it. Founders listed in the release.</span>
+  <span class="url">linuxfoundation.org/press/linux-foundation-announces-overture-maps-foundation-to-build-interoperable-open-map-data</span>
+</div>
+<div class="item">
+  <span class="t">Overture Maps Foundation</span> — <span class="by">Overture Maps Foundation, documentation and data releases</span>
+  <span class="why">The current monthly releases, themes (places, buildings, transportation, addresses) and licensing. Read the places theme and its confidence field to see what open POI data does and does not offer.</span>
+  <span class="url">docs.overturemaps.org</span>
+</div>
+<div class="item">
+  <span class="t">The world's user-generated road map is more than 80% complete</span> — <span class="by">Barrington-Leigh &amp; Millard-Ball (2017), PLOS ONE 12(8)</span>
+  <span class="why">A quantitative check on how complete OpenStreetMap roads are, country by country. Required reading before trusting open data as ground truth.</span>
+  <span class="url">doi.org/10.1371/journal.pone.0180698</span>
+</div>
+<h2><span class="num">6 —</span> Product Engineering for Decision Tools <span class="gloss">(decisions under uncertainty, honestly communicated)</span></h2>
+<div class="item">
+  <span class="t">Shape Up: Stop Running in Circles and Ship Work that Matters</span> — <span class="by">Ryan Singer (2019), Basecamp, free online</span>
+  <span class="why">A small-team method: fixed time, variable scope, shaping the work before building. Pairs well with models whose scope tends to balloon.</span>
+  <span class="url">basecamp.com/shapeup</span>
+</div>
+<div class="item">
+  <span class="t">Working Backwards: PR/FAQ</span> — <span class="by">Working Backwards (Bryar &amp; Carr), resource page</span>
+  <span class="why">How the press-release-and-FAQ document forces clarity on who the customer is and what changes for them, before any code. Good for decision-tool briefs.</span>
+  <span class="url">workingbackwards.com/resources/working-backwards-pr-faq/</span>
+</div>
+<div class="item">
+  <span class="t">The Visual Display of Quantitative Information (2nd ed.)</span> — <span class="by">Edward Tufte (2001), Graphics Press</span> <span class="tag">paywalled</span>
+  <span class="why">Data-ink, small multiples and graphical integrity: the canonical argument for showing numbers honestly. Publisher site blocks automated fetchers.</span>
+  <span class="url">edwardtufte.com/tufte/books_vdqi</span>
+</div>
+<div class="item">
+  <span class="t">Show Me the Numbers (2nd ed.)</span> — <span class="by">Stephen Few (2012), Analytics Press</span> <span class="tag">paywalled</span>
+  <span class="why">The practical counterpart to Tufte: which chart for which comparison, and what to leave out of a dashboard.</span>
+  <span class="url">perceptualedge.com/library.php</span>
+</div>
+<div class="item">
+  <span class="t">Models and Managers: The Concept of a Decision Calculus</span> — <span class="by">John D. C. Little (1970), Management Science 16(8)</span> <span class="tag">paywalled</span>
+  <span class="why">Argues that a model a manager can understand and adjust beats a sophisticated one they cannot. Six criteria for good decision-support models that have aged well.</span>
+  <span class="url">doi.org/10.1287/mnsc.16.8.B466</span>
+</div>
+<div class="item">
+  <span class="t">Science and Statistics</span> — <span class="by">George E. P. Box (1976), Journal of the American Statistical Association 71(356)</span> <span class="tag">paywalled</span>
+  <span class="why">Source of "all models are wrong" and the less-quoted point that the question is how wrong they need to be to still be useful.</span>
+  <span class="url">doi.org/10.1080/01621459.1976.10480949</span>
+</div>
+<div class="item">
+  <span class="t">Five ways to ensure that models serve society: a manifesto</span> — <span class="by">Saltelli et al. (2020), Nature 582</span>
+  <span class="why">Short and pointed: mind the assumptions, hubris and false precision. A checklist for what a trustworthy modelling tool must show its users.</span>
+  <span class="url">doi.org/10.1038/d41586-020-01812-9</span>
+</div>
+<div class="item">
+  <span class="t">Communicating uncertainty about facts, numbers and science</span> — <span class="by">van der Bles, van der Linden, Freeman, Mitchell et al. (2019), Royal Society Open Science 6(5)</span>
+  <span class="why">An evidence-based framework for what to say about uncertainty, in what form, to whom. Free.</span>
+  <span class="url">doi.org/10.1098/rsos.181870</span>
+</div>
+<div class="item">
+  <span class="t">When (ish) is My Bus? User-centered Visualizations of Uncertainty in Everyday, Mobile Predictive Systems</span> — <span class="by">Kay, Kola, Hullman &amp; Munson (2016), CHI Proceedings</span> <span class="tag">paywalled</span>
+  <span class="why">Experiments on how to show uncertain predictions to ordinary people. The quantile dotplot idea transfers directly to showing a range of outcomes from a plan.</span>
+  <span class="url">doi.org/10.1145/2858036.2858558</span>
+</div>
+<div class="item">
+  <span class="t">Decision Making under Deep Uncertainty: From Theory to Practice</span> — <span class="by">Marchau, Walker, Bloemen &amp; Popper, eds. (2019), Springer, open access</span>
+  <span class="why">Robust decision-making and scenario discovery: how to choose when probabilities cannot be trusted. The serious version of scenario planning.</span>
+  <span class="url">doi.org/10.1007/978-3-030-05252-2</span>
+</div>
+<h2><span class="num">7 —</span> Books &amp; Longer Reads <span class="gloss">(mostly free / open)</span></h2>
+<div class="item">
+  <span class="t">Geocomputation with Python</span> — <span class="by">Dorman, Graser, Nowosad &amp; Lovelace (CRC Press), free online</span>
+  <span class="why">A hands-on modern spatial stack in Python: vector and raster handling, geometries, CRS, networks and mapping.</span>
+  <span class="url">py.geocompx.org</span>
+</div>
+<div class="item">
+  <span class="t">Geocomputation with R (2nd ed.)</span> — <span class="by">Lovelace, Nowosad &amp; Muenchow (2025), CRC Press, free online</span>
+  <span class="why">The original and widest of the series. The transport and location-analysis chapters are the relevant ones.</span>
+  <span class="url">r.geocompx.org</span>
+</div>
+<div class="item">
+  <span class="t">Geographic Data Science with Python</span> — <span class="by">Rey, Arribas-Bel &amp; Wolf (CRC Press), free online</span>
+  <span class="why">Spatial weights, autocorrelation, clustering and spatial regression in PySAL, with the intuition behind each. The practical sequel to §1.</span>
+  <span class="url">geographicdata.science/book/</span>
+</div>
+<div class="item">
+  <span class="t">Spatial Data Science: With Applications in R</span> — <span class="by">Pebesma &amp; Bivand (2023), CRC Press, free online</span>
+  <span class="why">A rigorous treatment of spatial data types, support, sampling and models, including the cautions on what an areal value represents.</span>
+  <span class="url">r-spatial.org/book/</span>
+</div>
+<div class="item">
+  <span class="t">Location Science (2nd ed.)</span> — <span class="by">Laporte, Nickel &amp; Saldanha-da-Gama, eds. (2019), Springer</span> <span class="tag">paywalled</span>
+  <span class="why">The reference handbook of facility location: models, solution methods and applications, chapter by chapter.</span>
+  <span class="url">link.springer.com/book/10.1007/978-3-030-32177-2</span>
+</div>
+<div class="item">
+  <span class="t">The Power of Resilience: How the Best Companies Manage the Unexpected</span> — <span class="by">Yossi Sheffi (2015), MIT Press</span> <span class="tag">paywalled</span>
+  <span class="why">How firms prepare for disruption: redundancy, flexibility and culture. Gives the logistics view that cost-minimising plans can be brittle.</span>
+  <span class="url">sheffi.mit.edu/node/91</span>
+</div>
+<div class="item">
+  <span class="t">The Magic Conveyor Belt: Supply Chains, A.I., and the Future of Work</span> — <span class="by">Yossi Sheffi (2023), MIT CTL Media</span>
+  <span class="why">A plain-language tour of how modern supply chains work and where automation is heading, from a long-time MIT CTL scholar.</span>
+  <span class="url">sheffi.mit.edu/magicbelt</span>
+</div>
+<h2><span class="num">8 —</span> Idle Learning <span class="gloss">(follow casually: active as of Oct 2026)</span></h2>
+<div class="item">
+  <span class="t">The MapScaping Podcast</span> — <span class="by">MapScaping, podcast</span>
+  <span class="why">Long-form interviews on geospatial technology, data and practice. Latest episode seen Oct 1, 2026.</span>
+  <span class="url">mapscaping.com/podcasts/</span>
+</div>
+<div class="item">
+  <span class="t">weeklyOSM</span> — <span class="by">weeklyOSM community, weekly digest</span>
+  <span class="why">A weekly digest of OpenStreetMap news, tools and data-quality discussion. Latest issue seen Oct 25, 2026.</span>
+  <span class="url">weeklyosm.eu</span>
+</div>
+<div class="item">
+  <span class="t">Free and Open Source GIS Ramblings</span> — <span class="by">Anita Graser, blog</span>
+  <span class="why">Practical writing on QGIS, movement data and open geospatial analysis by a leading practitioner. Latest post seen Oct 14, 2026.</span>
+  <span class="url">anitagraser.com</span>
+</div>
+<div class="item">
+  <span class="t">Geoawesome</span> — <span class="by">Geoawesome, news and blog</span>
+  <span class="why">Industry-wide geospatial news: mapping, AI, earth observation and location data. Latest article seen Oct 24, 2026.</span>
+  <span class="url">geoawesome.com</span>
+</div>
+<div class="item">
+  <span class="t">OR in an OB World</span> — <span class="by">Paul Rubin, blog</span>
+  <span class="why">A working optimiser's notes on modelling puzzles, solver quirks and formulation tricks. Latest post seen Oct 25, 2026.</span>
+  <span class="url">orinanobworld.blogspot.com</span>
+</div>
+<div class="item">
+  <span class="t">Resoundingly Human</span> — <span class="by">INFORMS, podcast</span>
+  <span class="why">The OR and analytics society's podcast: practitioners, Edelman Award finalists and applications. Latest episode seen Oct 26, 2026 (Apple listing; the INFORMS page blocks fetchers).</span>
+  <span class="url">podcasts.apple.com/us/podcast/resoundingly-human/id1428964002</span>
+</div>
+<div class="item">
+  <span class="t">MIT Supply Chain Frontiers</span> — <span class="by">MIT Center for Transportation &amp; Logistics, podcast</span>
+  <span class="why">Research-led conversations on supply chains and logistics from MIT CTL. Latest episode seen Oct 20, 2026.</span>
+  <span class="url">podcasts.apple.com/us/podcast/mit-supply-chain-frontiers/id1509776693</span>
+</div>
+<div class="item">
+  <span class="t">Talking Logistics with Adrian Gonzalez</span> — <span class="by">Talking Logistics, blog and video series</span>
+  <span class="why">Industry commentary on transportation and supply chain technology. Latest post seen Oct 26, 2026.</span>
+  <span class="url">talkinglogistics.com</span>
+</div>
+<div class="item">
+  <span class="t">The Logistics of Logistics</span> — <span class="by">Joe Lynch, podcast</span>
+  <span class="why">A long-running, wide-ranging logistics interview show. Latest episode seen Oct 27, 2026.</span>
+  <span class="url">podcasts.apple.com/us/podcast/the-logistics-of-logistics/id1409735368</span>
+</div>
+<p class="footer"><b>Every link verified to resolve against a primary source (Oct 2026).</b> DOIs were checked against Crossref for authors, year and venue. Items marked paywalled (Wiley, Sage, JSTOR, Elsevier, INFORMS, Taylor &amp; Francis, ACM, Pearson, Springer books) block automated fetchers or sit behind subscriptions; they were confirmed real through DOI resolution and Crossref metadata, or through publisher and library catalogue records for books (ISBNs given). The Tufte and MIT Press sites return 403 to bots, so those were confirmed by search. The Openshaw monograph&#39;s original host (qmrg.org.uk) was returning a server error at check time, so the link points to a Wayback Machine copy that resolves. Idle-learning sources were checked for 2026 activity from their feeds or listings; the dates shown are the latest seen. Dropped as unconfirmed: Mike Trick&#39;s OR blog (last post 2016), the Spatial Edge newsletter (site unreachable), Logistics Viewpoints (bot-blocked, activity not confirmed), Huff and McCallum&#39;s Esri calibration white paper (its URL now redirects elsewhere; Esri&#39;s archived Huff documentation is used instead), and vendor blog posts on quick-commerce unit economics and the widely repeated &quot;53% of shipping cost is last mile&quot; figure (no primary source found). Peer-reviewed economics of instant delivery is still thin; Buldeo Rai et al. is the best open entry point found. Companion document: the <i>Catchment</i> project reading list.</p>
+</body>
+</html>

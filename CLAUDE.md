@@ -48,6 +48,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
   distinction.
 - Use the terms in `CONTEXT.md` (hex, candidate site, catchment, promise, lever, scenario, plan).
 - The repo is public: write about the product and its users only.
+- `docs/reference/*.pdf` are reading lists with their HTML sources in `docs/reference/src/`; edit the HTML,
+  then re-render with headless Chrome (`--print-to-pdf --no-pdf-header-footer`).
 
 ## Agent skills
 

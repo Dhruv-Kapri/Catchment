@@ -55,6 +55,8 @@ First area: **Gurugram and South Delhi**. All of Delhi NCR comes after.
 | [docs/cuts.md](docs/cuts.md) | What was cut from scope, and why |
 | [docs/data-sources.md](docs/data-sources.md) | Datasets, licences, and what was checked |
 | [CONTEXT.md](CONTEXT.md) | Glossary of the project's terms |
+| [Reading list](docs/reference/Resources_Catchment.pdf) | Papers, docs and data for each stage, in build order |
+| [Foundations](docs/reference/Foundations_Location_Intelligence_Logistics.pdf) | The field behind it: spatial thinking, retail geography, OR, last-mile, decision tools |
 
 ## Licence
 
