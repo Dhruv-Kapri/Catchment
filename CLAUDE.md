@@ -23,8 +23,9 @@ Open data → **demand** per H3 hex → **reach** (OSRM two-wheeler travel times
 web map with levers). Python for the pipeline and service; the web map is JavaScript.
 
 - Stages are strictly ordered; the next starts only when the previous one's "done when" is met.
-- Notebook-first, as in the sibling projects: `00-demand`, `01-reach`, `02-plan` work each stage on
-  the area with outputs committed as static PNGs; clean code moves into `src/catchment/` afterwards.
+- Notebook-first, as in the sibling projects: in stage 0.5 (Explore), `00-demand`, `01-reach`,
+  `02-plan` run the whole chain on a small slice with outputs committed as static PNGs; stages 1-2 move
+  the clean code into `src/catchment/` and run it on the full area.
 - The first cut is due **25 Nov 2026**. If a stage overruns, cut scope and log it in `docs/cuts.md`;
   don't move the date.
 

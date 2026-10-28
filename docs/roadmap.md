@@ -6,30 +6,47 @@ something that runs and can be shown; the next stage does not start until the pr
 
 Terms (hex, candidate site, catchment, promise, lever, plan, ...) are defined in [CONTEXT.md](../CONTEXT.md).
 
-## 0. Setup and demand (week 1, to 4 Nov)
+## 0. Setup (to 1 Nov)
 
-- `uv` project; the area polygon (Gurugram + South Delhi, from OSM admin boundaries) committed as GeoJSON.
+- `uv` project, with Jupyter and `nbstripout` in the dev group; the area polygon (Gurugram + South
+  Delhi, from OSM admin boundaries) committed as GeoJSON.
 - Fetch scripts for WorldPop, VIIRS and Overture Places/Buildings, clipped to the area; resumable and
   idempotent, writing to `data/`.
-- Notebook `00-demand`: hexes at the working resolution (choose it here, and record why), demand per
-  hex with each factor shown as its own map.
-- **Done when:** a demand map PNG of the area is committed and the demand table is reproducible from
-  one command.
+- **Done when:** one command fetches every source for the area into `data/`.
 
-## 1. Reach (week 2, to 11 Nov)
+## 0.5 Explore (to 8 Nov)
 
-- OSRM with a two-wheeler profile on an OSM extract clipped to the area plus a buffer (clip with
-  `osmium` first; the dev machine has 8 GB RAM).
-- Candidate sites: rule decided and recorded in notebook `01-reach`.
+Notebooks before code, as in the sibling projects: the whole chain runs once on a small slice, so the
+risks late in the pipeline (OSRM within 8 GB, the size of the travel-time table, CP-SAT solve time)
+show up in the first week rather than the third. Each notebook works its stage inline, with outputs
+committed as static PNGs so it reads on GitHub; the clean version goes into the package in stages 1-2.
+
+| # | Notebook | Question it answers |
+| --- | --- | --- |
+| 00 | `00-demand` | which slice (a few km² of Gurugram, recorded why); which hex resolution, and why; demand per hex, each factor as its own map |
+| 01 | `01-reach` | does OSRM's two-wheeler profile build and route within 8 GB; the candidate site rule; how many pairs the table holds under the longest promise |
+| 02 | `02-plan` | greedy baseline and the CP-SAT model on the slice; solve time, and what it implies for the full area |
+
+- Notebooks import helpers (fetch, loaders) from the `catchment` package; stage logic stays inline
+  until the stage is formalised.
+- No notebook for the web map (stage 3); it is JavaScript and goes straight to code.
+- **Done when:** all three notebooks run top to bottom on the slice, the hex resolution and candidate
+  site rule are recorded, and the expected table size and solve time for the full area are written up.
+
+## 1. Demand and reach (to 13 Nov)
+
+- `00-demand` and `01-reach` move into `src/catchment/` and run on the whole area.
+- OSRM on an OSM extract clipped to the area plus a buffer (clip with `osmium` first).
 - Travel-time table, candidate site × hex, kept sparse (only pairs under the longest promise considered).
 - Spot check: about 20 routes compared by hand against a live map app at a stated time of day; numbers
   noted, not stored from the app. The error is reported in the notebook and later in the UI.
-- **Done when:** the travel-time table builds from one command and the spot-check error is written up.
+- **Done when:** a demand map PNG of the area is committed, the demand table and the travel-time table
+  each build from one command, and the spot-check error is written up.
 
-## 2. Plan (week 3, to 18 Nov)
+## 2. Plan (to 18 Nov)
 
-- Notebook `02-plan`: the greedy baseline, then the CP-SAT model (maximise covered demand; N stores;
-  capacity; shared catchments split; competitor layer and existing stores fixed).
+- `02-plan` moves into `src/catchment/`: the greedy baseline and the CP-SAT model (maximise covered
+  demand; N stores; capacity; shared catchments split; competitor layer and existing stores fixed).
 - Competitor layer generator, with every count's source and date recorded.
 - Benchmark over a grid of scenarios: covered demand CP-SAT vs greedy, solve time.
 - **Done when:** CP-SAT returns a plan in ≤ 10 s for the default scenario, and the comparison table

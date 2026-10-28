@@ -3,6 +3,16 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-28: Explore on a slice before the pipeline
+
+- **A "0.5 Explore" step, to 8 Nov:** notebooks `00-demand`, `01-reach` and `02-plan` run end to end
+  on a small slice of Gurugram before any stage is formalised, as in the sibling projects. The risky
+  parts are late in the chain (OSRM within 8 GB, travel-time table size, CP-SAT ≤ 10 s), and the hex
+  resolution and candidate site rule should be chosen with the solver's limits in view.
+- **Stage 0 shrinks to setup and fetch; demand and reach are formalised together** in stage 1 (to
+  13 Nov). Stages 2 and 3 keep their dates. Rules out formalising one stage before the next has been
+  tried; the 25 Nov date does not move.
+
 ## 2026-10-28: Initial scope
 
 - **The core is a planning tool, not an ops simulator.** The user is a network planner deciding where
