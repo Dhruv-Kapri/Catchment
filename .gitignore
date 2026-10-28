@@ -1,0 +1,24 @@
+# Data: OSM extracts, OSRM graphs, rasters and derived tables are large; never commit
+data/
+outputs/
+*.osm.pbf
+*.osrm*
+*.tif
+*.parquet
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Agent worktrees
+.claude/worktrees/
+
+# Secrets and OS
+.env
+.DS_Store
