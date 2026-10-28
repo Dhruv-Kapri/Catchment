@@ -53,7 +53,7 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
 
 ### Issue tracker
 
-Issues live in GitHub Issues for Dhruv-Kapri/catchment (via `gh`). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for Dhruv-Kapri/Catchment (via `gh`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
