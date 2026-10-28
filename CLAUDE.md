@@ -15,6 +15,7 @@ starting any work; record new commands here.
 uv sync          # Python 3.12 venv
 uv run pytest    # tests
 uv run nbstripout --install                # once per clone: strip notebook outputs on commit
+uv run catchment-fetch [worldpop viirs overture] [--force]   # fetch sources into data/ (VIIRS needs EARTHDATA_TOKEN in .env, see .env.example)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 ```
 

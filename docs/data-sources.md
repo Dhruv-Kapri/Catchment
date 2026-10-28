@@ -8,10 +8,17 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 | Data | Use | Licence |
 | --- | --- | --- |
 | OpenStreetMap (Geofabrik India extract, clipped to the area) | road network for OSRM travel times | ODbL |
-| Overture Maps Places | activity and affluence proxy; candidate sites | CDLA-Permissive-2.0 |
-| Overture Maps / Google Open Buildings | built-up density | Overture buildings: ODbL; Google Open Buildings: CC BY 4.0 |
-| WorldPop (≈100 m population) | base demand | CC BY 4.0 |
-| VIIRS night-time lights | affluence proxy | public domain (NOAA/EOG); check the product page |
+| Overture Maps Places (release 2026-10-21.0) | activity and affluence proxy; candidate sites | CDLA-Permissive-2.0 |
+| Overture Maps buildings (release 2026-10-21.0) / Google Open Buildings | built-up density | Overture buildings: ODbL; Google Open Buildings: CC BY 4.0 |
+| WorldPop, India 2025 constrained 100 m, R2025A v1 (`ind_pop_2025_CN_100m_R2025A_v1.tif`) | base demand | CC BY 4.0 |
+| NASA Black Marble VNP46A4 (annual VIIRS night-time lights, collection 5200, 2025, tile h25v06) | affluence proxy | NASA data, no restrictions, cite (unverified: licence page not read) |
+
+- **Verified 2026-10-28:** EOG (Colorado School of Mines) scripted access to VIIRS products became
+  paid-only in June 2026 (<https://eogdata.mines.edu/products/register/>), hence Black Marble.
+- **Verified 2026-10-28:** the WorldPop server advertises `Accept-Ranges: bytes` but ignores `Range`
+  and answers 200 with the full body, so windowed reads over HTTP fail; the national file is downloaded
+  whole, then clipped.
+- Overture features are kept if they intersect the area (not cut at its boundary).
 
 ## Checked and not usable for competitor stores
 
