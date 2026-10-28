@@ -14,6 +14,8 @@ starting any work; record new commands here.
 ```sh
 uv sync          # Python 3.12 venv
 uv run pytest    # tests
+uv run nbstripout --install                # once per clone: strip notebook outputs on commit
+uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 ```
 
 ## What gets built

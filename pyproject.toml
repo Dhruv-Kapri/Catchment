@@ -7,7 +7,11 @@ authors = [
     { name = "Dhruv Kapri", email = "dhruv27kapri@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pyproj>=3.8.0",
+    "requests>=2.34.2",
+    "shapely>=2.2.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.31,<0.12.0"]
@@ -15,5 +19,8 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.4",
+    "nbstripout>=0.9.1",
     "pytest>=9.1.1",
 ]
