@@ -15,6 +15,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="catchment-build", description=__doc__)
     ap.add_argument("stages", nargs="*", choices=["demand"], metavar="stage")
     ap.add_argument("--res", type=int, default=9, help="H3 resolution (default: 9)")
+    ap.add_argument("--force", action="store_true", help="rebuild outputs that exist")
     args = ap.parse_args(argv)
     path = DATA / f"demand-r{args.res}.parquet"
     if path.exists():
