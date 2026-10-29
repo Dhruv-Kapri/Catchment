@@ -1,5 +1,5 @@
 # Data: OSM extracts, OSRM graphs, rasters and derived tables are large; never commit
-data/
+/data
 outputs/
 *.osm.pbf
 *.osrm*
