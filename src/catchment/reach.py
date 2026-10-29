@@ -17,6 +17,7 @@ from catchment import assumptions
 
 OSRM_SH = Path(__file__).resolve().parents[2] / "osrm" / "osrm.sh"
 
+NEAREST_SEGMENTS = 20   # segments asked of /nearest to find k roads: a carriageway is often several segments
 CHUNK_SRC, CHUNK_DST = 50, 950   # one /table request; osrm-routed runs with --max-table-size 1000
 
 
@@ -48,18 +49,40 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     return candidates, table
 
 
+def _nearest_roads(waypoints, k):
+    """The nearest segment of each of the k nearest roads. A road is a nearest segment plus same-named segments
+    reaching it through shared nodes: a carriageway, not the crossing road (other name) or its twin (no shared node)."""
+    roads, taken = [], set()
+    for i, w in enumerate(waypoints):
+        if i in taken:
+            continue
+        roads.append(w)
+        nodes, grew = set(w["nodes"]), True
+        while grew:
+            grew = False
+            for j, v in enumerate(waypoints):
+                if j not in taken and v["name"] == w["name"] and nodes & set(v["nodes"]):
+                    taken.add(j)
+                    nodes |= set(v["nodes"])
+                    grew = True
+        if len(roads) == k:
+            break
+    return roads
+
+
 class OsrmRouter:
     def __init__(self, url="http://localhost:5001"):
         self.url, self.session = url, requests.Session()
         self.peak_bytes = None   # osrm-routed's peak memory, set by served_osrm before it stops the container
 
     def snap(self, lons, lats, k=1):
-        """The k nearest road points of each point: arrays (n, k) of snapped lon, lat and distance in metres."""
+        """The k nearest roads' points of each point: arrays (n, k) of snapped lon, lat and distance in metres."""
         out = np.full((3, len(lons), k), np.nan)
         for i, (x, y) in enumerate(zip(lons, lats)):
-            r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}", params={"number": k}, timeout=300)
+            r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
+                                 params={"number": 1 if k == 1 else NEAREST_SEGMENTS}, timeout=300)
             r.raise_for_status()
-            for j, w in enumerate(r.json()["waypoints"]):
+            for j, w in enumerate(_nearest_roads(r.json()["waypoints"], k)):
                 out[:, i, j] = *w["location"], w["distance"]
         return out[0], out[1], out[2]
 

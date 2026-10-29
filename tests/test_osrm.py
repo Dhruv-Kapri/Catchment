@@ -98,6 +98,17 @@ def test_snap_puts_an_off_road_point_on_the_road(road_data):
 
 @docker
 @needs_docker
+def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(road_data):
+    lon, lat = 77.03055, 28.45995   # 5.5 m south of the eastbound carriageway (lat 28.4600); the westbound is at 28.4601
+    with served_osrm(road_data, PORT, NAME) as router:
+        s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
+    assert s_lon.shape == s_lat.shape == dist.shape == (1, 2)
+    assert s_lat[0] == pytest.approx([28.4600, 28.4601], abs=2e-6)   # nearest carriageway first
+    assert dist[0] == pytest.approx([5.5, 16.6], abs=0.5)
+
+
+@docker
+@needs_docker
 def test_minutes_along_the_road_are_positive_and_finite(road_data):
     with served_osrm(road_data, PORT, NAME) as router:
         m = router.minutes([77.0280, 77.0300], [28.4500, 28.4480], [77.0320], [28.4500])
