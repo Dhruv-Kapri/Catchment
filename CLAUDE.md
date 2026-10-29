@@ -17,6 +17,7 @@ starting any work; record new commands here.
 uv sync          # Python 3.12+ venv (currently 3.14)
 uv run pytest    # tests
 uv run nbstripout --install                # once per clone: strip notebook outputs on commit
+uv run jupyter nbconvert --to notebook --execute notebooks/NN-name.ipynb --output /tmp/NN-name.ipynb   # run a notebook headless; it rewrites notebooks/figures/
 uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources into data/ (osm clips with osmium: `brew install osmium-tool`; VIIRS needs a LAADS DAAC token as LAADS_TOKEN in .env, see .env.example)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 ```
