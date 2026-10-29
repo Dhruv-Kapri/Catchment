@@ -16,6 +16,7 @@ uv sync                          # Python 3.12+
 uv run nbstripout --install      # once per clone: strip notebook outputs on commit
 cp .env.example .env             # then set LAADS_TOKEN (needed for the night-lights data)
 uv run catchment-fetch           # fetch every source for the area into data/ (idempotent)
+uv run catchment-build           # build data/demand-r9.parquet from the fetched WorldPop and VIIRS
 uv run pytest
 ```
 
