@@ -97,3 +97,11 @@ def test_no_pair_drawn_twice():
     bad = bad_pairs(table, 8, 0)
     r = draw_routes(table, cands, hexes, bad, n=60, n_bad=8)
     assert not r.duplicated(["candidate", "hex"]).any()
+
+
+def test_model_min_is_free_flow_times_multiplier():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad())
+    assert np.allclose(r.model_min, (r.free_flow_min * assumptions.MULTIPLIER).round(2), atol=0.011)
+    assert (r.model_min == r.model_min.round(2)).all()
+    assert (r.free_flow_min == r.free_flow_min.round(2)).all()
