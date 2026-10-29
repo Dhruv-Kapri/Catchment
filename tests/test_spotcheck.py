@@ -118,3 +118,16 @@ def test_source_and_destination_formatting():
     hexes[["lat", "lon"]] = [28.5, 77.1234]
     r = draw_routes(table, cands, hexes, no_bad())
     assert set(r.source) == {"28.459512,77.026634"} and set(r.destination) == {"28.500000,77.123400"}
+
+
+def test_route_ids_run_1_to_n_in_free_flow_order():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad())
+    assert list(r.route) == list(range(1, 21))
+    assert r.free_flow_min.is_monotonic_increasing
+
+
+def test_app_columns_empty():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad())
+    assert r[["app_min", "app", "looked_up"]].isna().all().all()
