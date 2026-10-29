@@ -57,3 +57,10 @@ def test_hexes_without_places_never_qualify():
     places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
     candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())   # X allows all 7; 5 have places
     assert list(candidates.index) == [H[1], H[0], H[3], H[2], H[4]]
+
+
+def test_x_changes_the_candidate_count():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
+    counts = [len(build_reach(AREA, demand, places, RES, x, FakeRouter())[0]) for x in (15, 30, 45)]
+    assert counts == [2, 3, 4]   # ceil of 1.05, 2.1, 3.15
