@@ -47,5 +47,6 @@ def test_write_is_atomic(env, monkeypatch):
 def test_res_writes_a_separate_file(env):
     build.main(["demand"])
     build.main(["demand", "--res", "8"])
+    assert (env / "demand-r8.parquet").exists()
     d9, d8 = pd.read_parquet(env / "demand-r9.parquet"), pd.read_parquet(env / "demand-r8.parquet")
     assert d8.attrs["res"] == 8 and len(d8) < len(d9)
