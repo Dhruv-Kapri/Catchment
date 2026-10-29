@@ -5,6 +5,7 @@ from fractions import Fraction
 import h3
 import numpy as np
 import pandas as pd
+import shapely
 
 
 def n_top(x_pct, n_hexes, n_with_places):
@@ -13,7 +14,7 @@ def n_top(x_pct, n_hexes, n_with_places):
 
 
 def build_reach(polygon, demand, places, res, x_pct, router):
-    hexes = demand
+    hexes = demand[shapely.contains_xy(polygon, demand.lon, demand.lat)]
     cells = pd.Series([h3.latlng_to_cell(y, x, res) for x, y in zip(places.lon, places.lat)])
     hexes = hexes.assign(places=cells.value_counts().reindex(hexes.index).fillna(0).astype(int))
     order = hexes.sort_values(["places", "demand"], ascending=False, kind="stable").index

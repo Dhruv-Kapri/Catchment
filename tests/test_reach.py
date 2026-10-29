@@ -73,3 +73,13 @@ def test_count_is_exact_where_float_arithmetic_rounds_up():
                           index=pd.Index(cells, name="hex"))
     candidates, _ = build_reach(box(77.0, 28.4, 77.1, 28.5), demand, places_in({c: 1 for c in cells}), RES, 7, FakeRouter())
     assert len(candidates) == 7
+
+
+OUTSIDE = h3.latlng_to_cell(28.5, 77.2, RES)   # ~16 km from AREA
+
+
+def test_a_hex_with_its_centre_outside_the_area_is_not_a_candidate():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5], extra=[OUTSIDE])
+    places = places_in({H[0]: 5, OUTSIDE: 50})   # the outside hex is the busiest, and the highest demand ranks it first
+    candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())
+    assert list(candidates.index) == [H[0]]
