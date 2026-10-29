@@ -117,12 +117,8 @@ def clip_raster(src_path, polygon, dest):
 
 
 def _atomic_write_tif(dest, data, profile):
-    dest = Path(dest)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_name(dest.name + ".part")
-    with rasterio.open(tmp, "w", **profile) as out:
+    with atomic_path(dest) as tmp, rasterio.open(tmp, "w", **profile) as out:
         out.write(data)
-    os.replace(tmp, dest)
 
 
 # ---- NASA Black Marble VNP46A4 -------------------------------------------
@@ -215,9 +211,8 @@ def fetch_overture(polygon):
     for kind, name in (("place", "overture_places.parquet"), ("building", "overture_buildings.parquet")):
         gdf = ov.geodataframe(kind, bbox=polygon.bounds, release=OVERTURE_RELEASE)
         gdf = gdf[gdf.intersects(polygon)]
-        tmp = DATA / (name + ".part")
-        gdf.to_parquet(tmp)
-        os.replace(tmp, DATA / name)
+        with atomic_path(DATA / name) as tmp:
+            gdf.to_parquet(tmp)
         print(f"  {name}: {len(gdf)} rows", file=sys.stderr)
         del gdf
         files.append(name)
@@ -238,17 +233,13 @@ def fetch_osm(polygon):
     area = gpd.GeoSeries([polygon], crs="EPSG:4326")
     buffered = area.to_crs(area.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
     out = DATA / "osm.osm.pbf"
-    part = out.with_name(out.name + ".part")
-    try:
+    with atomic_path(out) as part:
         with tempfile.TemporaryDirectory() as td:
             clip = Path(td) / "clip.geojson"
             buffered.to_file(clip, driver="GeoJSON")
             _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
         info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
         data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
-        os.replace(part, out)
-    finally:
-        part.unlink(missing_ok=True)
     return {"source": OSM_URL, "data_date": data_date, "buffer_m": OSM_BUFFER_M, "files": [out.name]}
 
 
@@ -264,9 +255,8 @@ def _update_manifest(name, entry):
     path = DATA / "manifest.json"
     manifest = json.loads(path.read_text()) if path.exists() else {}
     manifest[name] = entry | {"fetched": date.today().isoformat()}
-    tmp = path.with_name(path.name + ".part")
-    tmp.write_text(json.dumps(manifest, indent=2) + "\n")
-    os.replace(tmp, path)
+    with atomic_path(path) as tmp:
+        tmp.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def main(argv=None):

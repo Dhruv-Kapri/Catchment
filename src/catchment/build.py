@@ -1,6 +1,5 @@
 """Build the derived tables from the fetched data into data/ (gitignored). Skips existing outputs."""
 import argparse
-import os
 import resource
 import sys
 import time
@@ -11,7 +10,7 @@ import pandas as pd
 from catchment import assumptions
 from catchment.area import load_area
 from catchment.demand import build_demand
-from catchment.fetch import DATA, VIIRS, WORLDPOP
+from catchment.fetch import DATA, atomic_path, VIIRS, WORLDPOP
 from catchment.reach import build_reach, served_osrm
 
 PLACES = DATA / "overture_places.parquet"
@@ -27,9 +26,8 @@ def reach_names(res, x_pct):
 
 
 def write_parquet(df, path):
-    tmp = path.with_name(path.name + ".part")
-    df.to_parquet(tmp)
-    os.replace(tmp, path)
+    with atomic_path(path) as tmp:
+        df.to_parquet(tmp)
 
 
 def build_demand_stage(polygon, args, paths):
