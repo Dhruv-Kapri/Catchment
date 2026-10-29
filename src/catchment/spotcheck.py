@@ -24,7 +24,10 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
     r["route"] = np.arange(1, len(r) + 1)
     r["free_flow_min"] = r.minutes.round(2)
     r["model_min"] = (r.minutes * assumptions.MULTIPLIER).round(2)
-    for c in ["source", "destination", "app_min", "app", "looked_up"]:
+    c, h = candidates.loc[r.candidate], hexes.loc[r.hex]
+    r["source"] = [f"{a:.6f},{b:.6f}" for a, b in zip(c.snap_lat, c.snap_lon)]
+    r["destination"] = [f"{a:.6f},{b:.6f}" for a, b in zip(h.lat, h.lon)]
+    for c in ["app_min", "app", "looked_up"]:
         r[c] = None
     return r[COLUMNS]
 

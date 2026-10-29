@@ -105,3 +105,15 @@ def test_model_min_is_free_flow_times_multiplier():
     assert np.allclose(r.model_min, (r.free_flow_min * assumptions.MULTIPLIER).round(2), atol=0.011)
     assert (r.model_min == r.model_min.round(2)).all()
     assert (r.free_flow_min == r.free_flow_min.round(2)).all()
+
+
+def test_source_and_destination_formatting():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad())
+    c, h = cands.loc[r.candidate], hexes.loc[r.hex]
+    assert list(r.source) == [f"{a:.6f},{b:.6f}" for a, b in zip(c.snap_lat, c.snap_lon)]
+    assert list(r.destination) == [f"{a:.6f},{b:.6f}" for a, b in zip(h.lat, h.lon)]
+    cands[["snap_lat", "snap_lon"]] = [28.4595123456, 77.0266339]
+    hexes[["lat", "lon"]] = [28.5, 77.1234]
+    r = draw_routes(table, cands, hexes, no_bad())
+    assert set(r.source) == {"28.459512,77.026634"} and set(r.destination) == {"28.500000,77.123400"}
