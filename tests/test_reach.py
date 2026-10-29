@@ -83,3 +83,11 @@ def test_a_hex_with_its_centre_outside_the_area_is_not_a_candidate():
     places = places_in({H[0]: 5, OUTSIDE: 50})   # the outside hex is the busiest, and the highest demand ranks it first
     candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())
     assert list(candidates.index) == [H[0]]
+
+
+def test_permanently_closed_places_do_not_count():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = pd.concat([places_in({H[0]: 1, H[1]: 1}), places_in({H[1]: 2, H[2]: 3}, "permanently_closed")])
+    candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())
+    assert list(candidates.index) == [H[1], H[0]]   # tied at 1 place each; H[2] has only closed places
+    assert list(candidates.places) == [1, 1]
