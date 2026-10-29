@@ -32,3 +32,13 @@ def test_stored_capture_share_is_readable_from_the_file(env):
 def test_prints_a_summary_with_the_capture_share(env, capsys):
     build.main(["demand"])
     assert "capture share" in capsys.readouterr().err
+
+
+def test_write_is_atomic(env, monkeypatch):
+    def partial_write(self, path, *a, **k):
+        open(path, "wb").write(b"half")
+        raise OSError("disk full")
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", partial_write)
+    with pytest.raises(OSError):
+        build.main(["demand"])
+    assert not (env / "demand-r9.parquet").exists()
