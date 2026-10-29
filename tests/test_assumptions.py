@@ -9,3 +9,7 @@ def test_max_pair_min_is_longest_promise_less_pick_and_pack():
 
 def test_orders_per_store_day_from_blinkit_orders_and_stores():
     assert assumptions.ORDERS_PER_STORE_DAY == pytest.approx(1576, abs=1)
+
+
+def test_orders_per_household_day_is_the_calibration_target():
+    assert assumptions.ORDERS_PER_HOUSEHOLD_DAY == pytest.approx(0.082, abs=0.0005)
