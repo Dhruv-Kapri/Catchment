@@ -62,3 +62,12 @@ def test_bad_pairs_drawn_and_flagged_only_when_in_range():
     assert set(zip(flagged.candidate, flagged.hex)) <= inside
     assert not set(zip(r.candidate, r.hex)) & set(zip(*bad.tail(3).T.values))
     assert not r[~r.bad_snap_before.eq(True)].apply(lambda x: (x.candidate, x.hex) in inside, axis=1).any()
+
+
+def test_fewer_bad_pairs_than_n_bad_takes_all_and_still_n_routes():
+    table, cands, hexes = make()
+    bad = bad_pairs(table, 2, 3)
+    r = draw_routes(table, cands, hexes, bad)
+    assert len(r) == 20
+    assert r.bad_snap_before.sum() == 2
+    assert set(zip(r[r.bad_snap_before].candidate, r[r.bad_snap_before].hex)) == set(zip(*bad.head(2).T.values))
