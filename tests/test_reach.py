@@ -27,6 +27,17 @@ class FakeRouter:
         return np.array([[self.times.get((s, d), 1.0) for d in dst] for s in src], dtype=np.float32)
 
 
+class ShiftingRouter(FakeRouter):
+    """Snaps every point 0.00005 degrees east, 12.5 m away, and records the sources it is asked for."""
+    def snap(self, lons, lats, k=1):
+        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        return lons + 0.00005, lats, np.full_like(lons, 12.5)
+
+    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+        self.sources = (list(src_lons), list(src_lats))
+        return super().minutes(src_lons, src_lats, dst_lons, dst_lats)
+
+
 def demand_of(values, extra=()):
     """Demand table for the hexes in H (values in order) plus `extra` hexes."""
     cells = H + list(extra)
@@ -123,3 +134,12 @@ def test_table_covers_only_hexes_inside_the_area():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5], extra=[OUTSIDE])
     _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 100, FakeRouter())
     assert set(table.hex) == set(H) and set(table.candidate) == {H[0]}
+
+
+def test_candidates_carry_the_snapped_point_and_its_distance():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    candidates, _ = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, ShiftingRouter())
+    site = candidates.loc[H[0]]
+    lat, lon = h3.cell_to_latlng(H[0])
+    assert (site.lat, site.lon) == (lat, lon)
+    assert site.snap_lon == lon + 0.00005 and site.snap_lat == lat and site.snap_m == 12.5
