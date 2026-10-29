@@ -3,6 +3,24 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Fastest-of-four snapping, measured (#14)
+
+- **"Second road" is defined by geometry, not by OSRM's two nearest hits.** `/nearest?number=2` returns two segments
+  of the same carriageway, and OSRM reports one-way segments' nodes as `[x, x]`, so grouping hits by name and shared
+  node fails on exactly the divided roads at issue. The second road is the nearest of 20 hits within 100 m that lies
+  more than 5 m from the first snap along the line from the point to that snap (a parallel carriageway lies along it,
+  the next segment of the same one across it); with none, the nearest road repeats. Both numbers are labelled
+  assumptions. 96.7% of candidate sites and 67.2% of hex centres get a distinct second road.
+- **Effect on the slice** (`03-area`, like-for-like one-snap build in the same session): no pair got slower;
+  three quarters moved, but by a median of 0.25 min (90th percentile 1.18, max 11.2). 3,711 pairs newly fall within
+  the default scenario's 5.0 free-flow minutes. On 200 short pairs (seed 42), out-and-back at an endpoint (over 300 m)
+  drops from 14.5% to 9.5%, mostly at the candidate end (14 to 6); the hex end barely moves (16 to 13). The fix halves
+  the problem rather than removing it; the spot check will show whether the rest matters.
+- **Effect on the area** (res 9, X 30): 1,137,695 → 1,187,469 pairs within 17 min (+4.4%; 3.69 → 3.82 MB on disk),
+  default-scenario pairs +19%. `build_reach` 59 → 159 s with OSRM already serving; `catchment-build reach` 179 s wall,
+  peak RSS 505 MB, `osrm-routed` peak 410 MB, so the build fits 8 GB with a wide margin. Rules out leaving
+  far-carriageway snaps as a measured caveat only.
+
 ## 2026-10-29: NCR population is WUP 2025's 30.2 M, not WUP2018's 34.7 M
 
 - **Adopted, verified at source:** UN DESA, World Urbanization Prospects: The 2025 Revision, File 21
