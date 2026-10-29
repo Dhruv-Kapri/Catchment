@@ -150,3 +150,10 @@ def test_the_table_is_timed_from_the_snapped_sites():
     candidates, _ = build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), RES, 30, router)
     lat, lon = h3.cell_to_latlng(H[0])
     assert router.sources == ([lon + 0.00005], [lat])
+
+
+def test_frames_carry_res_x_pct_and_float32_minutes():
+    candidates, table = build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), RES, 2.5, FakeRouter())
+    assert candidates.attrs == {"res": 9, "x_pct": 2.5} and table.attrs == {"res": 9, "x_pct": 2.5}
+    assert table.minutes.dtype == np.float32
+    assert list(table.columns) == ["candidate", "hex", "minutes"]

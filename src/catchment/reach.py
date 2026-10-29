@@ -30,4 +30,6 @@ def build_reach(polygon, demand, places, res, x_pct, router):
                              hexes.lon.to_numpy(), hexes.lat.to_numpy())
     src, dst = np.nonzero(minutes <= assumptions.MAX_PAIR_MIN)   # NaN compares False, so unroutable pairs drop out
     table = pd.DataFrame({"candidate": candidates.index[src], "hex": hexes.index[dst], "minutes": minutes[src, dst]})
+    for df in (candidates, table):
+        df.attrs = {"res": res, "x_pct": x_pct}
     return candidates, table
