@@ -21,7 +21,7 @@ uv run jupyter nbconvert --to notebook --execute notebooks/NN-name.ipynb --outpu
 uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources into data/ (osm clips with osmium: `brew install osmium-tool`; VIIRS needs a LAADS DAAC token as LAADS_TOKEN in .env, see .env.example)
 uv run catchment-build [demand] [--res 9] [--force]   # build data/demand-r9.parquet from the fetched WorldPop and VIIRS
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
-notebooks/osrm.sh build|serve|stop       # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001
+osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001
 ```
 
 ## What gets built
