@@ -1,5 +1,8 @@
+import contextlib
 from pathlib import Path
 
+import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -7,9 +10,24 @@ from catchment import assumptions, build
 from conftest import POLY, make_rasters
 
 
+class OneMinuteRouter:
+    """Snaps every point to itself; every pair is a minute apart."""
+    def snap(self, lons, lats, k=1):
+        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        return lons, lats, np.zeros_like(lons)
+
+    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+        return np.ones((len(src_lons), len(dst_lons)), dtype=np.float32)
+
+
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     wp, vi = make_rasters(tmp_path)
+    places = tmp_path / "overture_places.parquet"
+    gpd.GeoDataFrame({"operating_status": [None, None, "permanently_closed"]},
+                     geometry=gpd.points_from_xy([77.05, 77.048, 77.052], [28.45, 28.452, 28.448]), crs=4326).to_parquet(places)
+    monkeypatch.setattr(build, "PLACES", places)
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(OneMinuteRouter()))
     monkeypatch.setattr(build, "DATA", tmp_path)
     monkeypatch.setattr(build, "WORLDPOP", wp)
     monkeypatch.setattr(build, "VIIRS", vi)
@@ -73,3 +91,11 @@ def test_force_rebuilds_an_existing_output(env):
 def test_default_runs_every_stage(env):
     build.main([])
     assert (env / "demand-r9.parquet").exists()
+
+
+def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
+    assert build.main(["reach"]) == 0
+    candidates = pd.read_parquet(env / "candidates-r9-x30.parquet")
+    table = pd.read_parquet(env / "table-r9-x30.parquet")
+    assert len(candidates) == 2 and list(table.columns) == ["candidate", "hex", "minutes"]
+    assert set(table.candidate) == set(candidates.index)

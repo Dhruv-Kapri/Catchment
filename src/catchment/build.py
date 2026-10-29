@@ -20,9 +20,14 @@ def build_demand_stage(polygon, res, path):
           f"capture share {df.attrs['capture_share']:.3f}", file=sys.stderr)
 
 
+def build_reach_stage(polygon, res, path):
+    pass
+
+
 # stage -> (builder(polygon, res, path), output name for a resolution); `reach` joins here later
 STAGES = {
     "demand": (build_demand_stage, lambda res: f"demand-r{res}.parquet"),
+    "reach": (build_reach_stage, lambda res: f"candidates-r{res}-x30.parquet"),
 }
 
 
