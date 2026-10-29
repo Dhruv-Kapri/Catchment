@@ -5,3 +5,7 @@ from catchment import assumptions
 
 def test_max_pair_min_is_longest_promise_less_pick_and_pack():
     assert assumptions.MAX_PAIR_MIN == 17
+
+
+def test_orders_per_store_day_from_blinkit_orders_and_stores():
+    assert assumptions.ORDERS_PER_STORE_DAY == pytest.approx(1576, abs=1)
