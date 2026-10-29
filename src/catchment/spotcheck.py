@@ -1,4 +1,6 @@
 """Spot check: draw routes to look up in a map app and compare with the model's times."""
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -33,5 +35,13 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
 
 
 def write_sheet(routes, path):
-    routes.to_csv(path, index=False)
-    return True
+    """Write the sheet unless one exists (it may hold hand-noted app times); an existing one must be the same routes."""
+    path = Path(path)
+    if not path.exists():
+        routes.to_csv(path, index=False)
+        return True
+    keys = ["route", "candidate", "hex", "free_flow_min"]
+    old = pd.read_csv(path, dtype={"candidate": str, "hex": str})[keys]
+    if not old.equals(routes[keys].reset_index(drop=True)):
+        raise ValueError(f"{path} holds different routes; move it aside to draw a new sheet")
+    return False

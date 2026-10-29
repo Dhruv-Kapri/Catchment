@@ -145,3 +145,26 @@ def test_write_sheet_writes_when_absent(tmp_path):
     assert list(back.columns) == list(routes.columns)
     assert list(back.route) == [1, 2, 3, 4, 5]
     assert back[["app_min", "app", "looked_up"]].isna().all().all()
+
+
+def test_write_sheet_keeps_a_matching_existing_file(tmp_path):
+    routes, path = sample_routes(), tmp_path / "spot-check-routes.csv"
+    write_sheet(routes, path)
+    filled = pd.read_csv(path).astype({"app_min": float, "app": object})
+    filled.loc[0, ["app_min", "app"]] = [12.0, "Google Maps"]
+    filled.to_csv(path, index=False)
+    assert write_sheet(routes, path) is False
+    back = pd.read_csv(path)
+    assert back.loc[0, "app_min"] == 12.0 and back.loc[0, "app"] == "Google Maps"
+
+
+def test_write_sheet_raises_when_existing_routes_differ(tmp_path):
+    routes, path = sample_routes(), tmp_path / "spot-check-routes.csv"
+    write_sheet(routes, path)
+    for column, value in [("route", 9), ("candidate", "zz"), ("hex", "zz"), ("free_flow_min", 99.0)]:
+        other = routes.copy()
+        other.loc[0, column] = value
+        with pytest.raises(ValueError):
+            write_sheet(other, path)
+    with pytest.raises(ValueError):
+        write_sheet(routes.iloc[:3], path)
