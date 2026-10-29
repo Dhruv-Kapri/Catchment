@@ -165,6 +165,16 @@ def test_one_finite_time_among_four_unroutable_ones_is_kept_and_four_unroutable_
     assert (H[0], H[3]) not in got
 
 
+def test_the_cap_applies_to_the_fastest_of_four():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    times = {(H[0], sf, H[2], df): 20.0 + 2 * sf + df for sf in (False, True) for df in (False, True)} | {(H[0], True, H[2], True): 15.0}   # best of four under the cap, the nearest snaps over it
+    times |= {(H[0], sf, H[3], df): 18.0 + 2 * sf + df for sf in (False, True) for df in (False, True)}   # all four over
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, FarSideRouter(times))
+    got = pairs(table)
+    assert got.get((H[0], H[2])) == 15.0
+    assert (H[0], H[3]) not in got
+
+
 def test_unroutable_pairs_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     places = places_in({H[0]: 2, H[1]: 3})
