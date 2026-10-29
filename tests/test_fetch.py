@@ -209,7 +209,7 @@ def osm_env(tmp_path, monkeypatch):
 
 def osm_node_ids(path):
     out = subprocess.run(["osmium", "cat", str(path), "-f", "opl"], check=True, capture_output=True, text=True).stdout
-    return {int(l.split()[0][1:]) for l in out.splitlines() if l.startswith("n")}
+    return {int(line.split()[0][1:]) for line in out.splitlines() if line.startswith("n")}
 
 
 @needs_osmium

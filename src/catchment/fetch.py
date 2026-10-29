@@ -220,14 +220,14 @@ def fetch_osm(polygon):
     if shutil.which("osmium") is None:
         raise SourceError("osmium was not found on PATH; install osmium-tool with `brew install osmium-tool`")
     raw = download(OSM_URL, RAW / Path(OSM_URL).name)
-    s = gpd.GeoSeries([polygon], crs="EPSG:4326")
-    buffered = s.to_crs(s.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
+    area = gpd.GeoSeries([polygon], crs="EPSG:4326")
+    buffered = area.to_crs(area.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
     out = DATA / "osm.osm.pbf"
     part = out.with_name(out.name + ".part")
     with tempfile.TemporaryDirectory() as td:
-        area = Path(td) / "area.geojson"
-        buffered.to_file(area, driver="GeoJSON")
-        _osmium("extract", "-p", str(area), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
+        clip = Path(td) / "clip.geojson"
+        buffered.to_file(clip, driver="GeoJSON")
+        _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
     info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
     data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
     os.replace(part, out)
