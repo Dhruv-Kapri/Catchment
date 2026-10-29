@@ -25,7 +25,7 @@ def n_top(x_pct, n_hexes, n_with_places):
     return min(math.ceil(Fraction(str(x_pct)) * n_hexes / 100), n_with_places)
 
 
-def build_reach(polygon, demand, places, res, x_pct, router):
+def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     if demand.attrs.get("res", res) != res:
         raise ValueError(f"demand table is res {demand.attrs['res']}, asked for res {res}")
     hexes = demand[shapely.contains_xy(polygon, demand.lon, demand.lat)]
