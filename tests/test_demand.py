@@ -39,3 +39,8 @@ def test_population_is_pixels_in_hex(rasters):
     expected = wp["pop"].groupby([h3.latlng_to_cell(y, x, 9) for x, y in zip(wp.lon, wp.lat)]).sum()
     assert (df.population > 0).all()
     assert np.allclose(df.population, expected.reindex(df.index))
+
+
+def test_households_are_population_over_household_size(rasters):
+    df = build_demand(POLY, 9, *rasters)
+    assert np.allclose(df.households, df.population / assumptions.HOUSEHOLD_SIZE)

@@ -2,6 +2,7 @@
 import h3
 import pandas as pd
 
+from catchment import assumptions
 from catchment.fetch import DATA
 from catchment.load import worldpop_pixels
 
@@ -15,7 +16,8 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     wp = worldpop_pixels(worldpop)
     pix_hex = [h3.latlng_to_cell(y, x, res) for x, y in zip(wp.lon, wp.lat)]
     df["population"] = wp["pop"].groupby(pix_hex).sum().reindex(df.index).fillna(0.0)
-    for col in ["households", "radiance", "multiplier", "demand"]:
+    df["households"] = df["population"] / assumptions.HOUSEHOLD_SIZE
+    for col in ["radiance", "multiplier", "demand"]:
         df[col] = 0.0
     df.attrs["res"] = res
     return df
