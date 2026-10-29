@@ -19,3 +19,8 @@ NCR_HOUSEHOLDS = NCR_POPULATION / HOUSEHOLD_SIZE
 ORDERS_PER_HOUSEHOLD_DAY = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
 MAX_PAIR_MIN = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
 CAPACITY = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
+
+
+def table():
+    """The assumptions as a table: Input, Value, Source, Date, Status."""
+    return pd.DataFrame([], columns=["Input", "Value", "Source", "Date", "Status"])
