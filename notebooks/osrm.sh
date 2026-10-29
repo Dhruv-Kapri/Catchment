@@ -53,8 +53,9 @@ case "${1:-}" in
   serve)
     [ -f "$OUT/osm.osrm.hsgr" ] || { echo "osrm.sh: no graph in $OUT; run 'notebooks/osrm.sh build'" >&2; exit 1; }
     docker rm -f "$NAME" >/dev/null 2>&1 || true
+    # --max-table-size: /table accepts at most this many coordinates (default 100); the travel-time table is built in chunks of up to this size
     docker run -d --name "$NAME" -p "$PORT:5000" -v "$OUT:/data:ro" "$IMAGE" \
-      osrm-routed --algorithm ch /data/osm.osrm >/dev/null
+      osrm-routed --algorithm ch --max-table-size 1000 /data/osm.osrm >/dev/null
     for _ in $(seq 1 60); do
       if curl -fs "http://localhost:$PORT/nearest/v1/driving/77.03,28.45" >/dev/null 2>&1; then
         echo "OSRM answering on http://localhost:$PORT"
