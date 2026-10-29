@@ -40,7 +40,8 @@ labelled assumption.
 _Avoid_: affluence proxy (in the UI), wealth, income
 
 **Capture share**:
-The fraction of a hex's households assumed to order on a given day. A lever.
+Orders per household per day, read as the fraction of a hex's households assumed to order on a given day
+(at most one order each). A lever.
 
 ## Reach
 
