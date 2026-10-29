@@ -68,3 +68,10 @@ def test_multipliers_hit_bounds_and_follow_radiance(rasters):
     assert df.multiplier.max() == pytest.approx(assumptions.M_HIGH)
     m = df.sort_values("radiance").multiplier.to_numpy()
     assert (np.diff(m) >= -1e-12).all()
+
+
+def test_multiplier_bounds_are_read_from_assumptions(rasters, monkeypatch):
+    monkeypatch.setattr(assumptions, "M_LOW", 0.8)
+    monkeypatch.setattr(assumptions, "M_HIGH", 1.2)
+    df = build_demand(POLY, 9, *rasters)
+    assert df.multiplier.min() == pytest.approx(0.8) and df.multiplier.max() == pytest.approx(1.2)
