@@ -10,7 +10,14 @@ COLUMNS = ["route", "candidate", "hex", "source", "destination", "free_flow_min"
 
 
 def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11, 14, 17), seed=SEED):
-    return pd.DataFrame(columns=COLUMNS)
+    rng = np.random.default_rng(seed)
+    pairs = table[(table.minutes >= edges[0]) & (table.minutes <= edges[-1])]
+    r = pairs.iloc[rng.choice(len(pairs), n, replace=False)].sort_values("minutes").reset_index(drop=True)
+    r["route"] = np.arange(1, len(r) + 1)
+    r["free_flow_min"] = r.minutes.round(2)
+    for c in ["source", "destination", "model_min", "bad_snap_before", "app_min", "app", "looked_up"]:
+        r[c] = None
+    return r[COLUMNS]
 
 
 def write_sheet(routes, path):
