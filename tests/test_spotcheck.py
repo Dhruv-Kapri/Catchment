@@ -29,3 +29,17 @@ def test_n_routes_and_columns():
     assert len(r) == 20
     assert list(r.columns) == ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
                                "bad_snap_before", "app_min", "app", "looked_up"]
+
+
+def test_minutes_in_range_and_each_bin_gets_its_share():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad())
+    assert r.free_flow_min.between(2, 17).all()
+    counts = np.histogram(r.free_flow_min, bins=EDGES)[0]
+    assert list(counts) == [4, 4, 4, 4, 4]
+
+
+def test_remainder_goes_to_first_bins():
+    table, cands, hexes = make()
+    r = draw_routes(table, cands, hexes, no_bad(), n=17, n_bad=0)
+    assert list(np.histogram(r.free_flow_min, bins=EDGES)[0]) == [4, 4, 3, 3, 3]
