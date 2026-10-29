@@ -13,3 +13,7 @@ def test_orders_per_store_day_from_blinkit_orders_and_stores():
 
 def test_orders_per_household_day_is_the_calibration_target():
     assert assumptions.ORDERS_PER_HOUSEHOLD_DAY == pytest.approx(0.082, abs=0.0005)
+
+
+def test_capacity_matches_02_plan():
+    assert round(assumptions.CAPACITY) == 2364   # 02-plan and the decision log

@@ -11,9 +11,11 @@ NCR_POPULATION = 34.7e6       # Delhi urban agglomeration, 2025 projection
 PICK_AND_PACK = 3             # minutes, fixed
 MAX_PROMISE = 20              # longest promise lever, minutes
 
+CAPACITY_FACTOR = 1.5
+
 ORDERS_PER_STORE_DAY = BLINKIT_ORDERS_Q2 / Q2_DAYS / BLINKIT_STORES
 NCR_HOUSEHOLDS = NCR_POPULATION / HOUSEHOLD_SIZE
 # calibration target: all-brand orders per household per day
 ORDERS_PER_HOUSEHOLD_DAY = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
 MAX_PAIR_MIN = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
-CAPACITY = 0.0
+CAPACITY = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
