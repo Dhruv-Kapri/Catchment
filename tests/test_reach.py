@@ -117,3 +117,9 @@ def test_unroutable_pairs_are_absent():
     assert (H[1], H[2]) not in got and (H[0], H[4]) not in got
     assert len(got) == 12
     assert not table.minutes.isna().any()
+
+
+def test_table_covers_only_hexes_inside_the_area():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5], extra=[OUTSIDE])
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 100, FakeRouter())
+    assert set(table.hex) == set(H) and set(table.candidate) == {H[0]}
