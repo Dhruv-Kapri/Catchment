@@ -29,6 +29,8 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 - **Verified 2026-10-29:** Geofabrik splits India into six zones with no smaller sub-regions; the
   northern zone (`asia/india/northern-zone-latest.osm.pbf`, about 214 MB) has a bbox covering Delhi
   and Gurugram. The full India extract is about 1.6 GiB.
+- `catchment-fetch osm` clips that extract to the area plus a 5 km buffer; the manifest records the
+  extract's replication timestamp as `data_date`.
 - **Verified 2026-10-29:** OSRM ships car, bicycle and foot profiles only, with no two-wheeler profile,
   and no maintained community motorcycle profile was found; the official Docker image
   (`ghcr.io/project-osrm/osrm-backend`) has a linux/arm64 build. `osmium-tool` is in Homebrew for arm64.

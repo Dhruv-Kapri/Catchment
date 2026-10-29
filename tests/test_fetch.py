@@ -1,4 +1,7 @@
 import json
+import shutil
+import subprocess
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -179,3 +182,68 @@ def test_one_source_failing_does_not_stop_others(tmp_path, monkeypatch):
     monkeypatch.setattr(fetch, "SOURCES", {"a": (boom, ["a.txt"]), "b": (ok, ["b.txt"])})
     assert fetch.main([]) == 1
     assert "b" in json.loads((tmp_path / "manifest.json").read_text())
+
+
+# ---- osm ------------------------------------------------------------------
+
+TINY_OSM = Path(__file__).parent / "fixtures" / "tiny.osm"
+needs_osmium = pytest.mark.skipif(shutil.which("osmium") is None, reason="osmium-tool not installed")
+
+
+@pytest.fixture
+def osm_env(tmp_path, monkeypatch):
+    downloads = []
+
+    def fake_download(url, dest, **kw):
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["osmium", "cat", str(TINY_OSM), "-o", str(dest)], check=True)
+            downloads.append(url)
+        return dest
+    monkeypatch.setattr(fetch, "DATA", tmp_path)
+    monkeypatch.setattr(fetch, "RAW", tmp_path / "raw")
+    monkeypatch.setattr(fetch, "load_area", lambda: box(77.0, 28.4, 77.1, 28.5))
+    monkeypatch.setattr(fetch, "download", fake_download)
+    return tmp_path, downloads
+
+
+def osm_node_ids(path):
+    out = subprocess.run(["osmium", "cat", str(path), "-f", "opl"], check=True, capture_output=True, text=True).stdout
+    return {int(line.split()[0][1:]) for line in out.splitlines() if line.startswith("n")}
+
+
+@needs_osmium
+def test_osm_clips_to_area_plus_buffer(osm_env):
+    tmp_path, _ = osm_env
+    assert fetch.main(["osm"]) == 0
+    assert osm_node_ids(tmp_path / "osm.osm.pbf") == {1, 2, 3}
+    entry = json.loads((tmp_path / "manifest.json").read_text())["osm"]
+    assert entry["source"] == fetch.OSM_URL and entry["data_date"] == "2026-10-02T12:34:56Z"
+    assert entry["buffer_m"] == 5000 and entry["files"] == ["osm.osm.pbf"]
+
+
+@needs_osmium
+def test_osm_rerun_skips_and_force_reclips_without_download(osm_env):
+    tmp_path, downloads = osm_env
+    assert fetch.main(["osm"]) == 0
+    out = tmp_path / "osm.osm.pbf"
+    out.write_bytes(b"junk")
+    assert fetch.main(["osm"]) == 0 and out.read_bytes() == b"junk"
+    assert fetch.main(["osm", "--force"]) == 0
+    assert osm_node_ids(out) == {1, 2, 3} and len(downloads) == 1
+
+
+def test_osm_missing_osmium_fails_before_download(osm_env, monkeypatch, capsys):
+    tmp_path, downloads = osm_env
+
+    def ok(polygon):
+        return {"files": ["b.txt"]}
+    monkeypatch.setenv("PATH", "")
+    monkeypatch.setattr(fetch, "SOURCES", {"osm": fetch.SOURCES["osm"], "b": (ok, ["b.txt"])})
+    assert fetch.main([]) == 1
+    assert "brew install osmium-tool" in capsys.readouterr().err
+    assert "b" in json.loads((tmp_path / "manifest.json").read_text()) and downloads == []
+
+
+def test_osm_is_a_default_source():
+    assert "osm" in fetch.SOURCES

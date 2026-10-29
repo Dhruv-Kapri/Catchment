@@ -14,8 +14,8 @@ Terms (hex, candidate site, catchment, promise, lever, plan, ...) are defined in
   idempotent, writing to `data/`.
 - **Done when:** one command fetches every source for the area into `data/`.
 - **Done 2026-10-29:** `uv run catchment-fetch`. VIIRS comes from NASA Black Marble, not EOG (see
-  [decisions](decisions.md)). The OSM road network was missed; an `osm` source (Geofabrik northern
-  zone, clipped to the area plus 5 km) is added to `catchment-fetch` while building `01-reach`.
+  [decisions](decisions.md)). The OSM road network was missed; it is now the `osm` source (Geofabrik northern
+  zone, clipped to the area plus 5 km).
 
 ## 0.5 Explore (to 8 Nov)
 

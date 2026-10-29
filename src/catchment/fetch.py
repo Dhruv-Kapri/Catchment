@@ -2,11 +2,14 @@
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 from datetime import date
 from pathlib import Path
 
+import geopandas as gpd
 import h5py
 import numpy as np
 import rasterio
@@ -28,6 +31,8 @@ BM_BASE = "https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5200/VNP46A4/2
 BM_LAYER = "HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/NearNadir_Composite_Snow_Free"
 BM_NODATA = -9999.0
 OVERTURE_RELEASE = "2026-10-21.0"
+OSM_URL = "https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf"
+OSM_BUFFER_M = 5000
 HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
 LAADS_TOKEN_PAGE = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
 
@@ -204,10 +209,36 @@ def fetch_overture(polygon):
     return {"release": OVERTURE_RELEASE, "files": files}
 
 
+def _osmium(*args):
+    try:
+        return subprocess.run(["osmium", *args], check=True, capture_output=True, text=True).stdout
+    except subprocess.CalledProcessError as e:
+        raise SourceError(f"osmium {args[0]} failed: {e.stderr.strip()}") from e
+
+
+def fetch_osm(polygon):
+    if shutil.which("osmium") is None:
+        raise SourceError("osmium was not found on PATH; install osmium-tool with `brew install osmium-tool`")
+    raw = download(OSM_URL, RAW / Path(OSM_URL).name)
+    area = gpd.GeoSeries([polygon], crs="EPSG:4326")
+    buffered = area.to_crs(area.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
+    out = DATA / "osm.osm.pbf"
+    part = out.with_name(out.name + ".part")
+    with tempfile.TemporaryDirectory() as td:
+        clip = Path(td) / "clip.geojson"
+        buffered.to_file(clip, driver="GeoJSON")
+        _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
+    info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
+    data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
+    os.replace(part, out)
+    return {"source": OSM_URL, "data_date": data_date, "buffer_m": OSM_BUFFER_M, "files": [out.name]}
+
+
 SOURCES = {
     "worldpop": (fetch_worldpop, ["worldpop.tif"]),
     "viirs": (fetch_viirs, ["viirs.tif"]),
     "overture": (fetch_overture, ["overture_places.parquet", "overture_buildings.parquet"]),
+    "osm": (fetch_osm, ["osm.osm.pbf"]),
 }
 
 
