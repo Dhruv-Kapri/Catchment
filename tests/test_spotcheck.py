@@ -43,3 +43,22 @@ def test_remainder_goes_to_first_bins():
     table, cands, hexes = make()
     r = draw_routes(table, cands, hexes, no_bad(), n=17, n_bad=0)
     assert list(np.histogram(r.free_flow_min, bins=EDGES)[0]) == [4, 4, 3, 3, 3]
+
+
+def bad_pairs(table, k_in, k_out):
+    """k_in pairs inside 2-17 minutes and k_out outside it."""
+    inside = table[table.minutes.between(2, 17)].iloc[::7].head(k_in)
+    outside = table[~table.minutes.between(2, 17)].iloc[::5].head(k_out)
+    return pd.concat([inside, outside])[["candidate", "hex"]].reset_index(drop=True)
+
+
+def test_bad_pairs_drawn_and_flagged_only_when_in_range():
+    table, cands, hexes = make()
+    bad = bad_pairs(table, 8, 3)
+    r = draw_routes(table, cands, hexes, bad)
+    flagged = r[r.bad_snap_before.eq(True)]
+    assert len(r) == 20 and len(flagged) == 5
+    inside = set(zip(*bad.head(8).T.values))
+    assert set(zip(flagged.candidate, flagged.hex)) <= inside
+    assert not set(zip(r.candidate, r.hex)) & set(zip(*bad.tail(3).T.values))
+    assert not r[~r.bad_snap_before.eq(True)].apply(lambda x: (x.candidate, x.hex) in inside, axis=1).any()
