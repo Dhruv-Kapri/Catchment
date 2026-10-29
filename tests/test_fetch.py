@@ -283,3 +283,11 @@ def test_atomic_path_leaves_no_part_and_dest_untouched_when_the_write_raises(tmp
             part.write_bytes(b"half")
             raise OSError("disk full")
     assert dest.read_bytes() == b"old" and not part.exists()
+
+
+def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path):
+    dest = tmp_path / "a" / "b" / "f.bin"
+    with fetch.atomic_path(dest) as part:
+        part.write_bytes(b"whole")
+        assert not dest.exists()
+    assert dest.read_bytes() == b"whole" and not part.exists()

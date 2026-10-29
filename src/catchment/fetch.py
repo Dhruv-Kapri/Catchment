@@ -48,6 +48,7 @@ def atomic_path(dest):
     part = dest.with_name(dest.name + ".part")
     try:
         yield part
+        os.replace(part, dest)
     except BaseException:
         part.unlink(missing_ok=True)
         raise
