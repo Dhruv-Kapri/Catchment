@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Stage 0 (setup and fetch) and 0.5 Explore (notebooks `00-demand`, `01-reach`, `02-plan` on the slice, issues
 #1-#6) done 2026-10-29: H3 res 9, candidate sites the top 30% of hexes by places count. Next is stage 1 (demand and
-reach on the full area). The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `build.py`). The repo also
+reach on the full area). The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`). The repo also
 holds the product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the
 decision log (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`).
 Read the brief and the roadmap before starting any work; record new commands here.
@@ -19,9 +19,10 @@ uv run pytest    # tests
 uv run nbstripout --install                # once per clone: strip notebook outputs on commit
 uv run jupyter nbconvert --to notebook --execute notebooks/NN-name.ipynb --output /tmp/NN-name.ipynb   # run a notebook headless; it rewrites notebooks/figures/
 uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources into data/ (osm clips with osmium: `brew install osmium-tool`; VIIRS needs a LAADS DAAC token as LAADS_TOKEN in .env, see .env.example)
-uv run catchment-build [demand] [--res 9] [--force]   # build data/demand-r9.parquet from the fetched WorldPop and VIIRS
+uv run catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]   # demand-r9.parquet from the fetched WorldPop and VIIRS; reach: candidates-r9-x30.parquet and table-r9-x30.parquet (builds demand if missing; builds, serves and stops OSRM itself, so Docker must run; prints sites, pairs, time, peak memory)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
-osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001
+osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001; env overrides OSRM_DATA (default data/), OSRM_PORT (5001), OSRM_NAME (catchment-osrm)
+uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the container catchment-osrm-test on port 5091)
 ```
 
 ## What gets built

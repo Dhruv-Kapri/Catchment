@@ -9,14 +9,14 @@ take from the stores it already has?*
 ## Getting started
 
 Needs [uv](https://docs.astral.sh/uv/), osmium-tool (`brew install osmium-tool`, used to clip the
-OSM extract) and Docker Desktop, running (`01-reach` builds and serves OSRM in it).
+OSM extract) and Docker Desktop, running (`catchment-build reach` builds, serves and stops OSRM in it).
 
 ```sh
 uv sync                          # Python 3.12+
 uv run nbstripout --install      # once per clone: strip notebook outputs on commit
 cp .env.example .env             # then set LAADS_TOKEN (needed for the night-lights data)
 uv run catchment-fetch           # fetch every source for the area into data/ (idempotent)
-uv run catchment-build           # build data/demand-r9.parquet from the fetched WorldPop and VIIRS
+uv run catchment-build           # build data/demand-r9.parquet, then the candidate sites and travel-time table (candidates-r9-x30, table-r9-x30)
 uv run pytest
 ```
 
@@ -36,7 +36,7 @@ uv run jupyter nbconvert --to notebook --execute notebooks/02-plan.ipynb --outpu
 ```
 
 `01-reach` ran the OSRM script itself. The script and the two-wheeler profile have since moved to `osrm/`
-(`osrm/osrm.sh build|serve|stop`); the notebook is kept as the stage 0.5 record and still calls them in
+(`osrm/osrm.sh build|serve|stop`; env overrides `OSRM_DATA`, `OSRM_PORT`, `OSRM_NAME`); the notebook is kept as the stage 0.5 record and still calls them in
 `notebooks/`, so it no longer re-runs as committed. It was run with Docker's memory limit at
 3.82 GiB of 8 GiB; peak use was at most about 0.5 GB (the notebook prints it).
 
