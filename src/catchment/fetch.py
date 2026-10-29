@@ -1,5 +1,6 @@
 """Fetch every source for the area into data/ (gitignored). Idempotent and resumable."""
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -37,6 +38,14 @@ OSM_URL = "https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf
 OSM_BUFFER_M = 5000
 HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
 LAADS_TOKEN_PAGE = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
+
+
+@contextlib.contextmanager
+def atomic_path(dest):
+    """Yield dest's .part path to write to; on success rename it onto dest, on error remove it."""
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    yield dest.with_name(dest.name + ".part")
 
 
 class SourceError(Exception):
