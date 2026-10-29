@@ -50,12 +50,14 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
 
 
 def _nearest_roads(waypoints, k):
-    """The nearest segment of each of the k nearest roads. A road is a nearest segment plus same-named segments
+    """The nearest segment of each of the k nearest roads, a road after the first only within SECOND_ROAD_MAX_M. A road is a nearest segment plus same-named segments
     reaching it through shared nodes: a carriageway, not the crossing road (other name) or its twin (no shared node)."""
     roads, taken = [], set()
     for i, w in enumerate(waypoints):
         if i in taken:
             continue
+        if roads and w["distance"] > assumptions.SECOND_ROAD_MAX_M:
+            break
         roads.append(w)
         nodes, grew = set(w["nodes"]), True
         while grew:
@@ -82,7 +84,9 @@ class OsrmRouter:
             r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
                                  params={"number": 1 if k == 1 else NEAREST_SEGMENTS}, timeout=300)
             r.raise_for_status()
-            for j, w in enumerate(_nearest_roads(r.json()["waypoints"], k)):
+            roads = _nearest_roads(r.json()["waypoints"], k)
+            for j in range(k if roads else 0):
+                w = roads[min(j, len(roads) - 1)]   # a missing road repeats the nearest
                 out[:, i, j] = *w["location"], w["distance"]
         return out[0], out[1], out[2]
 

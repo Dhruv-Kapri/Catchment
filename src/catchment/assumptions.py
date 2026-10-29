@@ -27,6 +27,7 @@ ORDERS_PER_STORE_DAY = BLINKIT_ORDERS_Q2 / Q2_DAYS / BLINKIT_STORES
 NCR_HOUSEHOLDS = NCR_POPULATION / HOUSEHOLD_SIZE
 # calibration target: all-brand orders per household per day
 ORDERS_PER_HOUSEHOLD_DAY = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
+SECOND_ROAD_MAX_M = 100   # a point's second road counts for snapping only within this distance
 MAX_PAIR_MIN = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
 CAPACITY = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
 
