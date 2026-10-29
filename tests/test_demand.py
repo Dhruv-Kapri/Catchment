@@ -50,3 +50,13 @@ def test_household_size_is_read_from_assumptions(rasters, monkeypatch):
     base = build_demand(POLY, 9, *rasters).households
     monkeypatch.setattr(assumptions, "HOUSEHOLD_SIZE", 9.0)
     assert np.allclose(build_demand(POLY, 9, *rasters).households, base / 2)
+
+
+def test_nan_radiance_takes_the_minimum(tmp_path):
+    wp, _ = make_rasters(tmp_path)
+    arr = np.arange(100).reshape(10, 10) + 5.0
+    arr[:, :5] = -9999
+    vi = write_tif(tmp_path / "vn.tif", arr, 0.002, -9999)
+    df = build_demand(POLY, 9, wp, vi)
+    assert not df.radiance.isna().any()
+    assert df.radiance.min() >= 5.0

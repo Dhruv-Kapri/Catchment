@@ -1,10 +1,11 @@
 """Demand per hex: households x affluence multiplier x capture share, at any H3 resolution."""
 import h3
+import numpy as np
 import pandas as pd
 
 from catchment import assumptions
 from catchment.fetch import DATA
-from catchment.load import worldpop_pixels
+from catchment.load import viirs_at, worldpop_pixels
 
 
 def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "viirs.tif"):
@@ -17,7 +18,9 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     pix_hex = [h3.latlng_to_cell(y, x, res) for x, y in zip(wp.lon, wp.lat)]
     df["population"] = wp["pop"].groupby(pix_hex).sum().reindex(df.index).fillna(0.0)
     df["households"] = df["population"] / assumptions.HOUSEHOLD_SIZE
-    for col in ["radiance", "multiplier", "demand"]:
+    rad = viirs_at(df.lon, df.lat, viirs)
+    df["radiance"] = np.where(np.isnan(rad), np.nanmin(rad), rad)
+    for col in ["multiplier", "demand"]:
         df[col] = 0.0
     df.attrs["res"] = res
     return df
