@@ -141,3 +141,12 @@ def test_demand_without_fetched_rasters_says_to_fetch_them(env, monkeypatch, cap
     err = capsys.readouterr().err
     assert "catchment-fetch worldpop viirs" in err and "worldpop.tif" in err and "viirs.tif" in err
     assert not (env / "demand-r9.parquet").exists()
+
+
+def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env, monkeypatch, capsys):
+    monkeypatch.setattr(build, "PLACES", env / "overture_places.parquet.gone")
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: pytest.fail("OSRM started"))
+    assert build.main(["reach"]) == 1
+    err = capsys.readouterr().err
+    assert "catchment-fetch overture" in err and "overture_places.parquet.gone" in err
+    assert not (env / "demand-r9.parquet").exists()

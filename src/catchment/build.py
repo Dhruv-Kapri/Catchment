@@ -49,13 +49,12 @@ def build_demand_stage(polygon, args, paths):
 
 
 def build_reach_stage(polygon, args, paths):
+    require([PLACES], "overture")
     demand_path = DATA / demand_name(args.res)
     if not demand_path.exists():
         print(f"reach: {demand_path.name} missing, building it first", file=sys.stderr)
         build_demand_stage(polygon, args, [demand_path])
     demand = pd.read_parquet(demand_path)
-    if not PLACES.exists():
-        raise MissingInput("")
     pts = gpd.read_parquet(PLACES)
     places = pd.DataFrame({"lon": pts.geometry.x, "lat": pts.geometry.y, "operating_status": pts.operating_status})
     stats = DATA / "osrm" / "build-stats.tsv"
