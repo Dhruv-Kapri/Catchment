@@ -3,6 +3,19 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Area boundary and data products (stage 0)
+
+- **The area is the Gurgaon tehsil (OSM rel 10398244) plus South Delhi district (rel 21181223)**,
+  528 km², committed as `area/gurugram-south-delhi.geojson`. Gurugram district (1,253 km²) is mostly
+  rural and would grow the travel-time table and the solve for little demand. Rules out Sohna, Manesar,
+  Pataudi and Farrukhnagar until the NCR scaling stage.
+- **Population: WorldPop 2025 constrained 100 m (R2025A)**, the most current estimate, over the 2020
+  product.
+- **Night lights: NASA Black Marble VNP46A4 (annual, 2025) instead of EOG annual VNL.** EOG made
+  scripted downloads paid-only in June 2026; Black Marble is the same VIIRS sensor, free with a LAADS
+  token. Rules out the EOG VNL product unless a subscription is bought.
+- **Overture release pinned** (2026-10-21.0) so a re-fetch gives the same features.
+
 ## 2026-10-28: Explore on a slice before the pipeline
 
 - **A "0.5 Explore" step, to 8 Nov:** notebooks `00-demand`, `01-reach` and `02-plan` run end to end

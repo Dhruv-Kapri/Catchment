@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Planning. The repo holds the product brief (`docs/brief.md`), the staged roadmap with "done when"
+Stage 0 (setup and fetch) done 2026-10-29; next is 0.5 Explore (notebooks). The code is
+`src/catchment/` (`area.py`, `fetch.py`). The repo also holds the product brief (`docs/brief.md`), the staged roadmap with "done when"
 criteria (`docs/roadmap.md`), the decision log (`docs/decisions.md`), the scope cuts
 (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief and the roadmap before
 starting any work; record new commands here.

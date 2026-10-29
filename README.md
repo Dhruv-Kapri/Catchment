@@ -3,8 +3,23 @@
 *Where should a quick-commerce operator open its next N dark stores, and what does each one win, or
 take from the stores it already has?*
 
-> **Status: planning.** No code yet. This repo holds the product brief, the decision log and the
-> roadmap; the [roadmap](docs/roadmap.md) says what gets built and in what order.
+> **Status: stage 0 done** (setup and data fetch). Next: notebooks that run the whole chain on a small
+> slice. The [roadmap](docs/roadmap.md) says what gets built and in what order.
+
+## Getting started
+
+```sh
+uv sync                          # Python 3.12+
+uv run nbstripout --install      # once per clone: strip notebook outputs on commit
+cp .env.example .env             # then set LAADS_TOKEN (needed for the night-lights data)
+uv run catchment-fetch           # fetch every source for the area into data/ (idempotent)
+uv run pytest
+```
+
+`LAADS_TOKEN` is a LAADS DAAC token: log in at <https://ladsweb.modaps.eosdis.nasa.gov> with an
+Earthdata account, then generate it on the
+[download scripts page](https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/)
+(an Earthdata "EDL" token is not accepted). The WorldPop file is slow to fetch (about 2 hours, once).
 
 ## The problem
 
@@ -60,5 +75,6 @@ First area: **Gurugram and South Delhi**. All of Delhi NCR comes after.
 
 ## Licence
 
-Code: MIT. Data keeps its own licence (OpenStreetMap: ODbL; Overture Places: CDLA-Permissive-2.0;
-WorldPop: CC BY 4.0); derived outputs carry the matching attribution.
+Code: MIT. Data keeps its own licence (OpenStreetMap and Overture buildings: ODbL; Overture Places:
+CDLA-Permissive-2.0; WorldPop: CC BY 4.0; NASA Black Marble: CC0, cited); derived outputs carry the
+matching attribution.

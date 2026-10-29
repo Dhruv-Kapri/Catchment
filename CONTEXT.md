@@ -6,7 +6,7 @@ wins, loses and takes from the stores already there.
 ## Space
 
 **Area**:
-The region a plan covers, as one committed polygon. First area: Gurugram + South Delhi.
+The region a plan covers, as one committed polygon. First area: Gurugram + South Delhi (the Gurgaon tehsil and South Delhi district in OSM).
 _Avoid_: city, region, AOI (in prose)
 
 **Hex**:

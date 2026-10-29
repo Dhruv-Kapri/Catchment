@@ -13,6 +13,8 @@ Terms (hex, candidate site, catchment, promise, lever, plan, ...) are defined in
 - Fetch scripts for WorldPop, VIIRS and Overture Places/Buildings, clipped to the area; resumable and
   idempotent, writing to `data/`.
 - **Done when:** one command fetches every source for the area into `data/`.
+- **Done 2026-10-29:** `uv run catchment-fetch`. VIIRS comes from NASA Black Marble, not EOG (see
+  [decisions](decisions.md)).
 
 ## 0.5 Explore (to 8 Nov)
 
