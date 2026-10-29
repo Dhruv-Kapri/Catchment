@@ -175,6 +175,13 @@ def test_the_cap_applies_to_the_fastest_of_four():
     assert (H[0], H[3]) not in got
 
 
+def test_one_snap_uses_only_the_nearest_roads():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    router = FarSideRouter({(H[0], False, H[2], False): 12.0, (H[0], True, H[2], True): 2.0})
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router, snaps=1)
+    assert pairs(table)[(H[0], H[2])] == 12.0
+
+
 def test_unroutable_pairs_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     places = places_in({H[0]: 2, H[1]: 3})
