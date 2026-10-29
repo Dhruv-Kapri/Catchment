@@ -91,6 +91,7 @@ def test_force_rebuilds_an_existing_output(env):
 def test_default_runs_every_stage(env):
     build.main([])
     assert (env / "demand-r9.parquet").exists()
+    assert (env / "candidates-r9-x30.parquet").exists() and (env / "table-r9-x30.parquet").exists()
 
 
 def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
