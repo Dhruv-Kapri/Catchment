@@ -30,3 +30,12 @@ def test_hex_centres_are_lat_lon(rasters):
     df = build_demand(POLY, 9, *rasters)
     for h, row in df.iterrows():
         assert (row.lat, row.lon) == pytest.approx(h3.cell_to_latlng(h))
+
+
+def test_population_is_pixels_in_hex(rasters):
+    from catchment.load import worldpop_pixels
+    df = build_demand(POLY, 9, *rasters)
+    wp = worldpop_pixels(rasters[0])
+    expected = wp["pop"].groupby([h3.latlng_to_cell(y, x, 9) for x, y in zip(wp.lon, wp.lat)]).sum()
+    assert (df.population > 0).all()
+    assert np.allclose(df.population, expected.reindex(df.index))
