@@ -33,3 +33,9 @@ def test_table_lists_every_input():
         "Brands and store counts", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
         "Assignment tie-break", "Integer scale", "Solver",
     ]
+
+
+def test_table_cells_are_non_empty():
+    t = assumptions.table()
+    for col in ("Input", "Value", "Source", "Date", "Status"):
+        assert t[col].astype(str).str.strip().ne("").all()
