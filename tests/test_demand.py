@@ -24,3 +24,9 @@ def test_columns_and_res_attr(rasters):
     df = build_demand(POLY, 9, *rasters)
     assert list(df.columns) == ["lat", "lon", "population", "households", "radiance", "multiplier", "demand"]
     assert df.attrs["res"] == 9
+
+
+def test_hex_centres_are_lat_lon(rasters):
+    df = build_demand(POLY, 9, *rasters)
+    for h, row in df.iterrows():
+        assert (row.lat, row.lon) == pytest.approx(h3.cell_to_latlng(h))
