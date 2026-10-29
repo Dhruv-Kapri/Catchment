@@ -18,9 +18,11 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 - **Effect: the calibration target, the default capture share and the default demand all rise by 34.7 / 30.2,
   about 15%.** Calibration target 0.082 → 0.094 orders per household per day; default capture share
   0.070 → 0.080; area demand at res 9 78,092 → 89,728 orders a day (`catchment-build demand --force`, re-run
-  2026-10-29). Households and `ORDERS_PER_STORE_DAY` don't change, so the default capacity (2,364) doesn't either. A
-  default catchment's demand rises from 889-1,411 to about 1,020-1,620 orders a day, still under capacity, so
-  "capacity never binds at the default" stands.
+  2026-10-29). The area's households and `ORDERS_PER_STORE_DAY` don't change, so the default capacity (2,364) doesn't
+  either. A default catchment's demand rises from 889-1,411 to about 1,020-1,620 orders a day, and the largest on the
+  slice from 1,981 to about 2,276. That is still under capacity, so "capacity never binds at the default" stands, but
+  only by about 4%: a small further rise in demand would make capacity bind, and binding capacity is the slow CP-SAT
+  case.
 - Rules out keeping WUP2018 as the default. The `00-demand` notebook stays frozen at 34.7 M as the 0.5 record.
 
 ## 2026-10-29: Demand and reach (stage 1) design
