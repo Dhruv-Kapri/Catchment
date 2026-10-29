@@ -18,3 +18,9 @@ def test_hexes_are_area_hexes_sorted(rasters):
     assert df.index.name == "hex"
     assert list(df.index) == sorted(h3.geo_to_cells(POLY, 9))
     assert 3 <= len(df) < 30
+
+
+def test_columns_and_res_attr(rasters):
+    df = build_demand(POLY, 9, *rasters)
+    assert list(df.columns) == ["lat", "lon", "population", "households", "radiance", "multiplier", "demand"]
+    assert df.attrs["res"] == 9
