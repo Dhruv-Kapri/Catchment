@@ -9,11 +9,12 @@ The three notebooks ran the chain on the slice (`00-demand`, `01-reach`, `02-pla
 runs, on the placeholder network, at the default scenario (promise 10, multiplier 1.4, capacity 2,364 orders a day).
 
 - **Hex resolution: H3 res 9.** It is the finest tried, and it fits the budget. Res 8 is cheaper but its candidate
-  sites reach only 96.0% of the slice's demand at the default scenario; a res-8 hex (about 0.74 km²) is too coarse for
-  a catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table pairs
-  within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to 3.1-5.6 s
-  (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair count, solved in
-  1.2 s. Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took 19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table. Rules out res 8
+  sites reach only 96.0% of the slice's demand at the default scenario; a res-8 hex (about 0.74 km²) is too coarse
+  for a catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table
+  pairs within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to
+  3.1-5.6 s (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair
+  count, solved in 1.2 s. Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took
+  19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table. Rules out res 8
   unless that measurement misses the bar even after cutting X.
 - **Candidate sites: one per hex, the top 30% of the area's hexes by Overture places count**, the hex centre snapped
   to the nearest road (ties by demand; hexes with no places never qualify). 1,458 sites in the area, 554 in the slice.
@@ -30,8 +31,8 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
 - **CP-SAT against greedy:** they tie on the main network at N = 3 (5,599 orders a day against 1,090 for the existing
   stores alone). Across ten network placements CP-SAT wins 2 and ties 8 (mean +0.7%, best +4.6%), and on the slice it
   gains 0.6% at N = 5 and 3.2% at N = 10. Greedy is a strong baseline for a few stores; the gap grows with N.
-- **Correction: a default-scenario catchment is 4.4-6.2 km²** (40-57 res-9 hexes, 889-1,411 orders a day of demand), not the
-  ~17 km² the slice entry below assumed: the promise leaves 5 free-flow minutes after the multiplier and the
+- **Correction: a default-scenario catchment is 4.4-6.2 km²** (40-57 res-9 hexes, 889-1,411 orders a day of demand),
+  not the ~17 km² the slice entry below assumed: the promise leaves 5 free-flow minutes after the multiplier and the
   pick-and-pack allowance. The slice still holds many catchments, so the slice stands.
 - **Open, carried into stages 1-2:** about one short pair in seven is inflated by snapping onto the wrong
   carriageway (`01-reach`). Sized by orders, the placeholder network leaves 11,105 of the slice's 16,523 orders a day on
@@ -43,9 +44,9 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
 
 ## 2026-10-29: Explore (stage 0.5) model and slice
 
-- **Slice: about 80 km², old Gurugram (sectors 4-14, Sadar) to Golf Course Road / Sohna Road.** A
-  10-min catchment is about 17 km² (wrong: 4.4-6.2 km², see the results entry above), so "a few km²" would make every site reach every hex and give
-  nothing to extrapolate from. Rules out a slice smaller than several catchments.
+- **Slice: about 80 km², old Gurugram (sectors 4-14, Sadar) to Golf Course Road / Sohna Road.** A 10-min catchment
+  is about 17 km² (wrong: 4.4-6.2 km², see the results entry above), so "a few km²" would make every site reach
+  every hex and give nothing to extrapolate from. Rules out a slice smaller than several catchments.
 - **Demand = households × affluence multiplier × capture share.** Households = population ÷ one
   stated household size, since capture share is per household and the brief reports households
   covered. The affluence multiplier is VIIRS radiance ranked within the area and mapped to labelled
