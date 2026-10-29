@@ -13,7 +13,7 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
   a catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table pairs
   within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to 3.1-5.6 s
   (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair count, solved in
-  1.2 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table. Rules out res 8
+  1.2 s. Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took 19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table. Rules out res 8
   unless that measurement misses the bar even after cutting X.
 - **Candidate sites: one per hex, the top 30% of the area's hexes by Overture places count**, the hex centre snapped
   to the nearest road (ties by demand; hexes with no places never qualify). 1,458 sites in the area, 554 in the slice.
@@ -22,7 +22,8 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
   the resolution: X = 10% reaches 96.0% with a third of the pairs (extrapolated 1.5-1.8 s).
 - **CP-SAT formulation: assignment variables only for sites whose catchment can exceed capacity.** The plain model
   (a variable per site × hex pair) stalls with the trivial bound (9-22% below the optimum after 20 s). The used model
-  has the same optimum and solves the slice to proven optimality in 0.4 s (N = 3) and 1.3 s (N = 10). At the default
+  has the same optimum (checked where capacity binds: res 8 at 800 orders a day, both models proven optimal at the same
+  value) and solves the slice to proven optimality in 0.4 s (N = 3) and 1.3 s (N = 10). At the default
   capacity no site binds (largest catchment demand 1,981 against 2,364), so the default scenario is maximum coverage.
   **Capacity that binds is slow**: at 1,000 orders a day, CP-SAT is still 38% from its bound after 20 s. The capacity
   lever's range, or a faster model for that case, needs a decision before stage 3.
@@ -43,7 +44,7 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
 ## 2026-10-29: Explore (stage 0.5) model and slice
 
 - **Slice: about 80 km², old Gurugram (sectors 4-14, Sadar) to Golf Course Road / Sohna Road.** A
-  10-min catchment is about 17 km², so "a few km²" would make every site reach every hex and give
+  10-min catchment is about 17 km² (wrong: 4.4-6.2 km², see the results entry above), so "a few km²" would make every site reach every hex and give
   nothing to extrapolate from. Rules out a slice smaller than several catchments.
 - **Demand = households × affluence multiplier × capture share.** Households = population ÷ one
   stated household size, since capture share is per household and the brief reports households

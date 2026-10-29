@@ -37,8 +37,8 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 - **Done when:** all three notebooks run top to bottom on the slice, the hex resolution and candidate
   site rule are recorded, and the expected table size and solve time for the full area are written up.
 - **Done 2026-10-29:** H3 res 9; candidate sites are the top 30% of the area's hexes by places count (1,458).
-  Full area extrapolated to about 1.4 M table pairs (17 MB) and a CP-SAT solve of 3.1-5.6 s at N = 10, so the
-  ≤ 10 s bar looks reachable; stage 1 measures it. CP-SAT ties greedy at N = 3 on the slice and leads by 3% at
+  Full area extrapolated to about 1.4 M table pairs (17 MB) and a CP-SAT solve of 3.1-5.6 s at N = 10 (res 8:
+  0.04 s), so the ≤ 10 s bar looks reachable at res 9; stage 1 measures it. Solve time grows with N. CP-SAT ties greedy at N = 3 on the slice and leads by 3% at
   N = 10. A capacity that binds solves slowly, an open point for the capacity lever (see
   [decisions](decisions.md)).
 
