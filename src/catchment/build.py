@@ -57,8 +57,8 @@ def build_reach_stage(polygon, args, paths):
     seconds = time.perf_counter() - t0
     for df, path in zip((candidates, table), paths):
         write_parquet(df, path)
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1 if sys.platform == "darwin" else 1024)   # bytes on macOS, KiB on Linux
-    peak = getattr(router, "peak_bytes", None)
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == "darwin" else 1024)   # bytes on macOS, KiB on Linux
+    peak = router.peak_bytes
     print(f"  {len(candidates):,} candidate sites, {len(table):,} pairs within {assumptions.MAX_PAIR_MIN} min, "
           f"against 0.5's extrapolation of about {EXPLORE_PAIRS / 1e6:.2f} M pairs", file=sys.stderr)
     print(f"  wall time {seconds:,.0f} s (OSRM build and serve included); this process's peak RSS {rss / 1e6:,.0f} MB; "

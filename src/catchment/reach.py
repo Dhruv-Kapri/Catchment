@@ -50,6 +50,7 @@ def build_reach(polygon, demand, places, res, x_pct, router):
 class OsrmRouter:
     def __init__(self, url="http://localhost:5001"):
         self.url, self.session = url, requests.Session()
+        self.peak_bytes = None   # osrm-routed's peak memory, set by served_osrm before it stops the container
 
     def snap(self, lons, lats, k=1):
         """The k nearest road points of each point: arrays (n, k) of snapped lon, lat and distance in metres."""
@@ -79,8 +80,11 @@ class OsrmRouter:
 
 
 def _container_peak_bytes(name):
-    r = subprocess.run(["docker", "exec", name, "cat", "/sys/fs/cgroup/memory.peak"], capture_output=True, text=True)
-    return int(r.stdout) if r.returncode == 0 else None
+    try:
+        r = subprocess.run(["docker", "exec", name, "cat", "/sys/fs/cgroup/memory.peak"], capture_output=True, text=True)
+        return int(r.stdout) if r.returncode == 0 else None
+    except (OSError, ValueError):
+        return None
 
 
 @contextlib.contextmanager
@@ -95,12 +99,18 @@ def served_osrm(data_dir, port=5001, name="catchment-osrm"):
         print(r.stdout + r.stderr, end="", file=sys.stderr)
         r.check_returncode()
 
+    def stop():
+        router.peak_bytes = _container_peak_bytes(name)
+        osrm_sh("stop")
+
     router = OsrmRouter(f"http://localhost:{port}")
     try:
         if not (data_dir / "osrm" / "osm.osrm.hsgr").exists():
             osrm_sh("build")
         osrm_sh("serve")
         yield router
-    finally:
-        router.peak_bytes = _container_peak_bytes(name)
-        osrm_sh("stop")
+    except BaseException:
+        with contextlib.suppress(Exception):   # a failed stop must not hide the error that got us here
+            stop()
+        raise
+    stop()

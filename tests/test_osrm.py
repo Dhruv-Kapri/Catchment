@@ -21,6 +21,18 @@ def test_script_without_arguments_prints_usage_and_exits_2():
     assert "usage:" in r.stderr and "build|serve|stop" in r.stderr
 
 
+def test_a_failing_stop_does_not_hide_the_error_in_the_block(tmp_path, monkeypatch):
+    script = tmp_path / "osrm.sh"
+    script.write_text('#!/bin/sh\n[ "$1" = stop ] && exit 1\nexit 0\n')
+    script.chmod(0o755)
+    (tmp_path / "osrm").mkdir()
+    (tmp_path / "osrm" / "osm.osrm.hsgr").touch()
+    monkeypatch.setattr(reach, "OSRM_SH", script)
+    with pytest.raises(KeyError):
+        with served_osrm(tmp_path, name="catchment-osrm-no-such-container"):
+            raise KeyError("the real error")
+
+
 # ---- the real router, against a tiny road fixture in Docker ----
 
 ROADS_OSM = Path(__file__).parent / "fixtures" / "roads.osm"
