@@ -17,6 +17,8 @@ from catchment import assumptions
 
 OSRM_SH = Path(__file__).resolve().parents[2] / "osrm" / "osrm.sh"
 
+CHUNK_SRC, CHUNK_DST = 50, 950   # one /table request; osrm-routed runs with --max-table-size 1000
+
 
 def n_top(x_pct, n_hexes, n_with_places):
     """Candidate site count: the top X% of the area's hexes (rounded up, exactly), only those with a place."""
@@ -60,7 +62,20 @@ class OsrmRouter:
         return out[0], out[1], out[2]
 
     def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
-        return np.full((len(src_lons), len(dst_lons)), np.nan, dtype=np.float32)
+        """Free-flow minutes, sources x destinations, float32, NaN where there is no route. Requests are chunked."""
+        out = np.full((len(src_lons), len(dst_lons)), np.nan, dtype=np.float32)
+        for i in range(0, len(src_lons), CHUNK_SRC):
+            s = slice(i, i + CHUNK_SRC)
+            for j in range(0, len(dst_lons), CHUNK_DST):
+                d = slice(j, j + CHUNK_DST)
+                ns, nd = len(src_lons[s]), len(dst_lons[d])
+                coords = ";".join(f"{x:.6f},{y:.6f}" for x, y in zip([*src_lons[s], *dst_lons[d]], [*src_lats[s], *dst_lats[d]]))
+                params = {"sources": ";".join(map(str, range(ns))), "destinations": ";".join(map(str, range(ns, ns + nd))),
+                          "annotations": "duration"}
+                r = self.session.get(f"{self.url}/table/v1/driving/{coords}", params=params, timeout=300)
+                r.raise_for_status()
+                out[s, d] = np.array(r.json()["durations"], dtype=float) / 60   # null -> NaN
+        return out
 
 
 def _container_peak_bytes(name):

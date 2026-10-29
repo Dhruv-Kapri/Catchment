@@ -18,6 +18,8 @@ def test_script_without_arguments_prints_usage_and_exits_2():
 
 import shutil
 
+import numpy as np
+
 import pytest
 
 from catchment.reach import served_osrm
@@ -81,3 +83,13 @@ def test_snap_puts_an_off_road_point_on_the_road(road_data):
     assert s_lon.shape == s_lat.shape == dist.shape == (1, 1)
     assert s_lat[0, 0] == pytest.approx(28.4500, abs=1e-5) and 77.0300 <= s_lon[0, 0] <= 77.0310
     assert 25 < dist[0, 0] < 40
+
+
+@docker
+@needs_docker
+def test_minutes_along_the_road_are_positive_and_finite(road_data):
+    with served_osrm(road_data, PORT, NAME) as router:
+        m = router.minutes([77.0280, 77.0300], [28.4500, 28.4480], [77.0320], [28.4500])
+    assert m.shape == (2, 1) and m.dtype == np.float32
+    assert np.isfinite(m).all() and (m > 0).all()
+    assert 0.2 < m[0, 0] < 1.5   # 400 m of residential road
