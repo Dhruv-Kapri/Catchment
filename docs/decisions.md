@@ -12,6 +12,12 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   demand at the default capture share, with that share stored alongside so a plan can rescale when the lever moves.
 - **Labelled assumptions live in one module** (household size, multiplier bounds, the four calibration inputs,
   pick-and-pack, the 17 min cap), each with source, date and status, so notebooks and later the UI show the same table.
+- **The demand build runs natively at `--res`** (pixels binned, radiance sampled and ranked, capture share calibrated at
+  that resolution), not as 00-demand's sum of res-9 children. Res 9 reproduces 00-demand exactly; res 8 drops the
+  population of res-8 hexes whose centre is outside the area (941,794 households against 955,163), so res-8 and res-9
+  totals are not comparable. Res 8 is only the solve-time fallback.
+- **The assumptions module also holds 02-plan's table** (default scenario, N, capacity, placeholder network, solver),
+  copied as the 0.5 values; stage 2 reads them from there.
 - **OSRM moves to a top-level `osrm/`** (`osrm.sh`, `two-wheeler.lua`); `catchment-build reach` builds the graph if
   missing, serves it and stops it.
 - **Far-carriageway snaps are fixed, not just measured:** candidate sites and hex centres each snap to their two
