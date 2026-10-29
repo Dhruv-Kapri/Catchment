@@ -168,3 +168,11 @@ def test_write_sheet_raises_when_existing_routes_differ(tmp_path):
             write_sheet(other, path)
     with pytest.raises(ValueError):
         write_sheet(routes.iloc[:3], path)
+
+
+def test_write_sheet_keeps_a_sheet_drawn_from_float32_minutes(tmp_path):
+    table, cands, hexes = make()
+    routes = draw_routes(table.astype({"minutes": "float32"}), cands, hexes, no_bad())   # OsrmRouter's dtype
+    path = tmp_path / "spot-check.csv"
+    write_sheet(routes, path)
+    assert write_sheet(routes, path) is False
