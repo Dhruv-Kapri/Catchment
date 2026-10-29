@@ -99,7 +99,7 @@ def test_snap_puts_an_off_road_point_on_the_road(road_data):
 @docker
 @needs_docker
 def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(road_data):
-    lon, lat = 77.03055, 28.45995   # 5.5 m south of the eastbound carriageway (lat 28.4600); the westbound is at 28.4601
+    lon, lat = 77.0310, 28.45995   # 5.5 m south of the eastbound carriageway (lat 28.4600); the westbound is at 28.4601
     with served_osrm(road_data, PORT, NAME) as router:
         s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
     assert s_lon.shape == s_lat.shape == dist.shape == (1, 2)

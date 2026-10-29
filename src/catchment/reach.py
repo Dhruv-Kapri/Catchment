@@ -49,26 +49,23 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     return candidates, table
 
 
-def _nearest_roads(waypoints, k):
-    """The nearest segment of each of the k nearest roads, a road after the first only within SECOND_ROAD_MAX_M. A road is a nearest segment plus same-named segments
-    reaching it through shared nodes: a carriageway, not the crossing road (other name) or its twin (no shared node)."""
-    roads, taken = [], set()
-    for i, w in enumerate(waypoints):
-        if i in taken:
-            continue
-        if roads and w["distance"] > assumptions.SECOND_ROAD_MAX_M:
-            break
-        roads.append(w)
-        nodes, grew = set(w["nodes"]), True
-        while grew:
-            grew = False
-            for j, v in enumerate(waypoints):
-                if j not in taken and v["name"] == w["name"] and nodes & set(v["nodes"]):
-                    taken.add(j)
-                    nodes |= set(v["nodes"])
-                    grew = True
-        if len(roads) == k:
-            break
+def _nearest_roads(waypoints, x, y, k):
+    """The nearest hit, and for k > 1 the nearest later hit within SECOND_ROAD_MAX_M that lies more than SECOND_ROAD_GAP_M
+    from it along the direction from the point to it: a parallel carriageway, where the next segment of the same one lies
+    across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap from the point."""
+    if not waypoints:
+        return []
+    first, roads = waypoints[0], [waypoints[0]]
+    if k > 1:
+        to_m = np.array([111_320 * math.cos(math.radians(y)), 110_574])   # degrees to metres, local equirectangular
+        axis = (np.array(first["location"]) - [x, y]) * to_m / max(first["distance"], 1e-9)
+        for w in waypoints[1:]:
+            if w["distance"] > assumptions.SECOND_ROAD_MAX_M:
+                break
+            along = abs((np.array(w["location"]) - first["location"]) * to_m @ axis) if first["distance"] >= 1 else w["distance"]
+            if along > assumptions.SECOND_ROAD_GAP_M:
+                roads.append(w)
+                break
     return roads
 
 
@@ -84,7 +81,7 @@ class OsrmRouter:
             r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
                                  params={"number": 1 if k == 1 else NEAREST_SEGMENTS}, timeout=300)
             r.raise_for_status()
-            roads = _nearest_roads(r.json()["waypoints"], k)
+            roads = _nearest_roads(r.json()["waypoints"], x, y, k)
             for j in range(k if roads else 0):
                 w = roads[min(j, len(roads) - 1)]   # a missing road repeats the nearest
                 out[:, i, j] = *w["location"], w["distance"]
