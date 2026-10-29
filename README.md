@@ -34,7 +34,9 @@ uv run jupyter nbconvert --to notebook --execute notebooks/01-reach.ipynb --outp
 uv run jupyter nbconvert --to notebook --execute notebooks/02-plan.ipynb --output /tmp/02-plan.ipynb       # about 3 min
 ```
 
-`01-reach` runs `notebooks/osrm.sh build|serve|stop` itself. It was run with Docker's memory limit at
+`01-reach` ran the OSRM script itself. The script and the two-wheeler profile have since moved to `osrm/`
+(`osrm/osrm.sh build|serve|stop`); the notebook is kept as the stage 0.5 record and still calls them in
+`notebooks/`, so it no longer re-runs as committed. It was run with Docker's memory limit at
 3.82 GiB of 8 GiB; peak use was at most about 0.5 GB (the notebook prints it).
 
 ## The problem

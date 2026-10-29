@@ -20,7 +20,7 @@ uv run nbstripout --install                # once per clone: strip notebook outp
 uv run jupyter nbconvert --to notebook --execute notebooks/NN-name.ipynb --output /tmp/NN-name.ipynb   # run a notebook headless; it rewrites notebooks/figures/
 uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources into data/ (osm clips with osmium: `brew install osmium-tool`; VIIRS needs a LAADS DAAC token as LAADS_TOKEN in .env, see .env.example)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
-notebooks/osrm.sh build|serve|stop       # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001
+osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001
 ```
 
 ## What gets built

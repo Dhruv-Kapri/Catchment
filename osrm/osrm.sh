@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build and run the two-wheeler OSRM graph in Docker.
-#   notebooks/osrm.sh build   extract + contract (CH) data/osm.osm.pbf with notebooks/two-wheeler.lua into data/osrm/
-#   notebooks/osrm.sh serve   osrm-routed on http://localhost:5001 as container catchment-osrm (replaces a running one)
-#   notebooks/osrm.sh stop    remove the container
+#   osrm/osrm.sh build   extract + contract (CH) data/osm.osm.pbf with osrm/two-wheeler.lua into data/osrm/
+#   osrm/osrm.sh serve   osrm-routed on http://localhost:5001 as container catchment-osrm (replaces a running one)
+#   osrm/osrm.sh stop    remove the container
 set -euo pipefail
 
 IMAGE="ghcr.io/project-osrm/osrm-backend:v26.10.0-debian"   # linux/arm64 build; pinned
@@ -10,7 +10,7 @@ NAME="catchment-osrm"
 PORT=5001                                                    # macOS AirPlay often holds 5000
 
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-PROFILE="$ROOT/notebooks/two-wheeler.lua"
+PROFILE="$ROOT/osrm/two-wheeler.lua"
 PBF="$ROOT/data/osm.osm.pbf"
 OUT="$(mkdir -p "$ROOT/data/osrm" && cd -P "$ROOT/data/osrm" && pwd -P)"   # data may be a symlink; docker needs the real path
 STATS="$OUT/build-stats.tsv"
@@ -51,7 +51,7 @@ case "${1:-}" in
     cat "$STATS"
     ;;
   serve)
-    [ -f "$OUT/osm.osrm.hsgr" ] || { echo "osrm.sh: no graph in $OUT; run 'notebooks/osrm.sh build'" >&2; exit 1; }
+    [ -f "$OUT/osm.osrm.hsgr" ] || { echo "osrm.sh: no graph in $OUT; run 'osrm/osrm.sh build'" >&2; exit 1; }
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     # --max-table-size: /table accepts at most this many coordinates (default 100); the travel-time table is built in chunks of up to this size
     docker run -d --name "$NAME" -p "$PORT:5000" -v "$OUT:/data:ro" "$IMAGE" \
