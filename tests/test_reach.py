@@ -91,3 +91,18 @@ def test_permanently_closed_places_do_not_count():
     candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())
     assert list(candidates.index) == [H[1], H[0]]   # tied at 1 place each; H[2] has only closed places
     assert list(candidates.places) == [1, 1]
+
+
+def pairs(table):
+    return {(c, h): m for c, h, m in zip(table.candidate, table.hex, table.minutes)}
+
+
+def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = places_in({H[0]: 2, H[1]: 3})
+    times = {(H[1], H[0]): 17.0, (H[1], H[2]): 17.5, (H[0], H[4]): 100.0}
+    _, table = build_reach(AREA, demand, places, RES, 30, FakeRouter(times))   # candidates H[1], H[0]
+    got = pairs(table)
+    assert got[(H[1], H[0])] == 17.0
+    assert (H[1], H[2]) not in got and (H[0], H[4]) not in got
+    assert len(got) == 12   # 2 candidates x 7 hexes, less the 2 over the cap
