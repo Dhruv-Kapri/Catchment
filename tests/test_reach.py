@@ -103,6 +103,6 @@ def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept():
     times = {(H[1], H[0]): 17.0, (H[1], H[2]): 17.5, (H[0], H[4]): 100.0}
     _, table = build_reach(AREA, demand, places, RES, 30, FakeRouter(times))   # candidates H[1], H[0]
     got = pairs(table)
-    assert got[(H[1], H[0])] == 17.0
+    assert got.get((H[1], H[0])) == 17.0
     assert (H[1], H[2]) not in got and (H[0], H[4]) not in got
     assert len(got) == 12   # 2 candidates x 7 hexes, less the 2 over the cap
