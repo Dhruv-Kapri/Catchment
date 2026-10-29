@@ -29,6 +29,7 @@ BM_LAYER = "HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/NearNadir_Composite_Snow_
 BM_NODATA = -9999.0
 OVERTURE_RELEASE = "2026-10-21.0"
 HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
+LAADS_TOKEN_PAGE = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
 
 
 class SourceError(Exception):
@@ -120,8 +121,9 @@ def check_hdf5(path):
     with open(path, "rb") as f:
         if f.read(8) != HDF5_SIGNATURE:
             raise ValueError(
-                f"{path} is not HDF5 (probably an HTML login page): EARTHDATA_TOKEN is "
-                "invalid or expired; generate a new one at urs.earthdata.nasa.gov"
+                f"{path} is not HDF5 (LAADS sent its login page): LAADS_TOKEN was not accepted. "
+                "It must be a LAADS DAAC token (not an Earthdata EDL token) and not expired; "
+                f"generate one at {LAADS_TOKEN_PAGE}"
             )
 
 
@@ -162,11 +164,11 @@ def fetch_worldpop(polygon):
 
 
 def fetch_viirs(polygon):
-    token = os.environ.get("EARTHDATA_TOKEN")
+    token = os.environ.get("LAADS_TOKEN")
     if not token:
         raise SourceError(
-            "EARTHDATA_TOKEN is not set. Generate a token at urs.earthdata.nasa.gov "
-            "(Generate Token) and put EARTHDATA_TOKEN=... in .env"
+            "LAADS_TOKEN is not set. Log in to LAADS with Earthdata, generate a LAADS DAAC "
+            f"token at {LAADS_TOKEN_PAGE} and put LAADS_TOKEN=... in .env"
         )
     lon, lat = polygon.centroid.x, polygon.centroid.y
     h, v = black_marble_tile(lon, lat)

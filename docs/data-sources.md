@@ -18,6 +18,13 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 - **Verified 2026-10-28:** the WorldPop server advertises `Accept-Ranges: bytes` but ignores `Range`
   and answers 200 with the full body, so windowed reads over HTTP fail; the national file is downloaded
   whole, then clipped.
+- **Verified 2026-10-29:** LAADS downloads need a **LAADS DAAC token** (generated on
+  ladsweb after logging in); an Earthdata (EDL) token was redirected to the LAADS login for every file.
+  The WorldPop server delivered at 35-85 KB/s (the national file took about 2 hours).
+- **Verified 2026-10-29** (real tile): `NearNadir_Composite_Snow_Free` is float32 in nW/(cm² sr),
+  `_FillValue` -999.9, scale 1, offset 0; the tile's lat/lon arrays start at 30.0 / 70.0.
+- **Measured 2026-10-29**, area only: WorldPop total **4.40 million** people; Overture **81,939** places
+  and **389,303** buildings (peak memory about 1 GB to fetch).
 - Overture features are kept if they intersect the area (not cut at its boundary).
 
 ## Checked and not usable for competitor stores
