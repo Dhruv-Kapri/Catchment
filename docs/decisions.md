@@ -37,10 +37,13 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
 - **Open, carried into stages 1-2:** about one short pair in seven is inflated by snapping onto the wrong
   carriageway (`01-reach`). Sized by orders, the placeholder network leaves 11,105 of the slice's 16,523 orders a day on
   hexes no brand reaches; the stage 2 generator must choose whether store counts follow orders or reach.
-- **The defaults rest on unverified figures.** The capture share, `ORDERS_PER_STORE_DAY` (about 1,576) and so the
-  default capacity come from the Blinkit order and store counts, the NCR dark-store count and the NCR population. All
-  four are still **Unverified** in `00-demand` (secondary reports, a search summary, memory). Verify them before the
-  numbers are shown in the product.
+- **The defaults rest on four verified figures, with caveats.** The capture share, `ORDERS_PER_STORE_DAY` (about
+  1,576) and so the default capacity come from the Blinkit order and store counts, the NCR dark-store count and the
+  NCR population. All four were verified against primary sources on 2026-10-29 with no change in value, so the numbers
+  and "capacity never binds at the default" stand. Caveats remain: the population is a WUP2018 projection (WUP 2025
+  reportedly gives about 30.2 M, not yet checked at source, which would raise orders per household per day, and so the
+  capture share, by about 15%); Savills' count is a best-effort estimate as of Oct 2025; Blinkit's orders per store
+  stand in for every brand.
 
 ## 2026-10-29: Explore (stage 0.5) model and slice
 
