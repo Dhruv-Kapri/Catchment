@@ -6,9 +6,11 @@ import sys
 from catchment.area import load_area
 from catchment.demand import build_demand
 from catchment.fetch import DATA
+from catchment.reach import build_reach, served_osrm
 
 WORLDPOP = DATA / "worldpop.tif"
 VIIRS = DATA / "viirs.tif"
+PLACES = DATA / "overture_places.parquet"
 
 
 def build_demand_stage(polygon, res, path):
