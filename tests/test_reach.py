@@ -154,6 +154,17 @@ def test_a_pair_keeps_the_fast_time_to_the_hexs_far_side_snap():
     assert pairs(table)[(H[0], H[2])] == 2.0
 
 
+def test_one_finite_time_among_four_unroutable_ones_is_kept_and_four_unroutable_are_absent():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    nan = np.nan
+    times = {(H[0], sf, H[2], df): nan for sf in (False, True) for df in (False, True)} | {(H[0], True, H[2], True): 4.0}
+    times |= {(H[0], sf, H[3], df): nan for sf in (False, True) for df in (False, True)}
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, FarSideRouter(times))
+    got = pairs(table)
+    assert got.get((H[0], H[2])) == 4.0
+    assert (H[0], H[3]) not in got
+
+
 def test_unroutable_pairs_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     places = places_in({H[0]: 2, H[1]: 3})
