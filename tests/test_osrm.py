@@ -109,6 +109,15 @@ def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(road_
 
 @docker
 @needs_docker
+def test_a_point_on_a_carriageway_still_finds_the_other_one(road_data):
+    with served_osrm(road_data, PORT, NAME) as router:
+        s_lon, s_lat, dist = router.snap([77.0310], [28.4600], k=2)   # exactly on a node of the eastbound carriageway
+    assert s_lat[0] == pytest.approx([28.4600, 28.4601], abs=2e-6)
+    assert dist[0] == pytest.approx([0, 11.1], abs=0.5)
+
+
+@docker
+@needs_docker
 def test_a_second_road_further_than_100_m_is_not_one_and_the_nearest_repeats(road_data):
     lon, lat = 77.04055, 28.4501   # ~11 m north of the island road (way 12); every other road is over 700 m away
     with served_osrm(road_data, PORT, NAME) as router:
