@@ -58,3 +58,11 @@ def test_existing_output_is_skipped(env, capsys):
     out.write_bytes(b"sentinel")
     assert build.main(["demand"]) == 0
     assert out.read_bytes() == b"sentinel" and "skipping" in capsys.readouterr().err
+
+
+def test_force_rebuilds_an_existing_output(env):
+    out = env / "demand-r9.parquet"
+    out.write_bytes(b"sentinel")
+    assert build.main(["demand", "--force"]) == 0
+    assert out.read_bytes() != b"sentinel"
+    assert pd.read_parquet(out).attrs["res"] == 9

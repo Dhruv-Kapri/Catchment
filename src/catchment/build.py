@@ -18,7 +18,7 @@ def main(argv=None):
     ap.add_argument("--force", action="store_true", help="rebuild outputs that exist")
     args = ap.parse_args(argv)
     path = DATA / f"demand-r{args.res}.parquet"
-    if path.exists():
+    if not args.force and path.exists():
         print(f"demand: {path.name} exists, skipping", file=sys.stderr)
         return 0
     df = build_demand(load_area(), args.res, WORLDPOP, VIIRS)
