@@ -1,5 +1,8 @@
+import contextlib
 from pathlib import Path
 
+import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -7,9 +10,25 @@ from catchment import assumptions, build
 from conftest import POLY, make_rasters
 
 
+class OneMinuteRouter:
+    """Snaps every point to itself; every pair is a minute apart."""
+    peak_bytes = None
+    def snap(self, lons, lats, k=1):
+        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        return lons, lats, np.zeros_like(lons)
+
+    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+        return np.ones((len(src_lons), len(dst_lons)), dtype=np.float32)
+
+
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     wp, vi = make_rasters(tmp_path)
+    places = tmp_path / "overture_places.parquet"
+    gpd.GeoDataFrame({"operating_status": [None, None, "permanently_closed"]},
+                     geometry=gpd.points_from_xy([77.05, 77.048, 77.052], [28.45, 28.452, 28.448]), crs=4326).to_parquet(places)
+    monkeypatch.setattr(build, "PLACES", places)
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(OneMinuteRouter()))
     monkeypatch.setattr(build, "DATA", tmp_path)
     monkeypatch.setattr(build, "WORLDPOP", wp)
     monkeypatch.setattr(build, "VIIRS", vi)
@@ -73,3 +92,55 @@ def test_force_rebuilds_an_existing_output(env):
 def test_default_runs_every_stage(env):
     build.main([])
     assert (env / "demand-r9.parquet").exists()
+    assert (env / "candidates-r9-x30.parquet").exists() and (env / "table-r9-x30.parquet").exists()
+
+
+def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
+    assert build.main(["reach"]) == 0
+    assert (env / "candidates-r9-x30.parquet").exists() and (env / "table-r9-x30.parquet").exists()
+    candidates = pd.read_parquet(env / "candidates-r9-x30.parquet")
+    table = pd.read_parquet(env / "table-r9-x30.parquet")
+    assert len(candidates) == 2 and list(table.columns) == ["candidate", "hex", "minutes"]
+    assert set(table.candidate) == set(candidates.index)
+
+
+def test_x_pct_writes_a_separate_file_named_by_x(env):
+    build.main(["reach"])
+    build.main(["reach", "--x-pct", "2.5"])
+    assert (env / "candidates-r9-x2.5.parquet").exists() and (env / "table-r9-x2.5.parquet").exists()
+    assert pd.read_parquet(env / "candidates-r9-x2.5.parquet").attrs["x_pct"] == 2.5
+    assert (env / "candidates-r9-x30.parquet").exists()
+
+
+def test_reach_builds_a_missing_demand_table_first(env):
+    assert not (env / "demand-r9.parquet").exists()
+    build.main(["reach"])
+    assert (env / "demand-r9.parquet").exists()
+    assert pd.read_parquet(env / "demand-r9.parquet").attrs["res"] == 9
+
+
+def test_reach_reads_an_existing_demand_table(env):
+    build.main(["demand"])
+    before = (env / "demand-r9.parquet").stat().st_mtime_ns
+    build.main(["reach"])
+    assert (env / "demand-r9.parquet").stat().st_mtime_ns == before
+
+
+def test_reach_is_skipped_only_when_both_outputs_exist(env):
+    build.main(["reach"])
+    (env / "table-r9-x30.parquet").unlink()
+    (env / "candidates-r9-x30.parquet").write_bytes(b"sentinel")
+    build.main(["reach"])
+    assert (env / "table-r9-x30.parquet").exists()
+    assert (env / "candidates-r9-x30.parquet").read_bytes() != b"sentinel"
+
+
+def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatch):
+    router = OneMinuteRouter()
+    router.peak_bytes = 123_000_000
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(router))
+    build.main(["reach"])
+    err = capsys.readouterr().err
+    assert "2 candidate sites" in err and "pairs within 17 min" in err
+    assert "against 0.5's extrapolation of about 1.40 M pairs" in err
+    assert "wall time" in err and "peak RSS" in err and "osrm-routed peak 123 MB" in err
