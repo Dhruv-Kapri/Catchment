@@ -66,3 +66,8 @@ def test_force_rebuilds_an_existing_output(env):
     assert build.main(["demand", "--force"]) == 0
     assert out.read_bytes() != b"sentinel"
     assert pd.read_parquet(out).attrs["res"] == 9
+
+
+def test_default_runs_every_stage(env):
+    build.main([])
+    assert (env / "demand-r9.parquet").exists()
