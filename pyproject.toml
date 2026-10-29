@@ -37,3 +37,6 @@ dev = [
 [project.scripts]
 catchment-fetch = "catchment.fetch:main"
 catchment-build = "catchment.build:main"
+
+[tool.pytest.ini_options]
+markers = ["docker: needs a running Docker daemon (deselect with -m 'not docker')"]

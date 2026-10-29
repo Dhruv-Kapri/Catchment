@@ -1,7 +1,11 @@
 """Reach: candidate sites and the travel-time table for the area, from a router."""
 import contextlib
 import math
+import os
+import subprocess
+import sys
 from fractions import Fraction
+from pathlib import Path
 
 import h3
 import numpy as np
@@ -9,6 +13,8 @@ import pandas as pd
 import shapely
 
 from catchment import assumptions
+
+OSRM_SH = Path(__file__).resolve().parents[2] / "osrm" / "osrm.sh"
 
 
 def n_top(x_pct, n_hexes, n_with_places):
@@ -50,6 +56,29 @@ class OsrmRouter:
         return np.full((len(src_lons), len(dst_lons)), np.nan, dtype=np.float32)
 
 
+def _container_peak_bytes(name):
+    r = subprocess.run(["docker", "exec", name, "cat", "/sys/fs/cgroup/memory.peak"], capture_output=True, text=True)
+    return int(r.stdout) if r.returncode == 0 else None
+
+
 @contextlib.contextmanager
 def served_osrm(data_dir, port=5001, name="catchment-osrm"):
-    yield OsrmRouter(f"http://localhost:{port}")
+    """Build the graph in data_dir/osrm if missing, serve it, yield an OsrmRouter; always stop the container.
+    Before stopping it sets router.peak_bytes to the container's peak memory (None if unreadable)."""
+    data_dir = Path(data_dir)
+    env = {**os.environ, "OSRM_DATA": str(data_dir), "OSRM_PORT": str(port), "OSRM_NAME": name}
+
+    def osrm_sh(cmd):
+        r = subprocess.run([str(OSRM_SH), cmd], env=env, capture_output=True, text=True)
+        print(r.stdout + r.stderr, end="", file=sys.stderr)
+        r.check_returncode()
+
+    router = OsrmRouter(f"http://localhost:{port}")
+    try:
+        if not (data_dir / "osrm" / "osm.osrm.hsgr").exists():
+            osrm_sh("build")
+        osrm_sh("serve")
+        yield router
+    finally:
+        router.peak_bytes = _container_peak_bytes(name)
+        osrm_sh("stop")

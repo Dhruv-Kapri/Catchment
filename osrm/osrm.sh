@@ -3,16 +3,18 @@
 #   osrm/osrm.sh build   extract + contract (CH) data/osm.osm.pbf with osrm/two-wheeler.lua into data/osrm/
 #   osrm/osrm.sh serve   osrm-routed on http://localhost:5001 as container catchment-osrm (replaces a running one)
 #   osrm/osrm.sh stop    remove the container
+# Overrides (env), defaults in brackets: OSRM_DATA [<repo>/data], OSRM_PORT [5001], OSRM_NAME [catchment-osrm]
 set -euo pipefail
 
 IMAGE="ghcr.io/project-osrm/osrm-backend:v26.10.0-debian"   # linux/arm64 build; pinned
-NAME="catchment-osrm"
-PORT=5001                                                    # macOS AirPlay often holds 5000
+NAME="${OSRM_NAME:-catchment-osrm}"
+PORT="${OSRM_PORT:-5001}"                                    # macOS AirPlay often holds 5000
 
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 PROFILE="$ROOT/osrm/two-wheeler.lua"
-PBF="$ROOT/data/osm.osm.pbf"
-OUT="$(mkdir -p "$ROOT/data/osrm" && cd -P "$ROOT/data/osrm" && pwd -P)"   # data may be a symlink; docker needs the real path
+DATA="${OSRM_DATA:-$ROOT/data}"
+PBF="$DATA/osm.osm.pbf"
+OUT="$(mkdir -p "$DATA/osrm" && cd -P "$DATA/osrm" && pwd -P)"   # data may be a symlink; docker needs the real path
 STATS="$OUT/build-stats.tsv"
 
 now() { perl -MTime::HiRes=time -e 'printf "%.1f\n", time'; }
