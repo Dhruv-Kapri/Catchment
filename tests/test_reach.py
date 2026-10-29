@@ -13,12 +13,12 @@ H = sorted(h3.grid_disk(CENTRE, 1))   # seven hexes in the area: H[0] .. H[6]
 
 
 class FakeRouter:
-    """Snaps every point to itself; minutes are 1.0 unless `times` has (source hex, destination hex)."""
+    """Snaps every point to itself (k times); minutes are 1.0 unless `times` has (source hex, destination hex)."""
     def __init__(self, times=None):
         self.times = times or {}
 
     def snap(self, lons, lats, k=1):
-        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        lons, lats = np.repeat(np.asarray(lons, float)[:, None], k, axis=1), np.repeat(np.asarray(lats, float)[:, None], k, axis=1)
         return lons, lats, np.zeros_like(lons)
 
     def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
@@ -29,14 +29,34 @@ class FakeRouter:
 
 
 class ShiftingRouter(FakeRouter):
-    """Snaps every point 0.00005 degrees east, 12.5 m away, and records the sources it is asked for."""
+    """Snaps every point (k times) 0.00005 degrees east, 12.5 m away, and records the sources it is asked for."""
     def snap(self, lons, lats, k=1):
-        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        lons, lats, _ = super().snap(lons, lats, k)
         return lons + 0.00005, lats, np.full_like(lons, 12.5)
 
     def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
         self.sources = (list(src_lons), list(src_lats))
         return super().minutes(src_lons, src_lats, dst_lons, dst_lats)
+
+
+FAR, SLOW = 0.00005, 9.0   # a far-side snap sits FAR degrees (~5 m, same hex) east of the point
+
+
+class FarSideRouter(FakeRouter):
+    """Snap j of a point is j * FAR degrees east of it. A pair takes SLOW minutes unless `times` has
+    (source hex, source is a far-side snap, destination hex, destination is a far-side snap)."""
+    def snap(self, lons, lats, k=1):
+        lons = np.asarray(lons, float)[:, None] + FAR * np.arange(k)
+        lats = np.asarray(lats, float)[:, None] + np.zeros(k)
+        return lons, lats, np.zeros_like(lons)
+
+    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+        def side(lon, lat):
+            cell = h3.latlng_to_cell(lat, lon, RES)
+            return cell, bool(abs(lon - h3.cell_to_latlng(cell)[1]) > FAR / 2)
+        src = [side(x, y) for x, y in zip(src_lons, src_lats)]
+        dst = [side(x, y) for x, y in zip(dst_lons, dst_lats)]
+        return np.array([[self.times.get((*s, *d), SLOW) for d in dst] for s in src], dtype=np.float32)
 
 
 def demand_of(values, extra=()):
@@ -120,6 +140,13 @@ def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept():
     assert len(got) == 12   # 2 candidates x 7 hexes, less the 2 over the cap
 
 
+def test_a_pair_keeps_the_fast_time_from_the_sites_far_side_snap():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    router = FarSideRouter({(H[0], False, H[2], False): SLOW, (H[0], True, H[2], False): 2.0})
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
+    assert pairs(table)[(H[0], H[2])] == 2.0
+
+
 def test_unroutable_pairs_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     places = places_in({H[0]: 2, H[1]: 3})
@@ -146,11 +173,11 @@ def test_candidates_carry_the_snapped_point_and_its_distance():
     assert site.snap_lon == lon + 0.00005 and site.snap_lat == lat and site.snap_m == 12.5
 
 
-def test_the_table_is_timed_from_the_snapped_sites():
+def test_the_table_is_timed_from_every_snap_of_the_sites():
     router = ShiftingRouter()
     candidates, _ = build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), RES, 30, router)
     lat, lon = h3.cell_to_latlng(H[0])
-    assert router.sources == ([lon + 0.00005], [lat])
+    assert router.sources == ([lon + 0.00005] * 2, [lat] * 2)   # every snap of the site, nearest first
 
 
 def test_frames_carry_res_x_pct_and_float32_minutes():

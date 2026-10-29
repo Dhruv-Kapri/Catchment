@@ -11,10 +11,10 @@ from conftest import POLY, make_rasters
 
 
 class OneMinuteRouter:
-    """Snaps every point to itself; every pair is a minute apart."""
+    """Snaps every point to itself (k times); every pair is a minute apart."""
     peak_bytes = None
     def snap(self, lons, lats, k=1):
-        lons, lats = np.asarray(lons, float)[:, None], np.asarray(lats, float)[:, None]
+        lons, lats = np.repeat(np.asarray(lons, float)[:, None], k, axis=1), np.repeat(np.asarray(lats, float)[:, None], k, axis=1)
         return lons, lats, np.zeros_like(lons)
 
     def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
