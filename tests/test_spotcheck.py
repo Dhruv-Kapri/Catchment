@@ -79,3 +79,14 @@ def test_shuffled_input_same_result():
     a = draw_routes(table, cands, hexes, bad)
     b = draw_routes(table.sample(frac=1, random_state=0).reset_index(drop=True), cands, hexes, bad.iloc[::-1])
     pd.testing.assert_frame_equal(a, b)
+
+
+def test_same_seed_same_result():
+    table, cands, hexes = make()
+    pd.testing.assert_frame_equal(draw_routes(table, cands, hexes, no_bad()), draw_routes(table, cands, hexes, no_bad(), seed=SEED))
+
+
+def test_different_seed_different_result():
+    table, cands, hexes = make()
+    a, b = draw_routes(table, cands, hexes, no_bad()), draw_routes(table, cands, hexes, no_bad(), seed=SEED + 1)
+    assert not a[["candidate", "hex"]].equals(b[["candidate", "hex"]])
