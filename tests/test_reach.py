@@ -106,3 +106,14 @@ def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept():
     assert got.get((H[1], H[0])) == 17.0
     assert (H[1], H[2]) not in got and (H[0], H[4]) not in got
     assert len(got) == 12   # 2 candidates x 7 hexes, less the 2 over the cap
+
+
+def test_unroutable_pairs_are_absent():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = places_in({H[0]: 2, H[1]: 3})
+    times = {(H[1], H[2]): np.nan, (H[0], H[4]): np.nan}
+    _, table = build_reach(AREA, demand, places, RES, 30, FakeRouter(times))
+    got = pairs(table)
+    assert (H[1], H[2]) not in got and (H[0], H[4]) not in got
+    assert len(got) == 12
+    assert not table.minutes.isna().any()
