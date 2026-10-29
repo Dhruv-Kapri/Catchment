@@ -17,6 +17,15 @@ PLACES = DATA / "overture_places.parquet"
 EXPLORE_PAIRS = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
 
 
+class MissingInput(Exception):
+    """A fetched source the stage needs is not in data/."""
+
+
+def require(paths, source):
+    if not all(p.exists() for p in paths):
+        raise MissingInput("")
+
+
 def demand_name(res):
     return f"demand-r{res}.parquet"
 
@@ -31,6 +40,7 @@ def write_parquet(df, path):
 
 
 def build_demand_stage(polygon, args, paths):
+    require([WORLDPOP, VIIRS], "worldpop viirs")
     df = build_demand(polygon, args.res, WORLDPOP, VIIRS)
     write_parquet(df, paths[0])
     print(f"  {len(df):,} hexes, {df.households.sum():,.0f} households, {df.demand.sum():,.0f} orders a day, "
@@ -87,7 +97,11 @@ def main(argv=None):
             print(f"{name}: {', '.join(p.name for p in paths)} exist, skipping (--force to rebuild)", file=sys.stderr)
             continue
         print(f"{name}: building {', '.join(p.name for p in paths)}", file=sys.stderr)
-        fn(polygon, args, paths)
+        try:
+            fn(polygon, args, paths)
+        except MissingInput as e:
+            print(f"{name}: {e}", file=sys.stderr)
+            return 1
     return 0
 
 
