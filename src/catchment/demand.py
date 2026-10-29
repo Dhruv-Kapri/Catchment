@@ -29,6 +29,8 @@ def build_demand(polygon, res=9, worldpop=WORLDPOP, viirs=VIIRS):
     df["households"] = df["population"] / assumptions.HOUSEHOLD_SIZE
 
     rad = viirs_at(df.lon, df.lat, viirs)
+    if np.isnan(rad).all():
+        raise ValueError("VIIRS has no data over the area")
     df["radiance"] = np.where(np.isnan(rad), np.nanmin(rad), rad)
     pct = df["radiance"].rank(pct=True, method="average")
     span = pct.max() - pct.min()

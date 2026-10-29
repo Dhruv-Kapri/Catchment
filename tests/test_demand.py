@@ -62,6 +62,13 @@ def test_nan_radiance_takes_the_minimum(tmp_path):
     assert df.radiance.min() >= 5.0
 
 
+def test_all_nan_radiance_fails_loudly(tmp_path):
+    wp, _ = make_rasters(tmp_path)
+    vi = write_tif(tmp_path / "vn.tif", np.full((10, 10), -9999.0), 0.002, -9999)
+    with pytest.raises(ValueError, match="VIIRS has no data"):
+        build_demand(POLY, 9, wp, vi)
+
+
 def test_multipliers_hit_bounds_and_follow_radiance(rasters):
     df = build_demand(POLY, 9, *rasters)
     assert df.multiplier.min() == pytest.approx(assumptions.M_LOW)
