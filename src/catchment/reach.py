@@ -38,8 +38,9 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     candidates = hexes[hexes["rank"] < k].sort_values("rank")[["lat", "lon", "places", "rank"]]
     snap_lon, snap_lat, snap_m = router.snap(candidates.lon.to_numpy(), candidates.lat.to_numpy(), k=snaps)
     candidates["snap_lon"], candidates["snap_lat"], candidates["snap_m"] = snap_lon[:, 0], snap_lat[:, 0], snap_m[:, 0]
-    minutes = router.minutes(snap_lon.ravel(), snap_lat.ravel(), hexes.lon.to_numpy(), hexes.lat.to_numpy())
-    minutes = minutes.reshape(len(candidates), snaps, len(hexes)).min(axis=1)
+    hex_lon, hex_lat, _ = router.snap(hexes.lon.to_numpy(), hexes.lat.to_numpy(), k=snaps)
+    minutes = router.minutes(snap_lon.ravel(), snap_lat.ravel(), hex_lon.ravel(), hex_lat.ravel())
+    minutes = minutes.reshape(len(candidates), snaps, len(hexes), snaps).min(axis=(1, 3))
     src, dst = np.nonzero(minutes <= assumptions.MAX_PAIR_MIN)   # NaN compares False, so unroutable pairs drop out
     table = pd.DataFrame({"candidate": candidates.index[src], "hex": hexes.index[dst], "minutes": minutes[src, dst]})
     for df in (candidates, table):

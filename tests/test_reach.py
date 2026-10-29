@@ -147,6 +147,13 @@ def test_a_pair_keeps_the_fast_time_from_the_sites_far_side_snap():
     assert pairs(table)[(H[0], H[2])] == 2.0
 
 
+def test_a_pair_keeps_the_fast_time_to_the_hexs_far_side_snap():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    router = FarSideRouter({(H[0], False, H[2], False): SLOW, (H[0], False, H[2], True): 2.0})
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
+    assert pairs(table)[(H[0], H[2])] == 2.0
+
+
 def test_unroutable_pairs_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     places = places_in({H[0]: 2, H[1]: 3})
