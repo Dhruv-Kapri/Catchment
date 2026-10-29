@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="hand">
+  <node id="1" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4500" lon="77.0280"/>
+  <node id="2" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4500" lon="77.0290"/>
+  <node id="3" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4500" lon="77.0300"/>
+  <node id="4" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4500" lon="77.0310"/>
+  <node id="5" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4500" lon="77.0320"/>
+  <node id="6" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4490" lon="77.0300"/>
+  <node id="7" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4480" lon="77.0300"/>
+  <node id="8" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4510" lon="77.0300"/>
+  <node id="9" version="1" timestamp="2026-10-01T00:00:00Z" lat="28.4520" lon="77.0300"/>
+  <way id="10" version="1" timestamp="2026-10-01T00:00:00Z">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <nd ref="5"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="11" version="1" timestamp="2026-10-01T00:00:00Z">
+    <nd ref="7"/>
+    <nd ref="6"/>
+    <nd ref="3"/>
+    <nd ref="8"/>
+    <nd ref="9"/>
+    <tag k="highway" v="residential"/>
+  </way>
+</osm>

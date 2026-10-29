@@ -1,4 +1,5 @@
 """Reach: candidate sites and the travel-time table for the area, from a router."""
+import contextlib
 import math
 from fractions import Fraction
 
@@ -35,3 +36,20 @@ def build_reach(polygon, demand, places, res, x_pct, router):
     for df in (candidates, table):
         df.attrs = {"res": res, "x_pct": x_pct}
     return candidates, table
+
+
+class OsrmRouter:
+    def __init__(self, url="http://localhost:5001"):
+        self.url = url
+
+    def snap(self, lons, lats, k=1):
+        shape = (len(lons), k)
+        return np.zeros(shape), np.zeros(shape), np.zeros(shape)
+
+    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+        return np.full((len(src_lons), len(dst_lons)), np.nan, dtype=np.float32)
+
+
+@contextlib.contextmanager
+def served_osrm(data_dir, port=5001, name="catchment-osrm"):
+    yield OsrmRouter(f"http://localhost:{port}")
