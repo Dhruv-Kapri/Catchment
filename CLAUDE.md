@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stage 0 (setup and fetch) done 2026-10-29; next is 0.5 Explore (notebooks). The code is
+Stage 0 (setup and fetch) done 2026-10-29; next is 0.5 Explore (notebooks), specced in GitHub issue #1
+and split into tickets #2-#6. The code is
 `src/catchment/` (`area.py`, `fetch.py`). The repo also holds the product brief (`docs/brief.md`), the staged roadmap with "done when"
 criteria (`docs/roadmap.md`), the decision log (`docs/decisions.md`), the scope cuts
 (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief and the roadmap before
@@ -13,7 +14,7 @@ starting any work; record new commands here.
 ## Commands
 
 ```sh
-uv sync          # Python 3.12 venv
+uv sync          # Python 3.12+ venv (currently 3.14)
 uv run pytest    # tests
 uv run nbstripout --install                # once per clone: strip notebook outputs on commit
 uv run catchment-fetch [worldpop viirs overture] [--force]   # fetch sources into data/ (VIIRS needs a LAADS DAAC token as LAADS_TOKEN in .env, see .env.example)
@@ -39,8 +40,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
   `osmium` before running OSRM; keep the travel-time table sparse.
 - **Never commit data.** `data/`, `outputs/`, `.osm.pbf`, OSRM graphs, rasters and parquet are
   gitignored; datasets keep their own licences.
-- **No scraping of operator apps and no stored Google Places content.** Competitors come only from the
-  synthetic competitor layer; record the source and date of every reported count it uses.
+- **No scraping of operator apps and no stored Google Places content.** Existing stores (the operator's and
+  competitors') come only from the synthetic network; record the source and date of every reported count it uses.
 - **Demand is a model, not a forecast.** Every factor stays visible as a lever or labelled assumption;
   don't add ML forecasting.
 - **A new plan must return in ≤ 10 s** for the default scenario; measure it when the solver changes.
