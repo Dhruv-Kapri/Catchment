@@ -5,8 +5,9 @@ and compares them with the modelled travel times. The per-route app minutes are 
 `docs/spot-check.csv`, with the route endpoints, the app and the date and time of each lookup, so the
 reported error and implied congestion multiplier can be re-derived from the repo. This is the one
 deliberate exception to "never commit data", and it reverses the roadmap's earlier "numbers noted, not
-stored from the app". The values are hand-noted, a few dozen at most, never scraped or fetched through an
-API, and never Places content.
+stored from the app". The lookups are done once, at the stated time, by the planner or by a browser agent
+the planner runs on their behalf (one route at a time, as a person would). They are a few dozen values at
+most, never bulk-collected or fetched through an API, and never Places content.
 
 ## Considered Options
 
@@ -14,6 +15,10 @@ API, and never Places content.
   minutes off the repo: closest to the app's terms, but nobody can check the reported error.
 - **An Indian map app (Ola, Mappls) instead of Google Maps:** no clear gain in terms, and Google Maps'
   two-wheeler mode is what riders and planners in the area use.
+
+- **Hand lookups only:** what the first draft said. A browser agent run by the planner was allowed
+  instead, to fit the 7-8 pm window. The trade-off is that Google's terms discourage automated access
+  to Maps, accepted for about 20 one-off lookups.
 
 ## Consequences
 

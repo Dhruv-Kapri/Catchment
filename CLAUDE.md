@@ -41,7 +41,7 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
 - **Dev machine: Apple Silicon, 8 GB RAM, no GPU.** Clip OSM extracts to the area (plus a buffer) with
   `osmium` before running OSRM; keep the travel-time table sparse.
 - **Never commit data.** `data/`, `outputs/`, `.osm.pbf`, OSRM graphs, rasters and parquet are
-  gitignored; datasets keep their own licences. The one exception is `docs/spot-check.csv`, hand-noted
+  gitignored; datasets keep their own licences. The one exception is `docs/spot-check.csv`, spot-check
   map-app times ([ADR 0002](docs/adr/0002-spot-check-times-in-repo.md)).
 - **No scraping of operator apps and no stored Google Places content.** Existing stores (the operator's and
   competitors') come only from the synthetic network; record the source and date of every reported count it uses.
