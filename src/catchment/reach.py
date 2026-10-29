@@ -10,6 +10,7 @@ from pathlib import Path
 import h3
 import numpy as np
 import pandas as pd
+import requests
 import shapely
 
 from catchment import assumptions
@@ -46,11 +47,17 @@ def build_reach(polygon, demand, places, res, x_pct, router):
 
 class OsrmRouter:
     def __init__(self, url="http://localhost:5001"):
-        self.url = url
+        self.url, self.session = url, requests.Session()
 
     def snap(self, lons, lats, k=1):
-        shape = (len(lons), k)
-        return np.zeros(shape), np.zeros(shape), np.zeros(shape)
+        """The k nearest road points of each point: arrays (n, k) of snapped lon, lat and distance in metres."""
+        out = np.full((3, len(lons), k), np.nan)
+        for i, (x, y) in enumerate(zip(lons, lats)):
+            r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}", params={"number": k}, timeout=300)
+            r.raise_for_status()
+            for j, w in enumerate(r.json()["waypoints"]):
+                out[:, i, j] = *w["location"], w["distance"]
+        return out[0], out[1], out[2]
 
     def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
         return np.full((len(src_lons), len(dst_lons)), np.nan, dtype=np.float32)

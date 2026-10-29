@@ -70,3 +70,14 @@ def test_the_peak_memory_is_read_before_the_container_stops(road_data):
     with served_osrm(road_data, PORT, NAME) as router:
         pass
     assert (router.peak_bytes or 0) > 1_000_000   # a running osrm-routed holds at least a few MB
+
+
+@docker
+@needs_docker
+def test_snap_puts_an_off_road_point_on_the_road(road_data):
+    lon, lat = 77.0305, 28.4503   # ~33 m north of the east-west road (lat 28.4500)
+    with served_osrm(road_data, PORT, NAME) as router:
+        s_lon, s_lat, dist = router.snap([lon], [lat])
+    assert s_lon.shape == s_lat.shape == dist.shape == (1, 1)
+    assert s_lat[0, 0] == pytest.approx(28.4500, abs=1e-5) and 77.0300 <= s_lon[0, 0] <= 77.0310
+    assert 25 < dist[0, 0] < 40
