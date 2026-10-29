@@ -27,3 +27,8 @@ def test_stored_capture_share_is_readable_from_the_file(env):
     assert back.demand.sum() / back.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
     mean_m = (back.multiplier * back.households).sum() / back.households.sum()
     assert back.attrs["capture_share"] == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY / mean_m)
+
+
+def test_prints_a_summary_with_the_capture_share(env, capsys):
+    build.main(["demand"])
+    assert "capture share" in capsys.readouterr().err

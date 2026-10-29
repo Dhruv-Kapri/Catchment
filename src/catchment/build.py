@@ -16,4 +16,6 @@ def main(argv=None):
     args = ap.parse_args(argv)
     df = build_demand(load_area(), 9, WORLDPOP, VIIRS)
     df.to_parquet(DATA / "demand-r9.parquet")
+    print(f"  {len(df):,} hexes, {df.households.sum():,.0f} households, {df.demand.sum():,.0f} orders a day, "
+          f"capture share {df.attrs['capture_share']:.3f}", file=sys.stderr)
     return 0
