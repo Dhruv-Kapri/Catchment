@@ -20,7 +20,9 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     df["households"] = df["population"] / assumptions.HOUSEHOLD_SIZE
     rad = viirs_at(df.lon, df.lat, viirs)
     df["radiance"] = np.where(np.isnan(rad), np.nanmin(rad), rad)
-    for col in ["multiplier", "demand"]:
-        df[col] = 0.0
+    pct = df["radiance"].rank(pct=True, method="average")
+    p = (pct - pct.min()) / (pct.max() - pct.min())
+    df["multiplier"] = assumptions.M_LOW + p * (assumptions.M_HIGH - assumptions.M_LOW)
+    df["demand"] = 0.0
     df.attrs["res"] = res
     return df

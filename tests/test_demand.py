@@ -60,3 +60,11 @@ def test_nan_radiance_takes_the_minimum(tmp_path):
     df = build_demand(POLY, 9, wp, vi)
     assert not df.radiance.isna().any()
     assert df.radiance.min() >= 5.0
+
+
+def test_multipliers_hit_bounds_and_follow_radiance(rasters):
+    df = build_demand(POLY, 9, *rasters)
+    assert df.multiplier.min() == pytest.approx(assumptions.M_LOW)
+    assert df.multiplier.max() == pytest.approx(assumptions.M_HIGH)
+    m = df.sort_values("radiance").multiplier.to_numpy()
+    assert (np.diff(m) >= -1e-12).all()
