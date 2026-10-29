@@ -3,6 +3,26 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: NCR population is WUP 2025's 30.2 M, not WUP2018's 34.7 M
+
+- **Adopted, verified at source:** UN DESA, World Urbanization Prospects: The 2025 Revision, File 21
+  (`WUP2025-F21-DEGURBA-Cities_Pop.xlsx`, POP/DB/WUP/Rev.2025/F21), India, City_Code 8364 "New Delhi", 2025 column:
+  30,222.405 thousand. Downloaded from https://population.un.org/wup/assets/Download/Cities/ on 2026-10-29. File 19
+  (100 largest cities by time) gives the same figure. WUP2018 is superseded, so its 34.7 M goes.
+- **The definition changed.** WUP2018 counted the urban agglomeration (its footnote: including Faridabad, Gurgaon and
+  Ghaziabad). WUP 2025 counts the Degree of Urbanisation city: contiguous 1 km² cells of at least 1,500 people per km²,
+  2,101 km² of land in 2025 (File 19). Gurgaon, Faridabad, Ghaziabad and Noida have no separate entry in File 21, so they fall
+  inside "New Delhi". Greater Noida (0.33 M), Rasoi (0.70 M, north of Delhi) and Bhondsi (55 k, south of Gurugram) are
+  separate cities. This is an inference from the file; the UN publishes no boundary per city here. So the two figures
+  cover about the same towns, counted by a different rule.
+- **Effect: the calibration target, the default capture share and the default demand all rise by 34.7 / 30.2,
+  about 15%.** Calibration target 0.082 → 0.094 orders per household per day; default capture share
+  0.070 → 0.080; area demand at res 9 78,092 → 89,728 orders a day (`catchment-build demand --force`, re-run
+  2026-10-29). Households and `ORDERS_PER_STORE_DAY` don't change, so the default capacity (2,364) doesn't either. A
+  default catchment's demand rises from 889-1,411 to about 1,020-1,620 orders a day, still under capacity, so
+  "capacity never binds at the default" stands.
+- Rules out keeping WUP2018 as the default. The `00-demand` notebook stays frozen at 34.7 M as the 0.5 record.
+
 ## 2026-10-29: Demand and reach (stage 1) design
 
 - **One command, `catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]`**, like `catchment-fetch`.
@@ -72,10 +92,9 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
 - **The defaults rest on four verified figures, with caveats.** The capture share, `ORDERS_PER_STORE_DAY` (about
   1,576) and so the default capacity come from the Blinkit order and store counts, the NCR dark-store count and the
   NCR population. All four were verified against primary sources on 2026-10-29 with no change in value, so the numbers
-  and "capacity never binds at the default" stand. Caveats remain: the population is a WUP2018 projection (WUP 2025
-  reportedly gives about 30.2 M, not yet checked at source, which would raise orders per household per day, and so the
-  capture share, by about 15%); Savills' count is a best-effort estimate as of Oct 2025; Blinkit's orders per store
-  stand in for every brand.
+  and "capacity never binds at the default" stand. Caveats remain: the population was a WUP2018 projection, since
+  replaced by WUP 2025's 30.2 M (see the population entry above; the numbers in this entry are at 34.7 M); Savills'
+  count is a best-effort estimate as of Oct 2025; Blinkit's orders per store stand in for every brand.
 
 ## 2026-10-29: Explore (stage 0.5) model and slice
 

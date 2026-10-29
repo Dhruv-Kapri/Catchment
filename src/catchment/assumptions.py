@@ -9,7 +9,7 @@ BLINKIT_ORDERS_Q2 = 398.9e6   # Blinkit orders, Q2 FY27 (Jul-Sep 2026)
 Q2_DAYS = 92
 BLINKIT_STORES = 2751         # at quarter end
 NCR_STORES = 400              # dark stores, all brands, NCR
-NCR_POPULATION = 34.7e6       # Delhi urban agglomeration, 2025 projection
+NCR_POPULATION = 30.2e6       # Delhi (Degree of Urbanisation city), 2025 projection
 
 PICK_AND_PACK = 3             # minutes, fixed
 MAX_PROMISE = 20              # longest promise lever, minutes
@@ -40,7 +40,7 @@ def table():
             ("Blinkit orders, Q2 FY27", f"{BLINKIT_ORDERS_Q2/1e6:.1f} M over {Q2_DAYS} days", "Eternal Ltd shareholders' letter, 21 Oct 2026 (BSE filing), https://www.bseindia.com/xml-data/corpfiling/AttachLive/cbfbd146-6a68-43d6-9cbc-dfb7d0f50fd0.pdf, p. 13, Quick commerce operating metrics, row Orders (398.9 million). The 92 days are ours; the letter does not state them", "2026-10-29", "Verified"),
             ("Blinkit stores", f"{BLINKIT_STORES:,} at quarter end", "Eternal Ltd shareholders' letter, 21 Oct 2026 (BSE filing), https://www.bseindia.com/xml-data/corpfiling/AttachLive/cbfbd146-6a68-43d6-9cbc-dfb7d0f50fd0.pdf, p. 13, Quick commerce operating metrics, row Stores at the end of the period (#); also p. 6", "2026-10-29", "Verified"),
             ("NCR dark stores (all brands)", f"~{NCR_STORES}", "Savills India Research, Q-Commerce Growth: Dark Stores Shaping the Future of Retail, Dec 2025, https://pdf.savills.asia/asia-pacific-research/india-research/q-commerce-growth---dark-stores-shaping-the-future-of-retail.pdf, p. 8, Delhi-NCR 400. Best-effort estimate as of Oct 2025; not broken down by brand (all brands is our reading)", "2026-10-29", "Verified"),
-            ("NCR population", f"{NCR_POPULATION/1e6:.1f} M", "UN DESA World Urbanization Prospects 2018, File 12 (WUP2018-F12-Cities_Over_300K.xls), India, Delhi, 2025 column: 34,665.569 thousand. Read via https://web.archive.org/web/2022/https://population.un.org/wup/Download/Files/WUP2018-F12-Cities_Over_300K.xls (no longer served by the UN at that path)", "2026-10-29", "Verified"),
+            ("NCR population", f"{NCR_POPULATION/1e6:.1f} M", "UN DESA World Urbanization Prospects: The 2025 Revision, File 21 (WUP2025-F21-DEGURBA-Cities_Pop.xlsx, POP/DB/WUP/Rev.2025/F21), India, City_Code 8364 New Delhi, 2025 column: 30,222.405 thousand; File 19 gives the same. https://population.un.org/wup/assets/Download/Cities/WUP2025-F21-DEGURBA-Cities_Pop.xlsx. A Degree of Urbanisation city (contiguous cells of at least 1,500 per km²; Gurgaon, Faridabad, Ghaziabad and Noida have no separate entry, so fall inside), not WUP2018's agglomeration (34.7 M); see decision log, 2026-10-29", "2026-10-29", "Verified"),
             ("Pick-and-pack allowance", f"{PICK_AND_PACK} min, fixed", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Pairs kept in the table", f"Free-flow ≤ {MAX_PAIR_MIN} min (longest promise {MAX_PROMISE} − {PICK_AND_PACK} at multiplier 1.0)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),

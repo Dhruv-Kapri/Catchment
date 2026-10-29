@@ -12,7 +12,7 @@ def test_orders_per_store_day_from_blinkit_orders_and_stores():
 
 
 def test_orders_per_household_day_is_the_calibration_target():
-    assert assumptions.ORDERS_PER_HOUSEHOLD_DAY == pytest.approx(0.082, abs=0.0005)
+    assert assumptions.ORDERS_PER_HOUSEHOLD_DAY == pytest.approx(0.094, abs=0.0005)
 
 
 def test_capacity_matches_02_plan():
@@ -53,7 +53,7 @@ def test_status_and_values_match_the_notebook_tables():
     assert t.loc["Blinkit orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
     assert t.loc["Blinkit stores", "Value"] == "2,751 at quarter end"
     assert t.loc["NCR dark stores (all brands)", "Value"] == "~400"
-    assert t.loc["NCR population", "Value"] == "34.7 M"
+    assert t.loc["NCR population", "Value"] == "30.2 M"
     assert t.loc["Pick-and-pack allowance", "Value"] == "3 min, fixed"
     assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
     assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]
