@@ -64,3 +64,12 @@ def test_x_changes_the_candidate_count():
     places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
     counts = [len(build_reach(AREA, demand, places, RES, x, FakeRouter())[0]) for x in (15, 30, 45)]
     assert counts == [2, 3, 4]   # ceil of 1.05, 2.1, 3.15
+
+
+def test_count_is_exact_where_float_arithmetic_rounds_up():
+    cells = sorted(h3.grid_disk(CENTRE, 6))[:100]   # 7% of 100 is 7; 7 / 100 * 100 is 7.000000000000001 in floats
+    centres = [h3.cell_to_latlng(c) for c in cells]
+    demand = pd.DataFrame({"lat": [c[0] for c in centres], "lon": [c[1] for c in centres], "demand": 1.0},
+                          index=pd.Index(cells, name="hex"))
+    candidates, _ = build_reach(box(77.0, 28.4, 77.1, 28.5), demand, places_in({c: 1 for c in cells}), RES, 7, FakeRouter())
+    assert len(candidates) == 7
