@@ -22,6 +22,7 @@ import numpy as np
 
 import pytest
 
+from catchment import reach
 from catchment.reach import served_osrm
 
 ROADS_OSM = Path(__file__).parent / "fixtures" / "roads.osm"
@@ -93,3 +94,22 @@ def test_minutes_along_the_road_are_positive_and_finite(road_data):
     assert m.shape == (2, 1) and m.dtype == np.float32
     assert np.isfinite(m).all() and (m > 0).all()
     assert 0.2 < m[0, 0] < 1.5   # 400 m of residential road
+
+
+@docker
+@needs_docker
+def test_a_destination_on_a_disconnected_road_is_nan(road_data):
+    with served_osrm(road_data, PORT, NAME) as router:
+        m = router.minutes([77.0280], [28.4500], [77.0320, 77.0405], [28.4500, 28.4500])   # 2nd: an island road
+    assert np.isfinite(m[0, 0]) and np.isnan(m[0, 1])
+
+
+@docker
+@needs_docker
+def test_chunked_requests_give_the_same_table(road_data, monkeypatch):
+    src, dst = ([77.0280, 77.0300, 77.0320], [28.4500, 28.4480, 28.4520]), ([77.0290, 77.0300, 77.0310], [28.4500, 28.4520, 28.4500])
+    with served_osrm(road_data, PORT, NAME) as router:
+        whole = router.minutes(*src, *dst)
+        monkeypatch.setattr(reach, "CHUNK_SRC", 2)
+        monkeypatch.setattr(reach, "CHUNK_DST", 2)
+        assert np.array_equal(router.minutes(*src, *dst), whole)
