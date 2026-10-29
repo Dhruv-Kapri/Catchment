@@ -71,3 +71,11 @@ def test_fewer_bad_pairs_than_n_bad_takes_all_and_still_n_routes():
     assert len(r) == 20
     assert r.bad_snap_before.sum() == 2
     assert set(zip(r[r.bad_snap_before].candidate, r[r.bad_snap_before].hex)) == set(zip(*bad.head(2).T.values))
+
+
+def test_shuffled_input_same_result():
+    table, cands, hexes = make()
+    bad = bad_pairs(table, 8, 3)
+    a = draw_routes(table, cands, hexes, bad)
+    b = draw_routes(table.sample(frac=1, random_state=0).reset_index(drop=True), cands, hexes, bad.iloc[::-1])
+    pd.testing.assert_frame_equal(a, b)

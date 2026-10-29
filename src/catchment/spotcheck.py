@@ -11,6 +11,7 @@ COLUMNS = ["route", "candidate", "hex", "source", "destination", "free_flow_min"
 
 def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11, 14, 17), seed=SEED):
     rng = np.random.default_rng(seed)
+    table = table.sort_values(["candidate", "hex"], kind="stable")
     pairs = table[(table.minutes >= edges[0]) & (table.minutes <= edges[-1])]
     is_bad = pd.MultiIndex.from_frame(pairs[["candidate", "hex"]]).isin(pd.MultiIndex.from_frame(bad[["candidate", "hex"]]))
     bad_pairs, other = pairs[is_bad], pairs[~is_bad]
