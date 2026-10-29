@@ -11,11 +11,9 @@ import pandas as pd
 from catchment import assumptions
 from catchment.area import load_area
 from catchment.demand import build_demand
-from catchment.fetch import DATA
+from catchment.fetch import DATA, VIIRS, WORLDPOP
 from catchment.reach import build_reach, served_osrm
 
-WORLDPOP = DATA / "worldpop.tif"
-VIIRS = DATA / "viirs.tif"
 PLACES = DATA / "overture_places.parquet"
 EXPLORE_PAIRS = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
 

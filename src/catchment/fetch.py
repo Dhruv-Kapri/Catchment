@@ -22,6 +22,8 @@ from catchment.area import load_area
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 RAW = DATA / "raw"
+WORLDPOP = DATA / "worldpop.tif"
+VIIRS = DATA / "viirs.tif"
 
 WORLDPOP_URL = (
     "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/IND/v1/100m/"
@@ -163,9 +165,8 @@ def black_marble_to_tif(h5_path, h, v, polygon, dest):
 
 def fetch_worldpop(polygon):
     raw = download(WORLDPOP_URL, RAW / Path(WORLDPOP_URL).name)
-    out = DATA / "worldpop.tif"
-    clip_raster(raw, polygon, out)
-    return {"source": WORLDPOP_URL, "files": [out.name]}
+    clip_raster(raw, polygon, WORLDPOP)
+    return {"source": WORLDPOP_URL, "files": [WORLDPOP.name]}
 
 
 def fetch_viirs(polygon):
@@ -189,9 +190,8 @@ def fetch_viirs(polygon):
     except ValueError as e:
         raw.unlink()
         raise SourceError(str(e)) from e
-    out = DATA / "viirs.tif"
-    black_marble_to_tif(raw, h, v, polygon, out)
-    return {"source": url, "layer": BM_LAYER, "files": [out.name]}
+    black_marble_to_tif(raw, h, v, polygon, VIIRS)
+    return {"source": url, "layer": BM_LAYER, "files": [VIIRS.name]}
 
 
 def fetch_overture(polygon):
@@ -238,8 +238,8 @@ def fetch_osm(polygon):
 
 
 SOURCES = {
-    "worldpop": (fetch_worldpop, ["worldpop.tif"]),
-    "viirs": (fetch_viirs, ["viirs.tif"]),
+    "worldpop": (fetch_worldpop, [WORLDPOP.name]),
+    "viirs": (fetch_viirs, [VIIRS.name]),
     "overture": (fetch_overture, ["overture_places.parquet", "overture_buildings.parquet"]),
     "osm": (fetch_osm, ["osm.osm.pbf"]),
 }
