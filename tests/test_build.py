@@ -100,3 +100,11 @@ def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
     table = pd.read_parquet(env / "table-r9-x30.parquet")
     assert len(candidates) == 2 and list(table.columns) == ["candidate", "hex", "minutes"]
     assert set(table.candidate) == set(candidates.index)
+
+
+def test_x_pct_writes_a_separate_file_named_by_x(env):
+    build.main(["reach"])
+    build.main(["reach", "--x-pct", "2.5"])
+    assert (env / "candidates-r9-x2.5.parquet").exists() and (env / "table-r9-x2.5.parquet").exists()
+    assert pd.read_parquet(env / "candidates-r9-x2.5.parquet").attrs["x_pct"] == 2.5
+    assert (env / "candidates-r9-x30.parquet").exists()
