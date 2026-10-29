@@ -45,7 +45,12 @@ def atomic_path(dest):
     """Yield dest's .part path to write to; on success rename it onto dest, on error remove it."""
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    yield dest.with_name(dest.name + ".part")
+    part = dest.with_name(dest.name + ".part")
+    try:
+        yield part
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
 
 
 class SourceError(Exception):

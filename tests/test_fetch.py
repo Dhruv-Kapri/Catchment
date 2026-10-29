@@ -272,3 +272,14 @@ def test_osm_missing_osmium_fails_before_download(osm_env, monkeypatch, capsys):
 
 def test_osm_is_a_default_source():
     assert "osm" in fetch.SOURCES
+
+
+def test_atomic_path_leaves_no_part_and_dest_untouched_when_the_write_raises(tmp_path):
+    dest = tmp_path / "sub" / "f.bin"
+    dest.parent.mkdir()
+    dest.write_bytes(b"old")
+    with pytest.raises(OSError):
+        with fetch.atomic_path(dest) as part:
+            part.write_bytes(b"half")
+            raise OSError("disk full")
+    assert dest.read_bytes() == b"old" and not part.exists()
