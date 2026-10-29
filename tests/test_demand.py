@@ -75,3 +75,10 @@ def test_multiplier_bounds_are_read_from_assumptions(rasters, monkeypatch):
     monkeypatch.setattr(assumptions, "M_HIGH", 1.2)
     df = build_demand(POLY, 9, *rasters)
     assert df.multiplier.min() == pytest.approx(0.8) and df.multiplier.max() == pytest.approx(1.2)
+
+
+def test_flat_radiance_gives_midpoint_multiplier(tmp_path):
+    wp, _ = make_rasters(tmp_path)
+    vi = write_tif(tmp_path / "flat.tif", np.full((10, 10), 3.0), 0.002, -9999)
+    df = build_demand(POLY, 9, wp, vi)
+    assert (df.multiplier == (assumptions.M_LOW + assumptions.M_HIGH) / 2).all()

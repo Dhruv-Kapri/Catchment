@@ -21,7 +21,8 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     rad = viirs_at(df.lon, df.lat, viirs)
     df["radiance"] = np.where(np.isnan(rad), np.nanmin(rad), rad)
     pct = df["radiance"].rank(pct=True, method="average")
-    p = (pct - pct.min()) / (pct.max() - pct.min())
+    span = pct.max() - pct.min()
+    p = (pct - pct.min()) / span if span > 0 else pd.Series(0.5, index=df.index)
     df["multiplier"] = assumptions.M_LOW + p * (assumptions.M_HIGH - assumptions.M_LOW)
     df["demand"] = 0.0
     df.attrs["res"] = res
