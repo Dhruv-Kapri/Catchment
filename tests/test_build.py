@@ -109,3 +109,17 @@ def test_x_pct_writes_a_separate_file_named_by_x(env):
     assert (env / "candidates-r9-x2.5.parquet").exists() and (env / "table-r9-x2.5.parquet").exists()
     assert pd.read_parquet(env / "candidates-r9-x2.5.parquet").attrs["x_pct"] == 2.5
     assert (env / "candidates-r9-x30.parquet").exists()
+
+
+def test_reach_builds_a_missing_demand_table_first(env):
+    assert not (env / "demand-r9.parquet").exists()
+    build.main(["reach"])
+    assert (env / "demand-r9.parquet").exists()
+    assert pd.read_parquet(env / "demand-r9.parquet").attrs["res"] == 9
+
+
+def test_reach_reads_an_existing_demand_table(env):
+    build.main(["demand"])
+    before = (env / "demand-r9.parquet").stat().st_mtime_ns
+    build.main(["reach"])
+    assert (env / "demand-r9.parquet").stat().st_mtime_ns == before
