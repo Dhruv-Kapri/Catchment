@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Stage 0 (setup and fetch) and 0.5 Explore (notebooks `00-demand`, `01-reach`, `02-plan` on the slice, issues
 #1-#6) done 2026-10-29: H3 res 9, candidate sites the top 30% of hexes by places count. Next is stage 1 (demand and
-reach on the full area). The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`). The repo also
+reach on the full area). The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `build.py`). The repo also
 holds the product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the
 decision log (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`).
 Read the brief and the roadmap before starting any work; record new commands here.
