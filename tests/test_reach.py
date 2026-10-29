@@ -143,3 +143,10 @@ def test_candidates_carry_the_snapped_point_and_its_distance():
     lat, lon = h3.cell_to_latlng(H[0])
     assert (site.lat, site.lon) == (lat, lon)
     assert site.snap_lon == lon + 0.00005 and site.snap_lat == lat and site.snap_m == 12.5
+
+
+def test_the_table_is_timed_from_the_snapped_sites():
+    router = ShiftingRouter()
+    candidates, _ = build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), RES, 30, router)
+    lat, lon = h3.cell_to_latlng(H[0])
+    assert router.sources == ([lon + 0.00005], [lat])
