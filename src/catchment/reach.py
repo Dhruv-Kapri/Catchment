@@ -75,7 +75,7 @@ class OsrmRouter:
         self.peak_bytes = None   # osrm-routed's peak memory, set by served_osrm before it stops the container
 
     def snap(self, lons, lats, k=1):
-        """The k nearest roads' points of each point: arrays (n, k) of snapped lon, lat and distance in metres."""
+        """The k nearest roads' points of each point (k is 1 or 2): arrays (n, k) of snapped lon, lat and distance in metres."""
         out = np.full((3, len(lons), k), np.nan)
         for i, (x, y) in enumerate(zip(lons, lats)):
             r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
