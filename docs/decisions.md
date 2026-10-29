@@ -3,6 +3,23 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Second-road rule kept after classifying the residual out-and-back (#20)
+
+- **Kept as it is:** nearest hit within 100 m lying more than 5 m across the first (`SECOND_ROAD_MAX_M`,
+  `SECOND_ROAD_GAP_M`). No threshold changes.
+- **Why** (`03-area`, the same 200 short slice pairs, seed 42; road class and one-way from the OSM ways under each
+  snap): of the 19 pairs still riding more than 300 m out and back at an end, none lacks a second road. 11 snap to a
+  two-way road (10 a residential or service lane), not a divided road: in 9 the other snap loops too (the lane network
+  round a block), and in 2 it does not loop but is slower. No second-road rule reaches them. 4 are paired one-way roads where both carriageways loop. 4 took a second road that is
+  not the far carriageway. No cause dominates.
+- **The two cheap fixes, measured:** preferring a hit with the first road's name gives 18 of 200 (9.0%), one pair
+  (Mehrauli-Gurgaon Road, where the rule took a one-way slip at 8 m over the far carriageway at 9 m). A 200 m reach
+  for hex centres gives 19 (no change): 98.2% of sample hexes already have a second road within 100 m. The 1,595 area
+  hexes without one are probably on the outskirts (not checked), which this sample does not cover. One pair in 200 does not justify a rule change.
+- **What decides whether 9.5% matters** is the spot check (#16-#18), not more snapping rules. Rules out preferring
+  same-named hits, and a longer reach for hex centres, on this evidence. A fix for the lane-network loops would need
+  something other than a second road (more snaps per point, or road class from OSM in the build); not tried.
+
 ## 2026-10-29: Fastest-of-four snapping, measured (#14)
 
 - **"Second road" is defined by geometry, not by OSRM's two nearest hits.** `/nearest?number=2` returns two segments
