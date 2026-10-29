@@ -3,6 +3,43 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Explore (stage 0.5) results: hex resolution and candidate site rule
+
+The three notebooks ran the chain on the slice (`00-demand`, `01-reach`, `02-plan`); numbers below are from those
+runs, on the placeholder network, at the default scenario (promise 10, multiplier 1.4, capacity 2,364 orders a day).
+
+- **Hex resolution: H3 res 9.** It is the finest tried, and it fits the budget. Res 8 is cheaper but its candidate
+  sites reach only 96.0% of the slice's demand at the default scenario; a res-8 hex (about 0.74 km²) is too coarse for
+  a catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table pairs
+  within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to 3.1-5.6 s
+  (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair count, solved in
+  1.2 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table. Rules out res 8
+  unless that measurement misses the bar even after cutting X.
+- **Candidate sites: one per hex, the top 30% of the area's hexes by Overture places count**, the hex centre snapped
+  to the nearest road (ties by demand; hexes with no places never qualify). 1,458 sites in the area, 554 in the slice.
+  X = 30% is the smallest value in the grid whose slice candidates reach ≥ 99% of the slice's demand (99.3%). It was
+  not cut for the solve budget, since the budget holds at 30%. If stage 1's measured solve misses 10 s, cut X before
+  the resolution: X = 10% reaches 96.0% with a third of the pairs (extrapolated 1.5-1.8 s).
+- **CP-SAT formulation: assignment variables only for sites whose catchment can exceed capacity.** The plain model
+  (a variable per site × hex pair) stalls with the trivial bound (9-22% below the optimum after 20 s). The used model
+  has the same optimum and solves the slice to proven optimality in 0.4 s (N = 3) and 1.3 s (N = 10). At the default
+  capacity no site binds (largest catchment demand 1,981 against 2,364), so the default scenario is maximum coverage.
+  **Capacity that binds is slow**: at 1,000 orders a day, CP-SAT is still 38% from its bound after 20 s. The capacity
+  lever's range, or a faster model for that case, needs a decision before stage 3.
+- **CP-SAT against greedy:** they tie on the main network at N = 3 (5,599 orders a day against 1,090 for the existing
+  stores alone). Across ten network placements CP-SAT wins 2 and ties 8 (mean +0.7%, best +4.6%), and on the slice it
+  gains 0.6% at N = 5 and 3.2% at N = 10. Greedy is a strong baseline for a few stores; the gap grows with N.
+- **Correction: a default-scenario catchment is 4.4-6.2 km²** (40-57 res-9 hexes, 889-1,411 orders a day of demand), not the
+  ~17 km² the slice entry below assumed: the promise leaves 5 free-flow minutes after the multiplier and the
+  pick-and-pack allowance. The slice still holds many catchments, so the slice stands.
+- **Open, carried into stages 1-2:** about one short pair in seven is inflated by snapping onto the wrong
+  carriageway (`01-reach`). Sized by orders, the placeholder network leaves 11,105 of the slice's 16,523 orders a day on
+  hexes no brand reaches; the stage 2 generator must choose whether store counts follow orders or reach.
+- **The defaults rest on unverified figures.** The capture share, `ORDERS_PER_STORE_DAY` (about 1,576) and so the
+  default capacity come from the Blinkit order and store counts, the NCR dark-store count and the NCR population. All
+  four are still **Unverified** in `00-demand` (secondary reports, a search summary, memory). Verify them before the
+  numbers are shown in the product.
+
 ## 2026-10-29: Explore (stage 0.5) model and slice
 
 - **Slice: about 80 km², old Gurugram (sectors 4-14, Sadar) to Golf Course Road / Sohna Road.** A

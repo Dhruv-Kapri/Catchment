@@ -3,8 +3,8 @@
 *Where should a quick-commerce operator open its next N dark stores, and what does each one win, or
 take from the stores it already has?*
 
-> **Status: stage 0 done** (setup and data fetch). Next: notebooks that run the whole chain on a small
-> slice. The [roadmap](docs/roadmap.md) says what gets built and in what order.
+> **Status: stage 0.5 done** (the whole chain run once on a slice, in `notebooks/`). Next: demand and
+> reach on the full area. The [roadmap](docs/roadmap.md) says what gets built and in what order.
 
 ## Getting started
 
