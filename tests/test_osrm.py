@@ -1,5 +1,12 @@
+import shutil
 import subprocess
 from pathlib import Path
+
+import numpy as np
+import pytest
+
+from catchment import reach
+from catchment.reach import served_osrm
 
 OSRM = Path(__file__).parent.parent / "osrm"
 
@@ -15,15 +22,6 @@ def test_script_without_arguments_prints_usage_and_exits_2():
 
 
 # ---- the real router, against a tiny road fixture in Docker ----
-
-import shutil
-
-import numpy as np
-
-import pytest
-
-from catchment import reach
-from catchment.reach import served_osrm
 
 ROADS_OSM = Path(__file__).parent / "fixtures" / "roads.osm"
 PORT, NAME = 5091, "catchment-osrm-test"
