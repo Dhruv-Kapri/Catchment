@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from catchment.reach import build_reach
+from catchment.reach import _nearest_roads, build_reach
 
 RES = 9
 AREA = box(77.04, 28.44, 77.06, 28.46)
@@ -225,3 +225,13 @@ def test_frames_carry_res_x_pct_and_float32_minutes():
 def test_a_demand_table_of_another_resolution_is_refused():
     with pytest.raises(ValueError, match="res 9"):
         build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), 8, 30, FakeRouter())
+
+
+def test_the_second_road_is_the_nearest_across_whatever_its_name():
+    # Decision log 2026-10-29: the same-named variant was measured and rejected (#20)
+    x, y = 77.05, 28.45
+    at = lambda m: [x, y + m / 110_574]
+    first = {"location": [x, y], "distance": 0.0, "name": "Mehrauli-Gurgaon Road", "nodes": [1, 2]}
+    unnamed = {"location": at(8), "distance": 8.0, "name": "", "nodes": [3, 4]}
+    same = {"location": at(9), "distance": 9.0, "name": "Mehrauli-Gurgaon Road", "nodes": [5, 6]}
+    assert _nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
