@@ -56,5 +56,5 @@ def test_status_and_values_match_the_notebook_tables():
     assert t.loc["NCR population", "Value"] == "30.2 M"
     assert t.loc["Pick-and-pack allowance", "Value"] == "3 min, fixed"
     assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
-    assert "100 m" in t.loc["Second road for snapping", "Value"]
+    assert "5 m" in t.loc["Second road for snapping", "Value"] and "100 m" in t.loc["Second road for snapping", "Value"]
     assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]
