@@ -8,6 +8,9 @@ take from the stores it already has?*
 
 ## Getting started
 
+Needs [uv](https://docs.astral.sh/uv/), osmium-tool (`brew install osmium-tool`, used to clip the
+OSM extract) and Docker Desktop, running (`01-reach` builds and serves OSRM in it).
+
 ```sh
 uv sync                          # Python 3.12+
 uv run nbstripout --install      # once per clone: strip notebook outputs on commit
@@ -20,6 +23,19 @@ uv run pytest
 Earthdata account, then generate it on the
 [download scripts page](https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/)
 (an Earthdata "EDL" token is not accepted). The WorldPop file is slow to fetch (about 2 hours, once).
+
+Then run the stage 0.5 notebooks, in order: `00-demand` → `01-reach` → `02-plan`. `00-demand` writes the
+hexes and `01-reach` the candidate sites and travel-time table to `data/explore/`, for the next one to read;
+each run rewrites its figures in `notebooks/figures/`.
+
+```sh
+uv run jupyter nbconvert --to notebook --execute notebooks/00-demand.ipynb --output /tmp/00-demand.ipynb   # about 20 s
+uv run jupyter nbconvert --to notebook --execute notebooks/01-reach.ipynb --output /tmp/01-reach.ipynb     # about 4 min, with the OSRM build
+uv run jupyter nbconvert --to notebook --execute notebooks/02-plan.ipynb --output /tmp/02-plan.ipynb       # about 3 min
+```
+
+`01-reach` runs `notebooks/osrm.sh build|serve|stop` itself. It was run with Docker's memory limit at
+3.82 GiB of 8 GiB; peak use was at most about 0.5 GB (the notebook prints it).
 
 ## The problem
 
