@@ -224,13 +224,16 @@ def fetch_osm(polygon):
     buffered = area.to_crs(area.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
     out = DATA / "osm.osm.pbf"
     part = out.with_name(out.name + ".part")
-    with tempfile.TemporaryDirectory() as td:
-        clip = Path(td) / "clip.geojson"
-        buffered.to_file(clip, driver="GeoJSON")
-        _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
-    info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
-    data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
-    os.replace(part, out)
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            clip = Path(td) / "clip.geojson"
+            buffered.to_file(clip, driver="GeoJSON")
+            _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
+        info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
+        data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
+        os.replace(part, out)
+    finally:
+        part.unlink(missing_ok=True)
     return {"source": OSM_URL, "data_date": data_date, "buffer_m": OSM_BUFFER_M, "files": [out.name]}
 
 

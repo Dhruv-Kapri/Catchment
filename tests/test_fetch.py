@@ -233,6 +233,31 @@ def test_osm_rerun_skips_and_force_reclips_without_download(osm_env):
     assert osm_node_ids(out) == {1, 2, 3} and len(downloads) == 1
 
 
+@needs_osmium
+def test_osm_failure_leaves_no_part(osm_env, monkeypatch, capsys):
+    tmp_path, _ = osm_env
+    real = fetch._osmium
+
+    def flaky(*args):
+        if args[0] == "fileinfo":
+            raise fetch.SourceError("osmium fileinfo failed: boom")
+        return real(*args)
+    monkeypatch.setattr(fetch, "_osmium", flaky)
+    assert fetch.main(["osm"]) == 1
+    assert "boom" in capsys.readouterr().err
+    assert not list(tmp_path.glob("osm.osm.pbf*"))
+
+
+@needs_osmium
+def test_osm_data_date_prefers_replication_timestamp(osm_env):
+    tmp_path, _ = osm_env
+    raw = tmp_path / "raw" / Path(fetch.OSM_URL).name
+    raw.parent.mkdir()
+    subprocess.run(["osmium", "cat", str(TINY_OSM), "-o", str(raw), "--output-header=osmosis_replication_timestamp=2026-10-28T20:21:00Z"], check=True)
+    assert fetch.main(["osm"]) == 0
+    assert json.loads((tmp_path / "manifest.json").read_text())["osm"]["data_date"] == "2026-10-28T20:21:00Z"
+
+
 def test_osm_missing_osmium_fails_before_download(osm_env, monkeypatch, capsys):
     tmp_path, downloads = osm_env
 
