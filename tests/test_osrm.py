@@ -52,3 +52,21 @@ def test_served_osrm_builds_the_graph_and_leaves_no_container(road_data):
         assert (road_data / "osrm" / "osm.osrm.hsgr").exists()
         assert container_running()
     assert not container_running()
+
+
+@docker
+@needs_docker
+def test_the_container_is_stopped_when_the_block_raises(road_data):
+    with pytest.raises(RuntimeError, match="boom"):
+        with served_osrm(road_data, PORT, NAME):
+            assert container_running()
+            raise RuntimeError("boom")
+    assert not container_running()
+
+
+@docker
+@needs_docker
+def test_the_peak_memory_is_read_before_the_container_stops(road_data):
+    with served_osrm(road_data, PORT, NAME) as router:
+        pass
+    assert (router.peak_bytes or 0) > 1_000_000   # a running osrm-routed holds at least a few MB
