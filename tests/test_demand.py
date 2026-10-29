@@ -44,3 +44,9 @@ def test_population_is_pixels_in_hex(rasters):
 def test_households_are_population_over_household_size(rasters):
     df = build_demand(POLY, 9, *rasters)
     assert np.allclose(df.households, df.population / assumptions.HOUSEHOLD_SIZE)
+
+
+def test_household_size_is_read_from_assumptions(rasters, monkeypatch):
+    base = build_demand(POLY, 9, *rasters).households
+    monkeypatch.setattr(assumptions, "HOUSEHOLD_SIZE", 9.0)
+    assert np.allclose(build_demand(POLY, 9, *rasters).households, base / 2)
