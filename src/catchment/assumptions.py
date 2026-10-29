@@ -1,4 +1,6 @@
 """Every labelled assumption the model rests on, with source, date and status. Build code reads them from here."""
+import pandas as pd
+
 HOUSEHOLD_SIZE = 4.5          # persons per household, one value for every hex
 
 # Capture-share calibration inputs

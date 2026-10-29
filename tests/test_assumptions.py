@@ -17,3 +17,19 @@ def test_orders_per_household_day_is_the_calibration_target():
 
 def test_capacity_matches_02_plan():
     assert round(assumptions.CAPACITY) == 2364   # 02-plan and the decision log
+
+
+def test_table_lists_every_input():
+    t = assumptions.table()
+    assert list(t.columns) == ["Input", "Value", "Source", "Date", "Status"]
+    assert list(t.Input) == [
+        # 00-demand
+        "Household size", "Multiplier bounds", "Blinkit orders, Q2 FY27", "Blinkit stores",
+        "NCR dark stores (all brands)", "NCR population",
+        # 01-reach
+        "Pick-and-pack allowance", "Pairs kept in the table",
+        # 02-plan
+        "Default scenario", "New stores, N", "Orders per store per day", "Capacity per store",
+        "Brands and store counts", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
+        "Assignment tie-break", "Integer scale", "Solver",
+    ]
