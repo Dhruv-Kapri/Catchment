@@ -25,4 +25,28 @@ CAPACITY = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
 
 def table():
     """The assumptions as a table: Input, Value, Source, Date, Status."""
-    return pd.DataFrame([], columns=["Input", "Value", "Source", "Date", "Status"])
+    return pd.DataFrame(
+        [
+            ("Household size", "", "", "", ""),
+            ("Multiplier bounds", "", "", "", ""),
+            ("Blinkit orders, Q2 FY27", "", "", "", ""),
+            ("Blinkit stores", "", "", "", ""),
+            ("NCR dark stores (all brands)", "", "", "", ""),
+            ("NCR population", "", "", "", ""),
+            ("Pick-and-pack allowance", "", "", "", ""),
+            ("Pairs kept in the table", "", "", "", ""),
+            ("Default scenario", "", "", "", ""),
+            ("New stores, N", "", "", "", ""),
+            ("Orders per store per day", "", "", "", ""),
+            ("Capacity per store", "", "", "", ""),
+            ("Brands and store counts", "", "", "", ""),
+            ("Store placement", "", "", "", ""),
+            ("Competitor reach", "", "", "", ""),
+            ("Demand split", "", "", "", ""),
+            ("Sites for new stores", "", "", "", ""),
+            ("Assignment tie-break", "", "", "", ""),
+            ("Integer scale", "", "", "", ""),
+            ("Solver", "", "", "", ""),
+        ],
+        columns=["Input", "Value", "Source", "Date", "Status"],
+    )
