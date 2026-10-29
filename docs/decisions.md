@@ -5,32 +5,39 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 
 ## 2026-10-29: Full-area solve time measured (#15)
 
-The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) does not solve in 10 s on the full area. Res 9
-and X = 30 stand provisionally; the miss is an open point for stage 2. Measured in `03-area` on the real full-area
-tables (4,859 hexes, 1,458 candidate sites, 59,855 default-scenario pairs), the 0.5 CP-SAT model copied unchanged.
+The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) does not solve in 10 s on the full area, at any
+setting the ticket allows: not at X = 30, 20, 10 or 5 at res 9, and not at res 8. Res 9 and X = 30 stand; the miss is an
+open point for stage 2. Measured in `03-area` on the real full-area tables (4,859 hexes, 1,458 candidate sites, 59,855
+default-scenario pairs), the 0.5 CP-SAT model copied unchanged.
 
-- **Main run, the placeholder network** (3 operator, 4 Competitor A, 3 Competitor B, seed 2026, X = 30): median 61.0 s
-  of three (61.0 to 61.2), build 0.8 s plus solve 60.4 s. Status FEASIBLE: it stopped at the 60 s limit, with the best plan
-  27,965 orders a day against a bound of 33,432 (19.6% gap) and different plans on each run. Over the bar by a factor of
-  six or more.
-- **Sensitivity, a network sized to the area** (57 stores, 17/23/17, same seed): OPTIMAL, median 21.0 s (20.6 to 36.6),
+- **Main run, the placeholder network** (3 operator, 4 Competitor A, 3 Competitor B, seed 2026, X = 30): median 60.9 s
+  of three (60.6 to 61.8), build 0.6 s plus solve 60.2 s. Status FEASIBLE: it stopped at the 60 s limit, with the best
+  plan 28,234 orders a day against a bound of 33,430 (18.4% gap). Over the bar by a factor of six or more.
+- **Sensitivity, a network sized to the area** (57 stores, 17/23/17, same seed): OPTIMAL, median 14.3 s (12.4 to 15.4),
   objective 30,401.05, checked equal to `evaluate`'s score for the chosen stores. Also over the bar.
 - **Cause: capacity binds on the area at the default.** The largest catchment holds 5,266 orders a day against a capacity
   of 2,364, and 123 sites exceed capacity, so the model carries assignment variables for them. 0.5's slice had its largest
-  catchment at 1,981, no constrained site, and maximum coverage; its 3.1-5.6 s extrapolation (1.2 s for three slice copies)
-  was right for that case and does not carry to the area. The same network with capacity effectively infinite solves to
-  optimality in 2.9 s (diagnostic row). This is the 0.5 open point "capacity that binds is slow", now at the default
-  scenario. `evaluate` is slow for the same reason: for the main run's stores its first solve did not prove optimality
+  catchment at 1,981, no constrained site, and maximum coverage; its 3.1-5.6 s extrapolation (1.2 s for three slice
+  copies) was right for that case and does not carry to the area. The same network with capacity effectively infinite
+  solves to optimality in 2.7 s (diagnostic row). This is the 0.5 open point "capacity that binds is slow", now at the
+  default scenario. `evaluate` is slow for the same reason: for the main run's stores its first solve did not prove optimality
   in 30 s, so that check was skipped (it passed on the sensitivity run).
 - **Cutting X did not help.** The X% sets are the X = 30 table filtered by rank (equivalent to `catchment-build reach
   --x-pct X`, no OSRM needed); the network stays as placed at X = 30. X = 20, 10 and 5 (972, 486 and 243 sites) all ran to
-  the limit unproven (medians 62.5, 62.0, 60.5 s; 91, 53 and 30 constrained sites; bound still 9.5% above the best plan at
-  X = 5), at a coverage of 88.3%, 79.8% and 71.2% of the area's demand against 93.5% at X = 30. Res 8 was not tried: it
-  needs a res-8 OSRM table, and the 0.5 entry rules it out on coverage.
+  the limit unproven (medians 60.8, 60.4, 60.4 s; 91, 53 and 30 constrained sites; bound still 11.8% above the best plan
+  at X = 5), at a coverage of 88.3%, 79.8% and 71.2% of the area's demand against 93.5% at X = 30.
+- **Res 8, the last resort, misses too.** `catchment-build reach --res 8` at X = 30 gives 697 hexes, 210 sites and 1,194
+  default-scenario pairs; coverage 78.9% (14.6 points below res 9), 18 constrained sites, largest catchment 4,852
+  against 2,364. The main network, placed by the same rule over the res-8 candidates, is FEASIBLE after 60 s in all three
+  runs (median 60.3 s, plan 26,619, bound 29,309, 10.1% gap) on only 1,140 pairs, so size is not what makes it slow.
+  Res-8 numbers are not comparable with res 9's: the native res-8 demand build drops hexes whose centre is outside
+  the area (941,794 households against 955,163, 1.4% lower; see "Demand and reach (stage 1) design"). The 0.5 entry's
+  0.04 s for res 8 assumed no constrained site.
 - **Settings and hardware:** Apple M1, 8 cores, 8 GB, OR-tools 9.15.6755, 8 workers, 60 s limit, solver seed 1. The
-  machine was heavily loaded by parallel jobs: the 1-minute load average was 17 to 40 on 8 cores during the runs. Times are
-  inflated by that (the area-sized network took 30 to 42 s in an earlier run at a higher load), but the main run is
-  limit-bound, so the verdict stands.
+  machine was loaded by parallel jobs: the 1-minute load average was 13 to 30 on 8 cores during the runs. Times are
+  inflated by that (the area-sized network took 14 s here and 21 to 42 s in earlier runs), but the main run is
+  limit-bound, so the verdict stands. Unproven runs also vary: the main network's plan was 28,234 here and 27,965
+  earlier.
 - **Open, for stage 2:** a way to solve binding capacity in 10 s: a faster model, a warm start from the greedy plan, or a
   different capacity default (the area's dense catchments hold more than twice the 1.5 times average that the default
   allows). A faster `evaluate` is part of it.
@@ -118,8 +125,9 @@ runs, on the placeholder network, at the default scenario (promise 10, multiplie
   pairs within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to
   3.1-5.6 s (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair
   count, solved in 1.2 s. Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took
-  19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table (measured, and missed: see "Full-area solve time measured (#15)" above). Rules out res 8
-  unless that measurement misses the bar even after cutting X.
+  19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table (measured, and
+  missed at every X and at res 8: see "Full-area solve time measured (#15)" above). Rules out res 8 unless that
+  measurement misses the bar even after cutting X; the measurement did, so res 8 was tried there and missed too.
 - **Candidate sites: one per hex, the top 30% of the area's hexes by Overture places count**, the hex centre snapped
   to the nearest road (ties by demand; hexes with no places never qualify). 1,458 sites in the area, 554 in the slice.
   X = 30% is the smallest value in the grid whose slice candidates reach ≥ 99% of the slice's demand (99.3%). It was
