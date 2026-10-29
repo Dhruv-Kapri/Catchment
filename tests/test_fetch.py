@@ -290,4 +290,4 @@ def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path):
     with fetch.atomic_path(dest) as part:
         part.write_bytes(b"whole")
         assert not dest.exists()
-    assert dest.read_bytes() == b"whole" and not part.exists()
+    assert dest.exists() and dest.read_bytes() == b"whole" and not part.exists()
