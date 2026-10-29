@@ -14,6 +14,7 @@ VIIRS = DATA / "viirs.tif"
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="catchment-build", description=__doc__)
     ap.add_argument("stages", nargs="*", choices=["demand"], metavar="stage")
+    ap.add_argument("--res", type=int, default=9, help="H3 resolution (default: 9)")
     args = ap.parse_args(argv)
     df = build_demand(load_area(), 9, WORLDPOP, VIIRS)
     path = DATA / "demand-r9.parquet"
