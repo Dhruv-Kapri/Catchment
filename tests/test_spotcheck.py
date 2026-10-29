@@ -90,3 +90,10 @@ def test_different_seed_different_result():
     table, cands, hexes = make()
     a, b = draw_routes(table, cands, hexes, no_bad()), draw_routes(table, cands, hexes, no_bad(), seed=SEED + 1)
     assert not a[["candidate", "hex"]].equals(b[["candidate", "hex"]])
+
+
+def test_no_pair_drawn_twice():
+    table, cands, hexes = make()
+    bad = bad_pairs(table, 8, 0)
+    r = draw_routes(table, cands, hexes, bad, n=60, n_bad=8)
+    assert not r.duplicated(["candidate", "hex"]).any()
