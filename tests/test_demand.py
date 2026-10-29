@@ -101,3 +101,16 @@ def test_capture_share_is_stored_in_attrs(rasters):
     share = df.attrs.get("capture_share")
     assert share is not None
     assert np.allclose(df.demand, df.households * df.multiplier * share)
+
+
+def test_res_changes_the_hexes(rasters):
+    d9, d8 = build_demand(POLY, 9, *rasters), build_demand(POLY, 8, *rasters)
+    assert {h3.get_resolution(h) for h in d8.index} == {8}
+    assert len(d8) < len(d9) and d8.attrs["res"] == 8
+
+
+def test_attrs_round_trip_through_parquet(rasters, tmp_path):
+    df = build_demand(POLY, 9, *rasters)
+    df.to_parquet(tmp_path / "d.parquet")
+    back = pd.read_parquet(tmp_path / "d.parquet")
+    assert back.attrs == {"capture_share": df.attrs["capture_share"], "res": 9}
