@@ -132,3 +132,12 @@ def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatc
     assert "2 candidate sites" in err and "pairs within 17 min" in err
     assert "against 0.5's extrapolation of about 1.40 M pairs" in err
     assert "wall time" in err and "peak RSS" in err and "osrm-routed peak 123 MB" in err
+
+
+def test_demand_without_fetched_rasters_says_to_fetch_them(env, monkeypatch, capsys):
+    monkeypatch.setattr(build, "WORLDPOP", env / "worldpop.tif")
+    monkeypatch.setattr(build, "VIIRS", env / "viirs.tif")
+    assert build.main(["demand"]) == 1
+    err = capsys.readouterr().err
+    assert "catchment-fetch worldpop viirs" in err and "worldpop.tif" in err and "viirs.tif" in err
+    assert not (env / "demand-r9.parquet").exists()

@@ -22,8 +22,9 @@ class MissingInput(Exception):
 
 
 def require(paths, source):
-    if not all(p.exists() for p in paths):
-        raise MissingInput("")
+    missing = [p.name for p in paths if not p.exists()]
+    if missing:
+        raise MissingInput(f"{', '.join(missing)} not found; run `catchment-fetch {source}` first")
 
 
 def demand_name(res):
