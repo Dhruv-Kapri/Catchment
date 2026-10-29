@@ -50,3 +50,11 @@ def test_res_writes_a_separate_file(env):
     assert (env / "demand-r8.parquet").exists()
     d9, d8 = pd.read_parquet(env / "demand-r9.parquet"), pd.read_parquet(env / "demand-r8.parquet")
     assert d8.attrs["res"] == 8 and len(d8) < len(d9)
+
+
+def test_existing_output_is_skipped(env, capsys):
+    build.main(["demand"])
+    out = env / "demand-r9.parquet"
+    out.write_bytes(b"sentinel")
+    assert build.main(["demand"]) == 0
+    assert out.read_bytes() == b"sentinel" and "skipping" in capsys.readouterr().err

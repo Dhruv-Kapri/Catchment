@@ -16,8 +16,11 @@ def main(argv=None):
     ap.add_argument("stages", nargs="*", choices=["demand"], metavar="stage")
     ap.add_argument("--res", type=int, default=9, help="H3 resolution (default: 9)")
     args = ap.parse_args(argv)
-    df = build_demand(load_area(), args.res, WORLDPOP, VIIRS)
     path = DATA / f"demand-r{args.res}.parquet"
+    if path.exists():
+        print(f"demand: {path.name} exists, skipping", file=sys.stderr)
+        return 0
+    df = build_demand(load_area(), args.res, WORLDPOP, VIIRS)
     tmp = path.with_name(path.name + ".part")
     df.to_parquet(tmp)
     os.replace(tmp, path)
