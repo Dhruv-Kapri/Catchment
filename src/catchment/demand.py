@@ -26,5 +26,6 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     df["multiplier"] = assumptions.M_LOW + p * (assumptions.M_HIGH - assumptions.M_LOW)
     capture_share = assumptions.ORDERS_PER_HOUSEHOLD_DAY / np.average(df["multiplier"], weights=df["households"])
     df["demand"] = df["households"] * df["multiplier"] * capture_share
+    df.attrs["capture_share"] = capture_share
     df.attrs["res"] = res
     return df

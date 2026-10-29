@@ -94,3 +94,10 @@ def test_flat_radiance_still_matches_calibration_target(tmp_path):
     vi = write_tif(tmp_path / "flat.tif", np.full((10, 10), 3.0), 0.002, -9999)
     df = build_demand(POLY, 9, wp, vi)
     assert df.demand.sum() / df.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
+
+
+def test_capture_share_is_stored_in_attrs(rasters):
+    df = build_demand(POLY, 9, *rasters)
+    share = df.attrs.get("capture_share")
+    assert share is not None
+    assert np.allclose(df.demand, df.households * df.multiplier * share)
