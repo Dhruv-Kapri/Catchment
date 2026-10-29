@@ -3,6 +3,32 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Demand and reach (stage 1) design
+
+- **One command, `catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]`**, like `catchment-fetch`.
+  Outputs are named by what they depend on: `data/demand-r9.parquet`, `data/candidates-r9-x30.parquet`,
+  `data/table-r9-x30.parquet`. The defaults are the 0.5 results; the flags exist for the fallback (cut X, then res).
+- **The demand table stores the factors and the default demand**: population, households, affluence multiplier, and
+  demand at the default capture share, with that share stored alongside so a plan can rescale when the lever moves.
+- **Labelled assumptions live in one module** (household size, multiplier bounds, the four calibration inputs,
+  pick-and-pack, the 17 min cap), each with source, date and status, so notebooks and later the UI show the same table.
+- **OSRM moves to a top-level `osrm/`** (`osrm.sh`, `two-wheeler.lua`); `catchment-build reach` builds the graph if
+  missing, serves it and stops it.
+- **Far-carriageway snaps are fixed, not just measured:** candidate sites and hex centres each snap to their two
+  nearest roads, and a pair keeps the fastest of the four times (about 4× the OSRM queries). Measured before and after
+  on the slice.
+- **The write-up is one notebook, `03-area`:** the committed area demand map, the snapping before and after, the
+  spot check, and the full-area CP-SAT solve time against the ≤ 10 s bar (the 0.5 model, run once; a miss cuts X).
+- **Spot check:** about 20 routes from the table across 2-17 min, some with known bad snaps, timed in Google Maps'
+  two-wheeler mode on a weekday at 7-8 pm and compared with free-flow × 1.4; the multiplier the app implies is reported.
+  The per-route times are committed in `docs/spot-check.csv` ([ADR 0002](adr/0002-spot-check-times-in-repo.md)).
+- **`00-demand` and `01-reach` stay frozen** as the 0.5 record; they are not rewritten against the package.
+- **No GUI before stage 3.** Inputs are flags and the assumptions module; the web map with levers stays in stage 3.
+- **Tests:** the pure steps are unit-tested; OSRM sits behind a small client that tests replace with a fake, plus one
+  integration test against real OSRM that skips when Docker is down.
+- **One time-boxed try at the WUP 2025 population** at source before the area demand map is committed; if not found,
+  34.7 M and its caveat stand.
+
 ## 2026-10-29: Explore (stage 0.5) results: hex resolution and candidate site rule
 
 The three notebooks ran the chain on the slice (`00-demand`, `01-reach`, `02-plan`); numbers below are from those

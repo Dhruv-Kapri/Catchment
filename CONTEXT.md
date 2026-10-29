@@ -50,6 +50,11 @@ Two-wheeler time from a candidate site to a hex centroid, from OSRM on OSM roads
 congestion multiplier.
 _Avoid_: distance, ETA
 
+**Travel-time table**:
+The travel times from every candidate site to every hex, kept only up to the longest promise the levers
+allow.
+_Avoid_: distance matrix, OD matrix (in prose)
+
 **Promise**:
 The delivery time in minutes the operator commits to. A hex is reachable from a site if travel time
 plus a fixed pick-and-pack allowance is within the promise.
@@ -61,6 +66,11 @@ _Avoid_: radius, coverage area, polygon (a catchment is not a circle)
 
 **Congestion multiplier**:
 A factor applied to free-flow OSRM times to stand in for traffic. A lever, not a traffic model.
+
+**Spot check**:
+A handful of routes timed by hand in a live map app at a stated time of day, compared with the
+modelled travel times. It measures the error; it does not set the model.
+_Avoid_: validation, ground truth
 
 ## Network
 
