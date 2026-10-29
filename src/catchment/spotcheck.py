@@ -18,8 +18,8 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
     is_bad = pd.MultiIndex.from_frame(pairs[["candidate", "hex"]]).isin(pd.MultiIndex.from_frame(bad[["candidate", "hex"]]))
     bad_pairs, other = pairs[is_bad], pairs[~is_bad]
     drawn_bad = bad_pairs.iloc[rng.choice(len(bad_pairs), min(n_bad, len(bad_pairs)), replace=False)]
-    m, bins = n - len(drawn_bad), np.digitize(other.minutes, edges[1:-1])
-    share = [m // (len(edges) - 1) + (b < m % (len(edges) - 1)) for b in range(len(edges) - 1)]
+    n_other, bins = n - len(drawn_bad), np.digitize(other.minutes, edges[1:-1])
+    share = [n_other // (len(edges) - 1) + (b < n_other % (len(edges) - 1)) for b in range(len(edges) - 1)]
     pick = [rng.choice(np.flatnonzero(bins == b), k, replace=False) for b, k in enumerate(share)]
     r = pd.concat([drawn_bad.assign(bad_snap_before=True), other.iloc[np.concatenate(pick)].assign(bad_snap_before=False)])
     r = r.astype({"minutes": float}).sort_values("minutes", kind="stable").reset_index(drop=True)   # float32 from OSRM would not survive the CSV
