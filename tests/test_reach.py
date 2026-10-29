@@ -50,3 +50,10 @@ def test_top_x_pct_picks_the_busiest_hexes_and_demand_breaks_ties():
     assert list(candidates.index) == [H[1], H[0], H[3]]
     assert list(candidates["rank"]) == [0, 1, 2]
     assert list(candidates.places) == [5, 5, 3]
+
+
+def test_hexes_without_places_never_qualify():
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
+    candidates, _ = build_reach(AREA, demand, places, RES, 100, FakeRouter())   # X allows all 7; 5 have places
+    assert list(candidates.index) == [H[1], H[0], H[3], H[2], H[4]]
