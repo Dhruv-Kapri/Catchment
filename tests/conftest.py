@@ -35,6 +35,7 @@ class FakeRouter:
 
     def __init__(self, times=None, default=1.0, east=0.0, step=0.0, snap_m=0.0):
         self.times, self.default, self.east, self.step, self.snap_m = times or {}, default, east, step, snap_m
+        self.sources = None
 
     def snap(self, lons, lats, k=1):
         lons = np.asarray(lons, float)[:, None] + self.east + self.step * np.arange(k)
