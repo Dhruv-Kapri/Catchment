@@ -39,3 +39,21 @@ def test_table_cells_are_non_empty():
     t = assumptions.table()
     for col in ("Input", "Value", "Source", "Date", "Status"):
         assert t[col].astype(str).str.strip().ne("").all()
+
+
+def test_status_and_values_match_the_notebook_tables():
+    t = assumptions.table().set_index("Input")
+    verified = {"Household size", "Blinkit orders, Q2 FY27", "Blinkit stores", "NCR dark stores (all brands)",
+                "NCR population", "Orders per store per day"}
+    assert set(t.index[t.Status == "Verified"]) == verified
+    assert set(t.Status) == {"Verified", "Assumption"}
+    assert t.loc[list(verified - {"Orders per store per day"}), "Date"].eq("2026-10-29").all()
+    assert t.loc["Household size", "Value"] == "4.5 persons"
+    assert t.loc["Multiplier bounds", "Value"] == "0.5 to 1.5"
+    assert t.loc["Blinkit orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
+    assert t.loc["Blinkit stores", "Value"] == "2,751 at quarter end"
+    assert t.loc["NCR dark stores (all brands)", "Value"] == "~400"
+    assert t.loc["NCR population", "Value"] == "34.7 M"
+    assert t.loc["Pick-and-pack allowance", "Value"] == "3 min, fixed"
+    assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
+    assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]

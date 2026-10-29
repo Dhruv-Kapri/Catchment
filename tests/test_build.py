@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -36,7 +38,7 @@ def test_prints_a_summary_with_the_capture_share(env, capsys):
 
 def test_write_is_atomic(env, monkeypatch):
     def partial_write(self, path, *a, **k):
-        open(path, "wb").write(b"half")
+        Path(path).write_bytes(b"half")
         raise OSError("disk full")
     monkeypatch.setattr(pd.DataFrame, "to_parquet", partial_write)
     with pytest.raises(OSError):
