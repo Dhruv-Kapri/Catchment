@@ -16,6 +16,8 @@ def n_top(x_pct, n_hexes, n_with_places):
 
 
 def build_reach(polygon, demand, places, res, x_pct, router):
+    if demand.attrs.get("res", res) != res:
+        raise ValueError(f"demand table is res {demand.attrs['res']}, asked for res {res}")
     hexes = demand[shapely.contains_xy(polygon, demand.lon, demand.lat)]
     places = places[places.operating_status != "permanently_closed"]
     cells = pd.Series([h3.latlng_to_cell(y, x, res) for x, y in zip(places.lon, places.lat)])

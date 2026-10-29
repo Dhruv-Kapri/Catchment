@@ -1,6 +1,7 @@
 import h3
 import numpy as np
 import pandas as pd
+import pytest
 from shapely.geometry import box
 
 from catchment.reach import build_reach
@@ -157,3 +158,8 @@ def test_frames_carry_res_x_pct_and_float32_minutes():
     assert candidates.attrs == {"res": 9, "x_pct": 2.5} and table.attrs == {"res": 9, "x_pct": 2.5}
     assert table.minutes.dtype == np.float32
     assert list(table.columns) == ["candidate", "hex", "minutes"]
+
+
+def test_a_demand_table_of_another_resolution_is_refused():
+    with pytest.raises(ValueError, match="res 9"):
+        build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), 8, 30, FakeRouter())
