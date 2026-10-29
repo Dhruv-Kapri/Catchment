@@ -3,6 +3,35 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-29: Explore (stage 0.5) model and slice
+
+- **Slice: about 80 km², old Gurugram (sectors 4-14, Sadar) to Golf Course Road / Sohna Road.** A
+  10-min catchment is about 17 km², so "a few km²" would make every site reach every hex and give
+  nothing to extrapolate from. Rules out a slice smaller than several catchments.
+- **Demand = households × affluence multiplier × capture share.** Households = population ÷ one
+  stated household size, since capture share is per household and the brief reports households
+  covered. The affluence multiplier is VIIRS radiance ranked within the area and mapped to labelled
+  bounds (about 0.5-1.5); Overture places feed candidate sites, not demand, so commercial brightness
+  isn't counted twice. Calibration to reported orders per store per day sets only the *default*
+  capture share; the lever moves from there.
+- **The synthetic network holds every brand, the operator included.** The operator's existing stores
+  are one synthetic brand; planner-supplied stores move to Later ([cuts](cuts.md)).
+- **Shared catchments split equally by brand; the solver assigns each hex to one own store within
+  capacity** ([ADR 0001](adr/0001-demand-split-by-brand.md)).
+- **Lever ranges:** promise 8-20 min (default 10), pick-and-pack allowance 3 min fixed, congestion
+  multiplier 1.0-2.0 (default 1.4), so travel-time pairs are kept up to 17 min free-flow. Default
+  capacity is 1.5 × the calibrated average orders per store per day. The default scenario for the
+  ≤ 10 s bar is the full area with N = 10 new stores; the slice uses N = 3.
+- **Reach:** OSRM in Docker (arm64) with an edited `car.lua` (two-wheeler speeds, `motorcycle=*`
+  access; every edit listed as an assumption), since OSRM has no two-wheeler profile. The OSM extract is
+  the Geofabrik northern zone, clipped with osmium-tool to the area plus 5 km; hexes and candidate
+  sites stay inside the area.
+- **Hex resolution:** the finest whose full-area table and solve fit the budget; res 9 first, res 8
+  as fallback. **Candidate sites:** one per hex, top X% of hexes by Overture places count, X tuned to
+  the same budget.
+- **In 0.5, the synthetic network is placed inline in `02-plan`** (demand-weighted, fixed seed, counts
+  labelled placeholders); the generator stays in stage 2.
+
 ## 2026-10-29: Area boundary and data products (stage 0)
 
 - **The area is the Gurgaon tehsil (OSM rel 10398244) plus South Delhi district (rel 21181223)**,

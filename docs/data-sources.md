@@ -26,6 +26,12 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 - **Measured 2026-10-29**, area only: WorldPop total **4.40 million** people; Overture **81,939** places
   and **389,303** buildings (peak memory about 1 GB to fetch).
 - Overture features are kept if they intersect the area (not cut at its boundary).
+- **Verified 2026-10-29:** Geofabrik splits India into six zones with no smaller sub-regions; the
+  northern zone (`asia/india/northern-zone-latest.osm.pbf`, about 214 MB) has a bbox covering Delhi
+  and Gurugram. The full India extract is about 1.6 GiB.
+- **Verified 2026-10-29:** OSRM ships car, bicycle and foot profiles only, with no two-wheeler profile,
+  and no maintained community motorcycle profile was found; the official Docker image
+  (`ghcr.io/project-osrm/osrm-backend`) has a linux/arm64 build. `osmium-tool` is in Homebrew for arm64.
 
 ## Checked and not usable for competitor stores
 
@@ -40,7 +46,7 @@ barely has them.
   `place_id`, so it cannot become a dataset.
 - **Scraping operator apps:** not used (terms of service).
 
-Hence the **synthetic competitor layer** (see [CONTEXT.md](../CONTEXT.md)): stores per brand placed by
+Hence the **synthetic network** (see [CONTEXT.md](../CONTEXT.md)): stores per brand, the operator's included, placed by
 demand weight, with counts sized from publicly reported figures. Reported counts vary by source and
 date; record the source and date for every number used.
 

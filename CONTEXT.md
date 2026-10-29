@@ -9,21 +9,35 @@ wins, loses and takes from the stores already there.
 The region a plan covers, as one committed polygon. First area: Gurugram + South Delhi (the Gurgaon tehsil and South Delhi district in OSM).
 _Avoid_: city, region, AOI (in prose)
 
+**Slice**:
+A part of the area, several catchments across, that the Explore notebooks run the whole chain on before
+it runs on the full area. First slice: old Gurugram to Golf Course Road.
+_Avoid_: sample, test area
+
 **Hex**:
 One H3 cell at the project's working resolution; the unit demand is counted in.
 _Avoid_: cell, tile, grid square
 
 **Candidate site**:
-A point where a store could open: a hex with enough commercial activity, snapped to the road network.
+A point where a store could open: the centre of one of the area's busiest hexes by count of mapped
+places, snapped to the road network.
 Only candidate sites can be chosen.
 _Avoid_: location, site (alone), store (before it is chosen)
 
 ## Demand
 
 **Demand**:
-Expected orders per day from one hex: population × affluence proxy × capture share. A model, never
-observed data.
+Expected orders per day from one hex: households × affluence multiplier × capture share. A model,
+never observed data.
 _Avoid_: orders (alone, implies real data), sales, forecast
+
+**Households**:
+A hex's population divided by one stated household size (a labelled assumption).
+
+**Affluence multiplier**:
+A bounded factor per hex from night-time light brightness, ranked within the area; the bounds are a
+labelled assumption.
+_Avoid_: affluence proxy (in the UI), wealth, income
 
 **Capture share**:
 The fraction of a hex's households assumed to order on a given day. A lever.
@@ -49,22 +63,30 @@ A factor applied to free-flow OSRM times to stand in for traffic. A lever, not a
 
 ## Network
 
-**Store**:
-A chosen candidate site, or an existing store, own or competitor.
+**Brand**:
+One quick-commerce operator's app. Customers choose a brand, not a store.
 
-**Competitor layer**:
-Synthetic competitor stores, placed by demand weight, with counts sized from publicly reported
-figures (source and date recorded). Not a map of any company's real stores.
-_Avoid_: competitor data, real stores
+**Operator**:
+The brand the planner works for. In the first cut it is one brand of the synthetic network.
+
+**Store**:
+A chosen candidate site, or an existing store of the operator or a competitor.
+
+**Synthetic network**:
+The existing stores of every brand, the operator's included, placed by demand weight, with counts sized
+from publicly reported figures (source and date recorded). Not a map of any company's real stores.
+_Avoid_: competitor data, real stores, competitor layer (it holds the operator's stores too)
 
 **Capacity**:
 The most orders per day a store can serve. Demand beyond it is lost.
 
-**Cannibalisation**:
-Demand a new store takes from a store the operator already has, as opposed to demand it wins fresh.
-
 **Shared catchment**:
-Hexes reached by more than one store; their demand is split between those stores.
+Hexes reached by more than one brand. Their demand is split equally between the brands that reach them;
+within the operator, the plan assigns each hex to one of its stores that reaches it, within capacity.
+
+**Cannibalisation**:
+Demand a new store takes from a store the operator already has (a hex that moves from an existing
+store to the new one), as opposed to demand it wins fresh.
 
 ## Planning
 

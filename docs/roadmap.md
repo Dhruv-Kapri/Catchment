@@ -14,20 +14,22 @@ Terms (hex, candidate site, catchment, promise, lever, plan, ...) are defined in
   idempotent, writing to `data/`.
 - **Done when:** one command fetches every source for the area into `data/`.
 - **Done 2026-10-29:** `uv run catchment-fetch`. VIIRS comes from NASA Black Marble, not EOG (see
-  [decisions](decisions.md)).
+  [decisions](decisions.md)). The OSM road network was missed; an `osm` source (Geofabrik northern
+  zone, clipped to the area plus 5 km) is added to `catchment-fetch` while building `01-reach`.
 
 ## 0.5 Explore (to 8 Nov)
 
 Notebooks before code, as in the sibling projects: the whole chain runs once on a small slice, so the
 risks late in the pipeline (OSRM within 8 GB, the size of the travel-time table, CP-SAT solve time)
 show up in the first week rather than the third. Each notebook works its stage inline, with outputs
-committed as static PNGs so it reads on GitHub; the clean version goes into the package in stages 1-2.
+saved as static PNGs in `notebooks/figures/` and embedded in markdown cells (nbstripout strips
+outputs), so it reads on GitHub; the clean version goes into the package in stages 1-2.
 
 | # | Notebook | Question it answers |
 | --- | --- | --- |
-| 00 | `00-demand` | which slice (a few km² of Gurugram, recorded why); which hex resolution, and why; demand per hex, each factor as its own map |
-| 01 | `01-reach` | does OSRM's two-wheeler profile build and route within 8 GB; the candidate site rule; how many pairs the table holds under the longest promise |
-| 02 | `02-plan` | greedy baseline and the CP-SAT model on the slice; solve time, and what it implies for the full area |
+| 00 | `00-demand` | the slice (about 80 km², old Gurugram to Golf Course Road; several catchments across, recorded why); the finest hex resolution whose full-area table and solve fit the budget (res 9 first, else res 8); demand per hex, each factor as its own map |
+| 01 | `01-reach` | does OSRM's two-wheeler profile build and route within 8 GB; the two-wheeler profile (edited `car.lua`, every edit listed); the candidate site rule (top X% of hexes by places count); how many pairs the table holds under the longest promise |
+| 02 | `02-plan` | greedy baseline and the CP-SAT model on the slice (N = 3, placeholder synthetic network inline); solve time, and what it implies for the full area's default scenario |
 
 - Notebooks import helpers (fetch, loaders) from the `catchment` package; stage logic stays inline
   until the stage is formalised.
@@ -48,8 +50,10 @@ committed as static PNGs so it reads on GitHub; the clean version goes into the 
 ## 2. Plan (to 18 Nov)
 
 - `02-plan` moves into `src/catchment/`: the greedy baseline and the CP-SAT model (maximise covered
-  demand; N stores; capacity; shared catchments split; competitor layer and existing stores fixed).
-- Competitor layer generator, with every count's source and date recorded.
+  demand; N stores; capacity; shared catchments split by brand, see [ADR 0001](adr/0001-demand-split-by-brand.md);
+  the synthetic network fixed).
+- Synthetic network generator (the operator's and competitors' existing stores), with every count's
+  source and date recorded.
 - Benchmark over a grid of scenarios: covered demand CP-SAT vs greedy, solve time.
 - **Done when:** CP-SAT returns a plan in ≤ 10 s for the default scenario, and the comparison table
   with greedy is committed (whichever wins).
