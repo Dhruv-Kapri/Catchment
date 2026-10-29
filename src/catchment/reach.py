@@ -22,4 +22,4 @@ def build_reach(polygon, demand, places, res, x_pct, router):
     hexes["rank"] = pd.Series(np.arange(len(hexes)), index=order)
     k = n_top(x_pct, len(hexes), int((hexes.places > 0).sum()))
     candidates = hexes[hexes["rank"] < k].sort_values("rank")[["lat", "lon", "places", "rank"]]
-    return candidates, pd.DataFrame()
+    return candidates, pd.DataFrame(columns=["candidate", "hex", "minutes"])
