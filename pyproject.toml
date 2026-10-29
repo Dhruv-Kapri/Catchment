@@ -36,3 +36,4 @@ dev = [
 
 [project.scripts]
 catchment-fetch = "catchment.fetch:main"
+catchment-build = "catchment.build:main"
