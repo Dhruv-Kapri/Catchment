@@ -123,3 +123,23 @@ def test_reach_reads_an_existing_demand_table(env):
     before = (env / "demand-r9.parquet").stat().st_mtime_ns
     build.main(["reach"])
     assert (env / "demand-r9.parquet").stat().st_mtime_ns == before
+
+
+def test_reach_is_skipped_only_when_both_outputs_exist(env):
+    build.main(["reach"])
+    (env / "table-r9-x30.parquet").unlink()
+    (env / "candidates-r9-x30.parquet").write_bytes(b"sentinel")
+    build.main(["reach"])
+    assert (env / "table-r9-x30.parquet").exists()
+    assert (env / "candidates-r9-x30.parquet").read_bytes() != b"sentinel"
+
+
+def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatch):
+    router = OneMinuteRouter()
+    router.peak_bytes = 123_000_000
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(router))
+    build.main(["reach"])
+    err = capsys.readouterr().err
+    assert "2 candidate sites" in err and "pairs within 17 min" in err
+    assert "against 0.5's extrapolation of about 1.40 M pairs" in err
+    assert "wall time" in err and "peak RSS" in err and "osrm-routed peak 123 MB" in err
