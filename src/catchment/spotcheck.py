@@ -33,4 +33,5 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
 
 
 def write_sheet(routes, path):
-    return False
+    routes.to_csv(path, index=False)
+    return True

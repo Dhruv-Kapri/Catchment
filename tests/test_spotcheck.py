@@ -131,3 +131,17 @@ def test_app_columns_empty():
     table, cands, hexes = make()
     r = draw_routes(table, cands, hexes, no_bad())
     assert r[["app_min", "app", "looked_up"]].isna().all().all()
+
+
+def sample_routes():
+    table, cands, hexes = make()
+    return draw_routes(table, cands, hexes, no_bad(), n=5, n_bad=0)
+
+
+def test_write_sheet_writes_when_absent(tmp_path):
+    routes, path = sample_routes(), tmp_path / "spot-check-routes.csv"
+    assert write_sheet(routes, path) is True
+    back = pd.read_csv(path)
+    assert list(back.columns) == list(routes.columns)
+    assert list(back.route) == [1, 2, 3, 4, 5]
+    assert back[["app_min", "app", "looked_up"]].isna().all().all()
