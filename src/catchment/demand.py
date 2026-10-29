@@ -24,6 +24,7 @@ def build_demand(polygon, res=9, worldpop=DATA / "worldpop.tif", viirs=DATA / "v
     span = pct.max() - pct.min()
     p = (pct - pct.min()) / span if span > 0 else pd.Series(0.5, index=df.index)
     df["multiplier"] = assumptions.M_LOW + p * (assumptions.M_HIGH - assumptions.M_LOW)
-    df["demand"] = 0.0
+    capture_share = assumptions.ORDERS_PER_HOUSEHOLD_DAY / np.average(df["multiplier"], weights=df["households"])
+    df["demand"] = df["households"] * df["multiplier"] * capture_share
     df.attrs["res"] = res
     return df
