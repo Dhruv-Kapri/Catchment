@@ -181,7 +181,7 @@ def test_write_sheet_keeps_a_sheet_drawn_from_float32_minutes(tmp_path):
 
 
 def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm():
-    sheet = pd.read_csv(Path(__file__).parents[1] / "docs" / "spot-check.csv")
+    sheet = pd.read_csv(Path(__file__).parent.parent / "docs" / "spot-check.csv")
     assert len(sheet) == 20 and sheet.app_min.notna().all()
     assert (sheet.app_min == sheet.app_min.round()).all() and (sheet.app_min > 0).all()
     assert (sheet.app == "Google Maps two-wheeler").all()
