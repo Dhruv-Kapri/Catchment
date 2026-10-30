@@ -85,11 +85,12 @@ The 0.5 model's measurements follow, as the record of the miss.
 
 - **Kept as it is:** nearest hit within 100 m lying more than 5 m across the first (`SECOND_ROAD_MAX_M`,
   `SECOND_ROAD_GAP_M`). No threshold changes.
-- **Why** (`03-area`, the same 200 short slice pairs, seed 42; road class and one-way from the OSM ways under
-  each snap): of the 19 pairs still riding more than 300 m out and back at an end, none lacks a second road. 11 snap
-  to a two-way road (10 a residential or service lane), not a divided road: in 9 the other snap loops too (the lane
-  network round a block), and in 2 it does not loop but is slower. No second-road rule reaches them. 4 are paired
-  one-way roads where both carriageways loop; 4 took a second road that is not the far carriageway. No cause dominates.
+- **Why** (`03-area`, the same 200 short slice pairs, seed 42; road class and one-way from the OSM ways under each
+  snap): of the 19 pairs still riding more than 300 m out and back at an end, none lacks a second road. 11 snap to a
+  two-way road (10 a residential or service lane), not a divided road: in 9 the other snap loops too (the lane network
+  round a block), and in 2 it does not loop but is slower. No second-road rule reaches them. 4 are paired one-way
+  roads where both carriageways loop; 4 took a second road that is not the far carriageway. The largest cause (11) is
+  out of a second-road rule's reach; of the 8 it could reach, neither cause dominates.
 - **The two cheap fixes, measured:** preferring a hit with the first road's name gives 18 of 200 (9.0%); it changes
   one pair's route (Mehrauli-Gurgaon Road, where the rule took a one-way slip at 8 m over the far carriageway at 9 m).
   A 200 m reach for hex centres changes no pair: 98.2% of sample hexes already have a second road within 100 m. Over
