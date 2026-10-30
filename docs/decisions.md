@@ -3,7 +3,7 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
-## 2026-10-29: Full-area solve time measured (#15)
+## 2026-10-30: Full-area solve time measured (#15)
 
 **The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) returns a plan within 10 s on the full area
 with a tighter capacity row, gap stated.** The 0.5 model as written misses on the placeholder network at every setting
