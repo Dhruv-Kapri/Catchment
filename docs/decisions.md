@@ -5,20 +5,43 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 
 ## 2026-10-29: Full-area solve time measured (#15)
 
-The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) on the placeholder network misses the 10 s bar
-on the full area at every setting the ticket allows; a network sized to the area (a sensitivity run, not the default)
-solves within it. Res 9 and X = 30 stand; the placeholder network's miss is an open point for stage 2. Measured in
-`03-area` on the real full-area tables (4,859 hexes, 1,458 candidate sites, 59,855 default-scenario pairs), the 0.5
-CP-SAT model copied unchanged.
+**The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) returns a plan within 10 s on the full area
+with a tighter capacity row, gap stated.** The 0.5 model as written misses on the placeholder network at every setting
+the ticket allows, measured below. Res 9 and X = 30 stand. Measured in `03-area` on the real full-area tables (4,859
+hexes, 1,458 candidate sites, 59,855 default-scenario pairs).
 
-- **Main run, the placeholder network** (3 operator, 4 Competitor A, 3 Competitor B, seed 2026, X = 30): median 60.3 s
-  of three (60.3 to 60.6), build 0.2 s plus solve 60.1 s. Status FEASIBLE: it stopped at the 60 s limit, with the best
-  plan 28,266 orders a day against a bound of 33,432 (18.3% gap). Over the bar by a factor of six or more. Its first run
-  started at a load of 3.3 and took as long as the others, so the load does not explain the miss.
-- **Sensitivity, a network sized to the area** (57 stores, 17/23/17, same seed): OPTIMAL, median 6.1 s (5.8 to 6.4) at a
-  load of 11 to 13, objective 30,401.05, checked equal to `evaluate`'s score for the chosen stores (0.4 s). **This meets
-  the bar**, but it depends on the load: the same cell took 14 to 42 s at loads of 17 to 40 in earlier runs (medians
-  14.3, 21.0 and 34.8 s). So the bar is met with an area-sized network when the machine is not heavily loaded.
+- **Decision (the planner, 2026-10-30): the 10 s bar means a plan is returned within 10 s with its proven gap to the
+  bound stated; proven optimality is not required.** The model stays inline in `03-area`; stage 2 still moves it into
+  the package.
+- **The tighter model.** For each constrained new site the capacity row becomes `Σ_h share_h x_{s,h} ≤ cap · y_s`;
+  existing operator stores keep `≤ cap` and `x ≤ y` stays. It is valid (a closed site serves nothing, so the optimum is
+  unchanged) and it moves the root bound on the main network from 33,432 to 28,292, within 0.1% of the best plans found.
+  With a 9 s limit (build plus solve stays under 10 s) all nine default-scenario runs returned in at most 9.7 s: the
+  placeholder network at res 9 in a median of 9.6 s (9.5 to 9.7), FEASIBLE, plan 24,329 against a bound of 28,292, a gap
+  of 16.8% (16.3% to 23.9% over three runs); the area-sized network (57 stores) in 5.3 s (4.3 to 5.6) and res 8 in 2.2 s
+  (1.8 to 2.2), both OPTIMAL (gap 0) with objectives equal to the 0.5 model's (30,401.05 and 26,619.37, asserted). **The
+  placeholder network's gap is loose and load-sensitive.** The runs were on a loaded machine (another job held about
+  three cores; load average 6 to 17). A separate experiment at a 10 s limit and a load of 12 to 14 got 28,283 against
+  the same bound (0.03%), and the 0.5 model's 60 s plan (28,266) beats this 9 s one. Four executions of the cells gave
+  median gaps of 10% to 17%; the cause is unresolved and the gap should be re-measured on a quiet machine. The time did
+  not vary that way.
+- **`evaluate` check:** run 1's chosen stores score 24,388.22 with a 120 s limit, proven optimal in 5.3 s, 58.86 orders
+  a day (0.24%) above the solver's objective of 24,329.36. It is consistent (the objective is one feasible assignment)
+  but not equal: the objective of a plan cut off at 9 s understates what its stores serve. `evaluate` took 92 s for the
+  0.5 model's best stores in the experiment.
+- **Stress case, not a default scenario:** the main network at a capacity of 1,000 orders a day gets no usable plan in
+  9 s (objective 10,632 against a bound of 60,320, 10.65 s in total).
+
+The 0.5 model's measurements follow, as the record of the miss.
+
+- **0.5 model, main run, the placeholder network** (3 operator, 4 Competitor A, 3 Competitor B, seed 2026, X = 30):
+  median 60.3 s of three (60.3 to 60.6), build 0.2 s plus solve 60.1 s. Status FEASIBLE: it stopped at the 60 s limit,
+  with the best plan 28,266 orders a day against a bound of 33,432 (18.3% gap). Over the bar by a factor of six or more.
+  Its first run started at a load of 3.3 and took as long as the others, so the load does not explain the miss.
+- **0.5 model, sensitivity, a network sized to the area** (57 stores, 17/23/17, same seed): OPTIMAL, median 6.1 s (5.8
+  to 6.4) at a load of 11 to 13, objective 30,401.05, checked equal to `evaluate`'s score for the chosen stores (0.4 s).
+  **Within the bar**, but it depends on the load: the same cell took 14 to 42 s at loads of 17 to 40 in earlier runs
+  (medians 14.3, 21.0 and 34.8 s). So the bar is met with an area-sized network when the machine is not heavily loaded.
 - **Cause: capacity binds on the area at the default.** The largest catchment holds 5,266 orders a day against a
   capacity of 2,364, and sites above it need assignment variables: 123 with the placeholder network, 22 with the sized
   one. 0.5's slice had its largest catchment at 1,981, no constrained site, and maximum coverage; its 3.1-5.6 s
@@ -27,11 +50,11 @@ CP-SAT model copied unchanged.
   "capacity that binds is slow", now at the default scenario. `evaluate` is slow for the same reason: for the main run's
   stores its first solve did not prove optimality in 30 s, so that check was skipped there and for the X cuts (it took
   0.4 s on the sized network's stores and 0.3 s on res 8's, and matched the objective in both).
-- **Cutting X did not help the placeholder network.** The X% sets are the X = 30 table filtered by rank (equivalent to
-  `catchment-build reach --x-pct X`, no OSRM needed); the network stays as placed at X = 30. X = 20, 10 and 5 (972, 486
-  and 243 sites) all ran to the limit unproven (medians 60.2, 60.2, 60.1 s; 91, 53 and 30 constrained sites; bound still
-  9.5% above the best plan at X = 5), at a coverage of 88.3%, 79.8% and 71.2% of the area's demand against 93.5%
-  at X = 30.
+- **Cutting X did not help the 0.5 model on the placeholder network.** The X% sets are the X = 30 table filtered by rank
+  (equivalent to `catchment-build reach --x-pct X`, no OSRM needed); the network stays as placed at X = 30. X = 20, 10
+  and 5 (972, 486 and 243 sites) all ran to the limit unproven (medians 60.2, 60.2, 60.1 s; 91, 53 and 30 constrained
+  sites; bound still 9.5% above the best plan at X = 5), at a coverage of 88.3%, 79.8% and 71.2% of the area's demand
+  against 93.5% at X = 30.
 - **Res 8, the last resort, misses too, but proven.** `catchment-build reach --res 8` at X = 30 gives 697 hexes, 210
   sites and 1,194 default-scenario pairs; coverage 78.9% (14.6 points below res 9), 18 constrained sites, largest
   catchment 4,852 against 2,364. The main network, placed by the same rule over the res-8 candidates, is OPTIMAL in a
@@ -40,15 +63,15 @@ CP-SAT model copied unchanged.
   are not comparable with res 9's: the native res-8 demand build drops hexes whose centre is outside the area (941,794
   households against 955,163, 1.4% lower; see "Demand and reach (stage 1) design"). The 0.5 entry's 0.04 s for res 8
   assumed no constrained site.
-- **Settings and hardware:** Apple M1, 8 cores, 8 GB, OR-tools 9.15.6755, 8 workers, 60 s limit, solver seed 1. The
-  machine was loaded by parallel jobs: the 1-minute load average was 3 to 23 on 8 cores in the final run (11 to 13 for
-  the sized network, 16 to 18 for res 8) and 12 to 40 in earlier ones. Unproven runs also vary: the main network's plan
-  was 28,266 here and 27,965 to 28,234 earlier.
-- **Open, for stage 2:** the placeholder network's miss. Stage 2's network generator should size store counts to the
-  area's orders (about 57 stores here), since that is what meets the bar. Whatever the counts, a way to solve binding
-  capacity robustly in 10 s is still needed: a faster model, a warm start from the greedy plan, or a different capacity
-  default (the area's dense catchments hold more than twice the 1.5 times average that the default allows). A faster
-  `evaluate` is part of it.
+- **Settings and hardware:** Apple M1, 8 cores, 8 GB, OR-tools 9.15.6755, 8 workers, 60 s limit (9 s for the tighter
+  model), solver seed 1. The machine was loaded by parallel jobs: the 1-minute load average was 3 to 23 on 8 cores in
+  the final run (11 to 13 for the sized network, 16 to 18 for res 8) and 12 to 40 in earlier ones. Unproven runs also
+  vary: the main network's plan was 28,266 here and 27,965 to 28,234 earlier.
+- **Open, for stage 2:** binding capacity below the default (the capacity-1,000 stress case) and the slow `evaluate`
+  (92 s for a good plan's stores), moving the model, tightened, into the package, and re-measuring the placeholder
+  network's gap on a quiet machine. Stage 2's network generator should size store counts to the area's orders (about 57
+  stores here): with the 0.5 model that alone met the bar at a moderate load (6.1 s), and with the tighter row it is
+  proven optimal in 5.3 s.
 
 ## 2026-10-29: Fastest-of-four snapping, measured (#14)
 
@@ -127,16 +150,16 @@ CP-SAT model copied unchanged.
 The three notebooks ran the chain on the slice (`00-demand`, `01-reach`, `02-plan`); numbers below are from those
 runs, on the placeholder network, at the default scenario (promise 10, multiplier 1.4, capacity 2,364 orders a day).
 
-- **Hex resolution: H3 res 9.** It is the finest tried, and it fits the budget. Res 8 is cheaper but its candidate
-  sites reach only 96.0% of the slice's demand at the default scenario; a res-8 hex (about 0.74 km²) is too coarse
-  for a catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table
-  pairs within 17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to
-  3.1-5.6 s (other runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair
-  count, solved in 1.2 s. Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took
-  19 s. The ≤ 10 s bar looks reachable but is not proven until stage 1 builds the full-area table (measured, and
-  met with a network sized to the area, missed with the placeholder network at every X and at res 8: see "Full-area
-  solve time measured (#15)" above). Rules out res 8 unless that measurement misses the bar even after cutting X; with
-  the placeholder network it did, so res 8 was tried there and missed too.
+- **Hex resolution: H3 res 9.** It is the finest tried, and it fits the budget. Res 8 is cheaper but its candidate sites
+  reach only 96.0% of the slice's demand at the default scenario; a res-8 hex (about 0.74 km²) is too coarse for a
+  catchment of about 5 free-flow minutes. Res 9, full area, extrapolated from the slice: about 1.40 M table pairs within
+  17 min (17 MB in memory) and about 54 k default-scenario pairs; CP-SAT at N = 10 is extrapolated to 3.1-5.6 s (other
+  runs 1.9-11.3 s; the fit is noisy) and the slice copied three times, at the full area's pair count, solved in 1.2 s.
+  Res 8 would take about 0.04 s. The time grows with N: three slice copies at N = 30 took 19 s. The ≤ 10 s bar looks
+  reachable but is not proven until stage 1 builds the full-area table (measured: the 0.5 model misses on the
+  placeholder network at every X and at res 8, and a tighter capacity row returns a plan within 10 s with the gap
+  stated; see "Full-area solve time measured (#15)" above). Rules out res 8 unless that measurement misses the bar even
+  after cutting X; the 0.5 model did, so res 8 was tried and missed too, and the tighter model makes it unnecessary.
 - **Candidate sites: one per hex, the top 30% of the area's hexes by Overture places count**, the hex centre snapped
   to the nearest road (ties by demand; hexes with no places never qualify). 1,458 sites in the area, 554 in the slice.
   X = 30% is the smallest value in the grid whose slice candidates reach ≥ 99% of the slice's demand (99.3%). It was
