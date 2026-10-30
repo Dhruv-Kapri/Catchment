@@ -23,8 +23,11 @@ hexes, 1,458 candidate sites, 59,855 default-scenario pairs).
   placeholder network's gap is loose and load-sensitive.** The runs were on a loaded machine (another job held about
   three cores; load average 6 to 17). A separate experiment at a 10 s limit and a load of 12 to 14 got 28,283 against
   the same bound (0.03%), and the 0.5 model's 60 s plan (28,266) beats this 9 s one. Four executions of the cells gave
-  median gaps of 10% to 17%; the cause is unresolved and the gap should be re-measured on a quiet machine. The time did
-  not vary that way.
+  median gaps of 10% to 17%. The likely cause is CPU contention: in a diagnostic run (2026-10-30) with another project's
+  job holding four of the eight cores (load 10 to 17), the tighter model did not even reach its root bound in 9 s (bound
+  34,478, not 28,292; plans 21,161 to 23,895, 30% to 60% from the bound), and 4 workers did no better than 8. So the
+  time is met whatever the load, but the plan's quality in 9 s depends on the CPU free; the gap should be re-measured on
+  a quiet machine.
 - **`evaluate` check:** run 1's chosen stores score 24,388.22 with a 120 s limit, proven optimal in 5.3 s, 58.86 orders
   a day (0.24%) above the solver's objective of 24,329.36. It is consistent (the objective is one feasible assignment)
   but not equal: the objective of a plan cut off at 9 s understates what its stores serve. `evaluate` took 92 s for the
