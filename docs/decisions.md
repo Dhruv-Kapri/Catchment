@@ -16,18 +16,23 @@ hexes, 1,458 candidate sites, 59,855 default-scenario pairs).
 - **The tighter model.** For each constrained new site the capacity row becomes `Σ_h share_h x_{s,h} ≤ cap · y_s`;
   existing operator stores keep `≤ cap` and `x ≤ y` stays. It is valid (a closed site serves nothing, so the optimum is
   unchanged) and it moves the root bound on the main network from 33,432 to 28,292, within 0.1% of the best plans found.
-  With a 9 s limit (build plus solve stays under 10 s) all nine default-scenario runs returned in at most 9.7 s: the
-  placeholder network at res 9 in a median of 9.6 s (9.5 to 9.7), FEASIBLE, plan 24,329 against a bound of 28,292, a gap
-  of 16.8% (16.3% to 23.9% over three runs); the area-sized network (57 stores) in 5.3 s (4.3 to 5.6) and res 8 in 2.2 s
-  (1.8 to 2.2), both OPTIMAL (gap 0) with objectives equal to the 0.5 model's (30,401.05 and 26,619.37, asserted). **The
-  placeholder network's gap is loose and load-sensitive.** The runs were on a loaded machine (another job held about
-  three cores; load average 6 to 17). A separate experiment at a 10 s limit and a load of 12 to 14 got 28,283 against
-  the same bound (0.03%), and the 0.5 model's 60 s plan (28,266) beats this 9 s one. Four executions of the cells gave
-  median gaps of 10% to 17%. The likely cause is CPU contention: in a diagnostic run (2026-10-30) with another project's
-  job holding four of the eight cores (load 10 to 17), the tighter model did not even reach its root bound in 9 s (bound
-  34,478, not 28,292; plans 21,161 to 23,895, 30% to 60% from the bound), and 4 workers did no better than 8. So the
-  time is met whatever the load, but the plan's quality in 9 s depends on the CPU free; the gap should be re-measured on
-  a quiet machine.
+  With a fixed 9 s solver limit all nine default-scenario runs returned in at most 9.7 s: the placeholder network at res
+  9 in a median of 9.6 s (9.5 to 9.7), FEASIBLE, plan 24,329 against a bound of 28,292, a gap of 16.8% (16.3% to 23.9%
+  over three runs); the area-sized network (57 stores) in 5.3 s (4.3 to 5.6) and res 8 in 2.2 s (1.8 to 2.2), both
+  OPTIMAL (gap 0) with objectives equal to the 0.5 model's (30,401.05 and 26,619.37, asserted). **The placeholder
+  network's gap is loose and load-sensitive.** The runs were on a loaded machine (another job held about three cores;
+  load average 6 to 17). A separate experiment at a 10 s limit and a load of 12 to 14 got 28,283 against the same bound
+  (0.03%), and the 0.5 model's 60 s plan (28,266) beats this 9 s one. Four executions of the cells gave median gaps of
+  10% to 17%. The likely cause is CPU contention: in a diagnostic run (2026-10-30) with another project's job holding
+  four of the eight cores (load 10 to 17), the tighter model did not even reach its root bound in 9 s (bound 34,478, not
+  28,292; plans 21,161 to 23,895, 30% to 60% from the bound), and 4 workers did no better than 8. The plan's quality in
+  9 s depends on the CPU free; the gap should be re-measured on a quiet machine.
+- **The time limit became a budget.** A run at a load of 38 to 54 (2026-10-30) with the fixed 9 s solver limit took up
+  to 10.10 s in total (the build grew to about 1 s), over the bar. The solver now gets `SOLVE_LIMIT_S` (9 s) minus the
+  build time, so build plus solve stays under 10 s by construction: at a load of 26 to 48 all nine default-scenario runs
+  took at most 9.10 s. The runs quoted above used the fixed limit and were not repeated on a quiet machine. At that load
+  the plans were poor (placeholder network median gap 72%, the sized network 0.4%, res 8 proven optimal), and the
+  capacity-1,000 stress case found no plan at all.
 - **`evaluate` check:** run 1's chosen stores score 24,388.22 with a 120 s limit, proven optimal in 5.3 s, 58.86 orders
   a day (0.24%) above the solver's objective of 24,329.36. It is consistent (the objective is one feasible assignment)
   but not equal: the objective of a plan cut off at 9 s understates what its stores serve. `evaluate` took 92 s for the
