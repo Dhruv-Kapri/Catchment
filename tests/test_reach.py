@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from catchment.reach import _nearest_roads, build_reach
+from catchment.reach import _nearest_roads, build_reach, n_top
 from conftest import FAR, RES, FakeRouter, four_snaps
 
 AREA = box(77.04, 28.44, 77.06, 28.46)
@@ -56,6 +56,19 @@ def test_x_changes_the_candidate_count():
     places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
     counts = [len(build_reach(AREA, demand, places, RES, x, FakeRouter())[0]) for x in (15, 30, 45)]
     assert counts == [2, 3, 4]   # ceil of 1.05, 2.1, 3.15
+
+
+def test_a_smaller_x_gives_the_larger_xs_table_filtered_to_its_top_ranks():
+    # 03-area cuts X by filtering the X = 30 table to rank < n_top(X); this holds only if it equals a build at X
+    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
+    places = places_in({H[0]: 5, H[1]: 5, H[2]: 3, H[3]: 3, H[4]: 1})
+    times = {(s, d): 1.0 + i + 0.5 * j for i, s in enumerate(H) for j, d in enumerate(H)}
+    big_c, big_t = build_reach(AREA, demand, places, RES, 45, FakeRouter(times))
+    small_c, small_t = build_reach(AREA, demand, places, RES, 15, FakeRouter(times))
+    kept = big_c.index[big_c["rank"] < n_top(15, len(H), 5)]
+    assert list(small_c.index) == list(kept)
+    filtered = big_t[big_t.candidate.isin(kept)].reset_index(drop=True)
+    pd.testing.assert_frame_equal(small_t.reset_index(drop=True), filtered, check_like=False)
 
 
 def test_count_is_exact_where_float_arithmetic_rounds_up():
