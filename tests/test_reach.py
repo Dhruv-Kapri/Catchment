@@ -5,58 +5,18 @@ import pytest
 from shapely.geometry import box
 
 from catchment.reach import build_reach
+from conftest import FAR, RES, FakeRouter, four_snaps
 
-RES = 9
 AREA = box(77.04, 28.44, 77.06, 28.46)
 CENTRE = h3.latlng_to_cell(28.45, 77.05, RES)
 H = sorted(h3.grid_disk(CENTRE, 1))   # seven hexes in the area: H[0] .. H[6]
 
 
-class FakeRouter:
-    """Snaps every point to itself (k times); minutes are 1.0 unless `times` has (source hex, destination hex)."""
-    def __init__(self, times=None):
-        self.times = times or {}
-
-    def snap(self, lons, lats, k=1):
-        lons, lats = np.repeat(np.asarray(lons, float)[:, None], k, axis=1), np.repeat(np.asarray(lats, float)[:, None], k, axis=1)
-        return lons, lats, np.zeros_like(lons)
-
-    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
-        cell = lambda lon, lat: h3.latlng_to_cell(lat, lon, RES)
-        src = [cell(x, y) for x, y in zip(src_lons, src_lats)]
-        dst = [cell(x, y) for x, y in zip(dst_lons, dst_lats)]
-        return np.array([[self.times.get((s, d), 1.0) for d in dst] for s in src], dtype=np.float32)
+SLOW = 9.0
 
 
-class ShiftingRouter(FakeRouter):
-    """Snaps every point (k times) 0.00005 degrees east, 12.5 m away, and records the sources it is asked for."""
-    def snap(self, lons, lats, k=1):
-        lons, lats, _ = super().snap(lons, lats, k)
-        return lons + 0.00005, lats, np.full_like(lons, 12.5)
-
-    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
-        self.sources = (list(src_lons), list(src_lats))
-        return super().minutes(src_lons, src_lats, dst_lons, dst_lats)
-
-
-FAR, SLOW = 0.00005, 9.0   # a far-side snap sits FAR degrees (~5 m, same hex) east of the point
-
-
-class FarSideRouter(FakeRouter):
-    """Snap j of a point is j * FAR degrees east of it. A pair takes SLOW minutes unless `times` has
-    (source hex, source is a far-side snap, destination hex, destination is a far-side snap)."""
-    def snap(self, lons, lats, k=1):
-        lons = np.asarray(lons, float)[:, None] + FAR * np.arange(k)
-        lats = np.asarray(lats, float)[:, None] + np.zeros(k)
-        return lons, lats, np.zeros_like(lons)
-
-    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
-        def side(lon, lat):
-            cell = h3.latlng_to_cell(lat, lon, RES)
-            return cell, bool(abs(lon - h3.cell_to_latlng(cell)[1]) > FAR / 2)
-        src = [side(x, y) for x, y in zip(src_lons, src_lats)]
-        dst = [side(x, y) for x, y in zip(dst_lons, dst_lats)]
-        return np.array([[self.times.get((*s, *d), SLOW) for d in dst] for s in src], dtype=np.float32)
+def far_side_router(times):
+    return FakeRouter(times, default=SLOW, step=FAR)
 
 
 def demand_of(values, extra=()):
@@ -142,14 +102,14 @@ def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept():
 
 def test_a_pair_keeps_the_fast_time_from_the_sites_far_side_snap():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    router = FarSideRouter({(H[0], False, H[2], False): SLOW, (H[0], True, H[2], False): 2.0})
+    router = far_side_router({(H[0], False, H[2], False): SLOW, (H[0], True, H[2], False): 2.0})
     _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
     assert pairs(table)[(H[0], H[2])] == 2.0
 
 
 def test_a_pair_keeps_the_fast_time_to_the_hexs_far_side_snap():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    router = FarSideRouter({(H[0], False, H[2], False): SLOW, (H[0], False, H[2], True): 2.0})
+    router = far_side_router({(H[0], False, H[2], False): SLOW, (H[0], False, H[2], True): 2.0})
     _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
     assert pairs(table)[(H[0], H[2])] == 2.0
 
@@ -157,9 +117,8 @@ def test_a_pair_keeps_the_fast_time_to_the_hexs_far_side_snap():
 def test_one_finite_time_among_four_unroutable_ones_is_kept_and_four_unroutable_are_absent():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
     nan = np.nan
-    times = {(H[0], sf, H[2], df): nan for sf in (False, True) for df in (False, True)} | {(H[0], True, H[2], True): 4.0}
-    times |= {(H[0], sf, H[3], df): nan for sf in (False, True) for df in (False, True)}
-    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, FarSideRouter(times))
+    times = four_snaps(H[0], H[2], nan) | {(H[0], True, H[2], True): 4.0} | four_snaps(H[0], H[3], nan)
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, far_side_router(times))
     got = pairs(table)
     assert got.get((H[0], H[2])) == 4.0
     assert (H[0], H[3]) not in got
@@ -167,9 +126,9 @@ def test_one_finite_time_among_four_unroutable_ones_is_kept_and_four_unroutable_
 
 def test_the_cap_applies_to_the_fastest_of_four():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    times = {(H[0], sf, H[2], df): 20.0 + 2 * sf + df for sf in (False, True) for df in (False, True)} | {(H[0], True, H[2], True): 15.0}   # best of four under the cap, the nearest snaps over it
-    times |= {(H[0], sf, H[3], df): 18.0 + 2 * sf + df for sf in (False, True) for df in (False, True)}   # all four over
-    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, FarSideRouter(times))
+    times = four_snaps(H[0], H[2], lambda sf, df: 20.0 + 2 * sf + df) | {(H[0], True, H[2], True): 15.0}   # best of four under the cap, the nearest snaps over it
+    times |= four_snaps(H[0], H[3], lambda sf, df: 18.0 + 2 * sf + df)   # all four over
+    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, far_side_router(times))
     got = pairs(table)
     assert got.get((H[0], H[2])) == 15.0
     assert (H[0], H[3]) not in got
@@ -177,7 +136,7 @@ def test_the_cap_applies_to_the_fastest_of_four():
 
 def test_one_snap_uses_only_the_nearest_roads():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    router = FarSideRouter({(H[0], False, H[2], False): 12.0, (H[0], True, H[2], True): 2.0})
+    router = far_side_router({(H[0], False, H[2], False): 12.0, (H[0], True, H[2], True): 2.0})
     _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router, snaps=1)
     assert pairs(table)[(H[0], H[2])] == 12.0
 
@@ -201,7 +160,7 @@ def test_table_covers_only_hexes_inside_the_area():
 
 def test_candidates_carry_the_snapped_point_and_its_distance():
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    candidates, _ = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, ShiftingRouter())
+    candidates, _ = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, FakeRouter(east=FAR, snap_m=12.5))
     site = candidates.loc[H[0]]
     lat, lon = h3.cell_to_latlng(H[0])
     assert (site.lat, site.lon) == (lat, lon)
@@ -209,7 +168,7 @@ def test_candidates_carry_the_snapped_point_and_its_distance():
 
 
 def test_the_table_is_timed_from_every_snap_of_the_sites():
-    router = ShiftingRouter()
+    router = FakeRouter(east=FAR, snap_m=12.5)
     candidates, _ = build_reach(AREA, demand_of([10, 20, 7, 9, 100, 5, 5]), places_in({H[0]: 1}), RES, 30, router)
     lat, lon = h3.cell_to_latlng(H[0])
     assert router.sources == ([lon + 0.00005] * 2, [lat] * 2)   # every snap of the site, nearest first

@@ -2,23 +2,11 @@ import contextlib
 from pathlib import Path
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import pytest
 
 from catchment import assumptions, build
-from conftest import POLY, make_rasters
-
-
-class OneMinuteRouter:
-    """Snaps every point to itself (k times); every pair is a minute apart."""
-    peak_bytes = None
-    def snap(self, lons, lats, k=1):
-        lons, lats = np.repeat(np.asarray(lons, float)[:, None], k, axis=1), np.repeat(np.asarray(lats, float)[:, None], k, axis=1)
-        return lons, lats, np.zeros_like(lons)
-
-    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
-        return np.ones((len(src_lons), len(dst_lons)), dtype=np.float32)
+from conftest import POLY, FakeRouter, make_rasters
 
 
 @pytest.fixture
@@ -28,7 +16,7 @@ def env(tmp_path, monkeypatch):
     gpd.GeoDataFrame({"operating_status": [None, None, "permanently_closed"]},
                      geometry=gpd.points_from_xy([77.05, 77.048, 77.052], [28.45, 28.452, 28.448]), crs=4326).to_parquet(places)
     monkeypatch.setattr(build, "PLACES", places)
-    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(OneMinuteRouter()))
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(FakeRouter()))
     monkeypatch.setattr(build, "DATA", tmp_path)
     monkeypatch.setattr(build, "WORLDPOP", wp)
     monkeypatch.setattr(build, "VIIRS", vi)
@@ -136,7 +124,7 @@ def test_reach_is_skipped_only_when_both_outputs_exist(env):
 
 
 def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatch):
-    router = OneMinuteRouter()
+    router = FakeRouter()
     router.peak_bytes = 123_000_000
     monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(router))
     build.main(["reach"])
@@ -144,3 +132,21 @@ def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatc
     assert "2 candidate sites" in err and "pairs within 17 min" in err
     assert "against 0.5's extrapolation of about 1.40 M pairs" in err
     assert "wall time" in err and "peak RSS" in err and "osrm-routed peak 123 MB" in err
+
+
+def test_demand_without_fetched_rasters_says_to_fetch_them(env, monkeypatch, capsys):
+    monkeypatch.setattr(build, "WORLDPOP", env / "worldpop.tif")
+    monkeypatch.setattr(build, "VIIRS", env / "viirs.tif")
+    assert build.main(["demand"]) == 1
+    err = capsys.readouterr().err
+    assert "catchment-fetch worldpop viirs" in err and "worldpop.tif" in err and "viirs.tif" in err
+    assert not (env / "demand-r9.parquet").exists()
+
+
+def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env, monkeypatch, capsys):
+    monkeypatch.setattr(build, "PLACES", env / "overture_places.parquet.gone")
+    monkeypatch.setattr(build, "served_osrm", lambda data_dir: pytest.fail("OSRM started"))
+    assert build.main(["reach"]) == 1
+    err = capsys.readouterr().err
+    assert "catchment-fetch overture" in err and "overture_places.parquet.gone" in err
+    assert not (env / "demand-r9.parquet").exists()

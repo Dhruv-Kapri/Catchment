@@ -1,6 +1,5 @@
 """Build the derived tables from the fetched data into data/ (gitignored). Skips existing outputs."""
 import argparse
-import os
 import resource
 import sys
 import time
@@ -11,13 +10,21 @@ import pandas as pd
 from catchment import assumptions
 from catchment.area import load_area
 from catchment.demand import build_demand
-from catchment.fetch import DATA
+from catchment.fetch import DATA, atomic_path, VIIRS, WORLDPOP
 from catchment.reach import build_reach, served_osrm
 
-WORLDPOP = DATA / "worldpop.tif"
-VIIRS = DATA / "viirs.tif"
 PLACES = DATA / "overture_places.parquet"
 EXPLORE_PAIRS = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
+
+
+class MissingInput(Exception):
+    """A fetched source the stage needs is not in data/."""
+
+
+def require(paths, source):
+    missing = [p.name for p in paths if not p.exists()]
+    if missing:
+        raise MissingInput(f"{', '.join(missing)} not found; run `catchment-fetch {source}` first")
 
 
 def demand_name(res):
@@ -29,12 +36,12 @@ def reach_names(res, x_pct):
 
 
 def write_parquet(df, path):
-    tmp = path.with_name(path.name + ".part")
-    df.to_parquet(tmp)
-    os.replace(tmp, path)
+    with atomic_path(path) as tmp:
+        df.to_parquet(tmp)
 
 
 def build_demand_stage(polygon, args, paths):
+    require([WORLDPOP, VIIRS], "worldpop viirs")
     df = build_demand(polygon, args.res, WORLDPOP, VIIRS)
     write_parquet(df, paths[0])
     print(f"  {len(df):,} hexes, {df.households.sum():,.0f} households, {df.demand.sum():,.0f} orders a day, "
@@ -42,6 +49,7 @@ def build_demand_stage(polygon, args, paths):
 
 
 def build_reach_stage(polygon, args, paths):
+    require([PLACES], "overture")
     demand_path = DATA / demand_name(args.res)
     if not demand_path.exists():
         print(f"reach: {demand_path.name} missing, building it first", file=sys.stderr)
@@ -91,7 +99,11 @@ def main(argv=None):
             print(f"{name}: {', '.join(p.name for p in paths)} exist, skipping (--force to rebuild)", file=sys.stderr)
             continue
         print(f"{name}: building {', '.join(p.name for p in paths)}", file=sys.stderr)
-        fn(polygon, args, paths)
+        try:
+            fn(polygon, args, paths)
+        except MissingInput as e:
+            print(f"{name}: {e}", file=sys.stderr)
+            return 1
     return 0
 
 

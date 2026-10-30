@@ -1,5 +1,6 @@
 """Fetch every source for the area into data/ (gitignored). Idempotent and resumable."""
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -22,6 +23,8 @@ from catchment.area import load_area
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 RAW = DATA / "raw"
+WORLDPOP = DATA / "worldpop.tif"
+VIIRS = DATA / "viirs.tif"
 
 WORLDPOP_URL = (
     "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/IND/v1/100m/"
@@ -35,6 +38,20 @@ OSM_URL = "https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf
 OSM_BUFFER_M = 5000
 HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
 LAADS_TOKEN_PAGE = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
+
+
+@contextlib.contextmanager
+def atomic_path(dest):
+    """Yield dest's .part path to write to; on success rename it onto dest, on error remove it."""
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    part = dest.with_name(dest.name + ".part")
+    try:
+        yield part
+        os.replace(part, dest)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
 
 
 class SourceError(Exception):
@@ -100,12 +117,8 @@ def clip_raster(src_path, polygon, dest):
 
 
 def _atomic_write_tif(dest, data, profile):
-    dest = Path(dest)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_name(dest.name + ".part")
-    with rasterio.open(tmp, "w", **profile) as out:
+    with atomic_path(dest) as tmp, rasterio.open(tmp, "w", **profile) as out:
         out.write(data)
-    os.replace(tmp, dest)
 
 
 # ---- NASA Black Marble VNP46A4 -------------------------------------------
@@ -163,9 +176,8 @@ def black_marble_to_tif(h5_path, h, v, polygon, dest):
 
 def fetch_worldpop(polygon):
     raw = download(WORLDPOP_URL, RAW / Path(WORLDPOP_URL).name)
-    out = DATA / "worldpop.tif"
-    clip_raster(raw, polygon, out)
-    return {"source": WORLDPOP_URL, "files": [out.name]}
+    clip_raster(raw, polygon, WORLDPOP)
+    return {"source": WORLDPOP_URL, "files": [WORLDPOP.name]}
 
 
 def fetch_viirs(polygon):
@@ -189,9 +201,8 @@ def fetch_viirs(polygon):
     except ValueError as e:
         raw.unlink()
         raise SourceError(str(e)) from e
-    out = DATA / "viirs.tif"
-    black_marble_to_tif(raw, h, v, polygon, out)
-    return {"source": url, "layer": BM_LAYER, "files": [out.name]}
+    black_marble_to_tif(raw, h, v, polygon, VIIRS)
+    return {"source": url, "layer": BM_LAYER, "files": [VIIRS.name]}
 
 
 def fetch_overture(polygon):
@@ -200,9 +211,8 @@ def fetch_overture(polygon):
     for kind, name in (("place", "overture_places.parquet"), ("building", "overture_buildings.parquet")):
         gdf = ov.geodataframe(kind, bbox=polygon.bounds, release=OVERTURE_RELEASE)
         gdf = gdf[gdf.intersects(polygon)]
-        tmp = DATA / (name + ".part")
-        gdf.to_parquet(tmp)
-        os.replace(tmp, DATA / name)
+        with atomic_path(DATA / name) as tmp:
+            gdf.to_parquet(tmp)
         print(f"  {name}: {len(gdf)} rows", file=sys.stderr)
         del gdf
         files.append(name)
@@ -223,23 +233,19 @@ def fetch_osm(polygon):
     area = gpd.GeoSeries([polygon], crs="EPSG:4326")
     buffered = area.to_crs(area.estimate_utm_crs()).buffer(OSM_BUFFER_M).to_crs("EPSG:4326")
     out = DATA / "osm.osm.pbf"
-    part = out.with_name(out.name + ".part")
-    try:
+    with atomic_path(out) as part:
         with tempfile.TemporaryDirectory() as td:
             clip = Path(td) / "clip.geojson"
             buffered.to_file(clip, driver="GeoJSON")
             _osmium("extract", "-p", str(clip), str(raw), "-f", "pbf", "-o", str(part), "--overwrite")
         info = json.loads(_osmium("fileinfo", "-e", "-j", str(raw)))
         data_date = info["header"]["option"].get("osmosis_replication_timestamp") or info["data"]["timestamp"]["last"]
-        os.replace(part, out)
-    finally:
-        part.unlink(missing_ok=True)
     return {"source": OSM_URL, "data_date": data_date, "buffer_m": OSM_BUFFER_M, "files": [out.name]}
 
 
 SOURCES = {
-    "worldpop": (fetch_worldpop, ["worldpop.tif"]),
-    "viirs": (fetch_viirs, ["viirs.tif"]),
+    "worldpop": (fetch_worldpop, [WORLDPOP.name]),
+    "viirs": (fetch_viirs, [VIIRS.name]),
     "overture": (fetch_overture, ["overture_places.parquet", "overture_buildings.parquet"]),
     "osm": (fetch_osm, ["osm.osm.pbf"]),
 }
@@ -249,9 +255,8 @@ def _update_manifest(name, entry):
     path = DATA / "manifest.json"
     manifest = json.loads(path.read_text()) if path.exists() else {}
     manifest[name] = entry | {"fetched": date.today().isoformat()}
-    tmp = path.with_name(path.name + ".part")
-    tmp.write_text(json.dumps(manifest, indent=2) + "\n")
-    os.replace(tmp, path)
+    with atomic_path(path) as tmp:
+        tmp.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def main(argv=None):
