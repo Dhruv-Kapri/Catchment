@@ -50,9 +50,10 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
 
 
 def nearest_roads(waypoints, x, y, k, max_m=assumptions.SECOND_ROAD_MAX_M, same_name=False):
-    """The nearest hit, and for k > 1 the nearest later hit within max_m (default SECOND_ROAD_MAX_M) that lies more than SECOND_ROAD_GAP_M
-    from it along the direction from the point to it: a parallel carriageway, where the next segment of the same one lies
-    across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap from the point."""
+    """The nearest hit, and for k > 1 the nearest later hit within max_m (default SECOND_ROAD_MAX_M) that lies more than
+    SECOND_ROAD_GAP_M from it along the direction from the point to it: a parallel carriageway, where the next segment of
+    the same one lies across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap
+    from the point. With same_name, a qualifying hit with the nearest road's name is preferred to a nearer one without."""
     if not waypoints:
         return []
     first, roads = waypoints[0], [waypoints[0]]
@@ -64,8 +65,11 @@ def nearest_roads(waypoints, x, y, k, max_m=assumptions.SECOND_ROAD_MAX_M, same_
                 break
             along = abs((np.array(w["location"]) - first["location"]) * to_m @ axis) if first["distance"] >= 1 else w["distance"]
             if along > assumptions.SECOND_ROAD_GAP_M:
-                roads.append(w)
-                break
+                if len(roads) == 1:
+                    roads.append(w)   # the nearest qualifying hit, kept unless a same-named one turns up
+                if not (same_name and first["name"]) or w["name"] == first["name"]:
+                    roads[1] = w
+                    break
     return roads
 
 
