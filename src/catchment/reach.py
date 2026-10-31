@@ -49,24 +49,27 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     return candidates, table
 
 
-def _nearest_roads(waypoints, x, y, k):
-    """The nearest hit, and for k > 1 the nearest later hit within SECOND_ROAD_MAX_M that lies more than SECOND_ROAD_GAP_M
-    from it along the direction from the point to it: a parallel carriageway, where the next segment of the same one lies
-    across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap from the point."""
+def nearest_roads(waypoints, x, y, k, max_m=assumptions.SECOND_ROAD_MAX_M, same_name=False):
+    """The nearest hit, and for k > 1 the nearest later hit within max_m (default SECOND_ROAD_MAX_M) that lies more than
+    SECOND_ROAD_GAP_M from it along the direction from the point to it: a parallel carriageway, where the next segment of
+    the same one lies across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap
+    from the point. With same_name, a qualifying hit with the nearest road's name is preferred to a nearer one without."""
     if not waypoints:
         return []
-    first, roads = waypoints[0], [waypoints[0]]
-    if k > 1:
-        to_m = np.array([111_320 * math.cos(math.radians(y)), 110_574])   # degrees to metres, local equirectangular
-        axis = (np.array(first["location"]) - [x, y]) * to_m / max(first["distance"], 1e-9)
-        for w in waypoints[1:]:
-            if w["distance"] > assumptions.SECOND_ROAD_MAX_M:
-                break
-            along = abs((np.array(w["location"]) - first["location"]) * to_m @ axis) if first["distance"] >= 1 else w["distance"]
-            if along > assumptions.SECOND_ROAD_GAP_M:
-                roads.append(w)
-                break
-    return roads
+    first = waypoints[0]
+    if k <= 1:
+        return [first]
+    to_m = np.array([111_320 * math.cos(math.radians(y)), 110_574])   # degrees to metres, local equirectangular
+    axis = (np.array(first["location"]) - [x, y]) * to_m / max(first["distance"], 1e-9)
+    ok = []   # later hits within max_m that lie across from the nearest, nearest first
+    for w in waypoints[1:]:
+        if w["distance"] > max_m:
+            break
+        along = abs((np.array(w["location"]) - first["location"]) * to_m @ axis) if first["distance"] >= 1 else w["distance"]
+        if along > assumptions.SECOND_ROAD_GAP_M:
+            ok.append(w)
+    named = [w for w in ok if same_name and first["name"] and w["name"] == first["name"]]
+    return [first, *(named or ok)[:1]]
 
 
 class OsrmRouter:
@@ -81,7 +84,7 @@ class OsrmRouter:
             r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
                                  params={"number": 1 if k == 1 else NEAREST_SEGMENTS}, timeout=300)
             r.raise_for_status()
-            roads = _nearest_roads(r.json()["waypoints"], x, y, k)
+            roads = nearest_roads(r.json()["waypoints"], x, y, k)
             for j in range(k if roads else 0):
                 w = roads[min(j, len(roads) - 1)]   # a missing road repeats the nearest
                 out[:, i, j] = *w["location"], w["distance"]

@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from catchment.reach import _nearest_roads, build_reach, n_top
+from catchment.reach import build_reach, n_top, nearest_roads
 from conftest import FAR, RES, FakeRouter, four_snaps
 
 AREA = box(77.04, 28.44, 77.06, 28.46)
@@ -206,4 +206,27 @@ def test_the_second_road_is_the_nearest_across_whatever_its_name():
     first = {"location": [x, y], "distance": 0.0, "name": "Mehrauli-Gurgaon Road", "nodes": [1, 2]}
     unnamed = {"location": at(8), "distance": 8.0, "name": "", "nodes": [3, 4]}
     same = {"location": at(9), "distance": 9.0, "name": "Mehrauli-Gurgaon Road", "nodes": [5, 6]}
-    assert _nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
+    assert nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
+
+
+def roads_at(*specs):
+    """Waypoints due north of (77.05, 28.45): (metres, name) each, nearest first."""
+    x, y = 77.05, 28.45
+    return x, y, [{"location": [x, y + m / 110_574], "distance": float(m), "name": n, "nodes": [i, i + 1]}
+                  for i, (m, n) in enumerate(specs)]
+
+
+def test_a_longer_reach_finds_a_farther_second_road():
+    x, y, wps = roads_at((0, "A"), (150, "B"))
+    assert nearest_roads(wps, x, y, 2) == wps[:1]
+    assert nearest_roads(wps, x, y, 2, max_m=200) == wps
+
+
+def test_same_name_prefers_a_same_named_hit_over_a_nearer_unnamed_one():
+    x, y, wps = roads_at((0, "A"), (20, ""), (30, "A"))
+    assert nearest_roads(wps, x, y, 2, same_name=True) == [wps[0], wps[2]]
+
+
+def test_same_name_without_a_same_named_hit_falls_back_to_the_nearest():
+    x, y, wps = roads_at((0, "A"), (20, "B"), (30, "C"))
+    assert nearest_roads(wps, x, y, 2, same_name=True) == [wps[0], wps[1]]

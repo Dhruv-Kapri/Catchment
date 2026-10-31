@@ -57,7 +57,8 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 
 - `02-plan` moves into `src/catchment/`: the greedy baseline and the CP-SAT model (maximise covered
   demand; N stores; capacity; shared catchments split by brand, see [ADR 0001](adr/0001-demand-split-by-brand.md);
-  the synthetic network fixed).
+  the synthetic network fixed). The CP-SAT model is the tighter one in `03-area` (#15, the tighter capacity row),
+  not `02-plan`'s 0.5 model; stage 2 re-measures its time and gap with the build-plus-solve budget.
 - Synthetic network generator (the operator's and competitors' existing stores), with every count's
   source and date recorded.
 - Benchmark over a grid of scenarios: covered demand CP-SAT vs greedy, solve time.
