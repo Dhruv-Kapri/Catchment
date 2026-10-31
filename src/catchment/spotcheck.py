@@ -10,7 +10,7 @@ from catchment import assumptions
 
 SEED: int = 16
 COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
-           "bad_snap_before", "app_min", "app", "looked_up"]
+                      "bad_snap_before", "app_min", "app", "looked_up"]
 
 
 def draw_routes(table: pd.DataFrame, candidates: pd.DataFrame, hexes: pd.DataFrame, bad: pd.DataFrame, n: int = 20,

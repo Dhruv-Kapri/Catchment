@@ -53,6 +53,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
 - **Demand is a model, not a forecast.** Every factor stays visible as a lever or labelled assumption;
   don't add ML forecasting.
 - **A new plan must return in ≤ 10 s** for the default scenario; measure it when the solver changes.
+- **Type hints on every function**, tests and notebook `def`s included, and wherever a type isn't obvious
+  (module constants, class attributes, empty containers). `uvx ruff check --select ANN src tests` stays clean.
 
 ## Docs conventions
 

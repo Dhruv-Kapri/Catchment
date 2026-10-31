@@ -4,8 +4,8 @@ import math
 import os
 import subprocess
 import sys
-from fractions import Fraction
 from collections.abc import Iterator, Mapping, Sequence
+from fractions import Fraction
 from pathlib import Path
 from typing import Any, Protocol
 
