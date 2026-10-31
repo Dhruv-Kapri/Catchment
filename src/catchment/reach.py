@@ -49,7 +49,7 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     return candidates, table
 
 
-def _nearest_roads(waypoints, x, y, k):
+def nearest_roads(waypoints, x, y, k):
     """The nearest hit, and for k > 1 the nearest later hit within SECOND_ROAD_MAX_M that lies more than SECOND_ROAD_GAP_M
     from it along the direction from the point to it: a parallel carriageway, where the next segment of the same one lies
     across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap from the point."""
@@ -81,7 +81,7 @@ class OsrmRouter:
             r = self.session.get(f"{self.url}/nearest/v1/driving/{x:.6f},{y:.6f}",
                                  params={"number": 1 if k == 1 else NEAREST_SEGMENTS}, timeout=300)
             r.raise_for_status()
-            roads = _nearest_roads(r.json()["waypoints"], x, y, k)
+            roads = nearest_roads(r.json()["waypoints"], x, y, k)
             for j in range(k if roads else 0):
                 w = roads[min(j, len(roads) - 1)]   # a missing road repeats the nearest
                 out[:, i, j] = *w["location"], w["distance"]

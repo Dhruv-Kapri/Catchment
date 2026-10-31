@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from catchment.reach import _nearest_roads, build_reach, n_top
+from catchment.reach import nearest_roads, build_reach, n_top
 from conftest import FAR, RES, FakeRouter, four_snaps
 
 AREA = box(77.04, 28.44, 77.06, 28.46)
@@ -206,4 +206,4 @@ def test_the_second_road_is_the_nearest_across_whatever_its_name():
     first = {"location": [x, y], "distance": 0.0, "name": "Mehrauli-Gurgaon Road", "nodes": [1, 2]}
     unnamed = {"location": at(8), "distance": 8.0, "name": "", "nodes": [3, 4]}
     same = {"location": at(9), "distance": 9.0, "name": "Mehrauli-Gurgaon Road", "nodes": [5, 6]}
-    assert _nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
+    assert nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
