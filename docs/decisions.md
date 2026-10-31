@@ -3,6 +3,30 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-10-31: Demand and reach (stage 1) results: spot-check error and stage close (#18)
+
+- **Res 9 and X = 30 stand.** The full area has 4,859 hexes and 1,458 candidate sites, with 59,855 default-scenario
+  pairs. Both tables build with `catchment-build`.
+- **Solve time.** The default scenario (N = 10) returns a plan within 10 s using the tighter capacity row, with its gap
+  stated. On a loaded machine the median was 9.6 s with a 16.8% gap on the placeholder network. A network sized to the
+  area (57 stores) is proven optimal in 5.3 s. Details are in the entry below.
+- **Spot-check error** (`03-area`, 20 routes from `docs/spot-check.csv`). The routes were looked up in Google Maps'
+  two-wheeler mode with "Leave now" on Friday 30 October 2026, 19:00-19:07, so the times are live evening-peak
+  estimates, not a typical range.
+  - The app took a median of 1.28× the modelled time (free-flow × 1.4): 25th-75th percentile 1.17-1.54, range 0.97 to
+    2.65. It was slower than the model on 19 of 20 routes, by a median of 3.7 min.
+  - The worst routes are the two shortest (2.65 and 2.20). Whole-minute app times weigh most on them.
+- **Implied multiplier: about 1.8 (median 1.79; 25th-75th percentile 1.64-2.16) against the 1.4 default.** It is
+  proportional, not a fixed overhead on short trips (fit: app ≈ 0.75 + 1.82 × free-flow min). At 1.8, the default
+  promise reaches 3.9 free-flow minutes instead of 5.0.
+  - **Not changed here:** whether the evening-peak figure should become the default, or a labelled peak setting of the
+    lever, is the planner's decision.
+  - One evening's live estimates are thin evidence for either. 1.8 is already inside the lever's 1.0-2.0 range.
+- **The former bad snaps no longer stand out as a group.** Their median ratio is 1.33, against 1.28 for the other 15
+  routes, and they rank 1, 7, 9, 14 and 16 of 20.
+  - Route 1 (2.97 free-flow min, 11 in the app) is the worst route, so one snap may still be wrong.
+  - One route does not justify a new snapping rule. The second-road rule stands (#20).
+
 ## 2026-10-30: Full-area solve time measured (#15)
 
 **The default scenario (promise 10, multiplier 1.4, capacity 2,364, N = 10) returns a plan within 10 s on the full area

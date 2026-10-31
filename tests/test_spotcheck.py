@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from catchment import assumptions
-from catchment.spotcheck import SEED, draw_routes, write_sheet
+from catchment.spotcheck import SEED, compare, draw_routes, write_sheet
 
 EDGES = (2, 5, 8, 11, 14, 17)
 CANDS = [f"c{i}" for i in range(4)]
@@ -187,3 +187,36 @@ def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm():
     assert (sheet.app == "Google Maps two-wheeler").all()
     when = pd.to_datetime(sheet.looked_up, format="%Y-%m-%d %H:%M")
     assert (when.dt.weekday < 5).all() and (when.dt.hour == 19).all()
+
+
+def app_sheet():
+    """Free-flow 2, 4, 5, 10 min at x1.4 = 2.8, 5.6, 7, 14; app 7, 6, none, 14."""
+    return pd.DataFrame({"route": [1, 2, 3, 4], "free_flow_min": [2.0, 4.0, 5.0, 10.0], "model_min": [2.8, 5.6, 7.0, 14.0],
+                         "bad_snap_before": [True, False, False, True], "app_min": [7.0, 6.0, np.nan, 14.0]})
+
+
+def test_compare_ratio_implied_and_diff():
+    routes, summary = compare(app_sheet(), multiplier=1.4)
+    routes = routes.set_index("route")
+    assert routes.loc[1, "ratio"] == pytest.approx(2.5) and routes.loc[2, "ratio"] == pytest.approx(6 / 5.6) and routes.loc[4, "ratio"] == pytest.approx(1.0)
+    assert routes.loc[1, "implied"] == pytest.approx(3.5) and routes.loc[4, "implied"] == pytest.approx(1.4)
+    assert routes.loc[2, "diff_min"] == pytest.approx(0.4)
+    assert summary["ratio_median"] == pytest.approx(6 / 5.6) and summary["implied_median"] == pytest.approx(1.5)
+
+
+def test_compare_drops_routes_without_an_app_time_and_sorts_worst_first():
+    routes, summary = compare(app_sheet(), multiplier=1.4)
+    assert list(routes.route) == [1, 2, 4]
+    assert summary["n"] == 3 and summary["n_no_app"] == 1
+    assert summary["ratio_min"] == pytest.approx(1.0) and summary["ratio_max"] == pytest.approx(2.5)
+
+
+def test_compare_bad_snap_split_and_ranks():
+    _, summary = compare(app_sheet(), multiplier=1.4)
+    assert summary["ratio_median_bad"] == pytest.approx(1.75) and summary["ratio_median_other"] == pytest.approx(6 / 5.6)
+    assert summary["bad_snap_ranks"] == {1: 1, 4: 3}
+
+
+def test_compare_uses_the_multiplier_argument_not_model_min():
+    routes, _ = compare(app_sheet(), multiplier=2.0)
+    assert routes.set_index("route").loc[4, "ratio"] == pytest.approx(14 / 20)
