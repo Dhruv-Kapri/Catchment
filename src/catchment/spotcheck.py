@@ -54,10 +54,11 @@ def compare(sheet, multiplier=assumptions.MULTIPLIER):
     found["ratio"], found["implied"], found["diff_min"] = found.app_min / modelled, found.app_min / found.free_flow_min, found.app_min - modelled
     routes = found.sort_values("ratio", ascending=False, kind="stable").reset_index(drop=True)
     bad = routes.bad_snap_before.astype(bool)
-    q = lambda s: s.quantile([0.25, 0.75]).tolist()
+    r25, r75 = routes.ratio.quantile([0.25, 0.75])
+    i25, i75 = routes.implied.quantile([0.25, 0.75])
     summary = {"n": len(routes), "n_no_app": len(sheet) - len(routes), "ratio_median": routes.ratio.median(),
-               "ratio_q25": q(routes.ratio)[0], "ratio_q75": q(routes.ratio)[1], "ratio_min": routes.ratio.min(), "ratio_max": routes.ratio.max(),
-               "implied_median": routes.implied.median(), "implied_q25": q(routes.implied)[0], "implied_q75": q(routes.implied)[1],
+               "ratio_q25": r25, "ratio_q75": r75, "ratio_min": routes.ratio.min(), "ratio_max": routes.ratio.max(),
+               "implied_median": routes.implied.median(), "implied_q25": i25, "implied_q75": i75,
                "ratio_median_bad": routes.ratio[bad].median(), "ratio_median_other": routes.ratio[~bad].median(),
                "bad_snap_ranks": {int(r): int(i) + 1 for r, i in zip(routes.route[bad], routes.index[bad])}}
     return routes, summary
