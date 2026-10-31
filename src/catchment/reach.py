@@ -26,6 +26,16 @@ CHUNK_SRC: int = 50
 CHUNK_DST: int = 950   # one /table request; osrm-routed runs with --max-table-size 1000
 
 
+class Router(Protocol):
+    """What build_reach needs from a router: OsrmRouter, or a fake in tests."""
+
+    def snap(self, lons: npt.NDArray[np.float64], lats: npt.NDArray[np.float64], k: int = 1,
+             ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
+
+    def minutes(self, src_lons: npt.NDArray[np.float64], src_lats: npt.NDArray[np.float64],
+                dst_lons: npt.NDArray[np.float64], dst_lats: npt.NDArray[np.float64]) -> npt.NDArray[np.float32]: ...
+
+
 def n_top(x_pct: float, n_hexes: int, n_with_places: int) -> int:
     """Candidate site count: the top X% of the area's hexes (rounded up, exactly), only those with a place."""
     return min(math.ceil(Fraction(str(x_pct)) * n_hexes / 100), n_with_places)
@@ -77,16 +87,6 @@ def nearest_roads(waypoints: Sequence[Mapping[str, Any]], x: float, y: float, k:
             ok.append(w)
     named = [w for w in ok if same_name and first["name"] and w["name"] == first["name"]]
     return [first, *(named or ok)[:1]]
-
-
-class Router(Protocol):
-    """What build_reach needs from a router: OsrmRouter, or a fake in tests."""
-
-    def snap(self, lons: npt.NDArray[np.float64], lats: npt.NDArray[np.float64], k: int = 1,
-             ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
-
-    def minutes(self, src_lons: npt.NDArray[np.float64], src_lats: npt.NDArray[np.float64],
-                dst_lons: npt.NDArray[np.float64], dst_lats: npt.NDArray[np.float64]) -> npt.NDArray[np.float32]: ...
 
 
 class OsrmRouter:

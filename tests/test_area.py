@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pytest
 import shapely
@@ -6,11 +8,11 @@ from pyproj import Transformer
 from catchment.area import load_area, relation_to_geometry
 
 
-def way(*pts, role):
+def way(*pts: tuple[float, float], role: str) -> dict[str, Any]:
     return {"role": role, "type": "way", "geometry": [{"lat": y, "lon": x} for x, y in pts]}
 
 
-def test_outer_ring_from_two_ways():
+def test_outer_ring_from_two_ways() -> None:
     rel = {"members": [
         way((0, 0), (1, 0), (1, 1), role="outer"),
         way((1, 1), (0, 1), (0, 0), role="outer"),
@@ -20,7 +22,7 @@ def test_outer_ring_from_two_ways():
     assert g.area == pytest.approx(1.0)
 
 
-def test_ways_joined_with_reversed_direction():
+def test_ways_joined_with_reversed_direction() -> None:
     rel = {"members": [
         way((0, 0), (1, 0), (1, 1), role="outer"),
         way((0, 0), (0, 1), (1, 1), role="outer"),
@@ -28,7 +30,7 @@ def test_ways_joined_with_reversed_direction():
     assert relation_to_geometry(rel).area == pytest.approx(1.0)
 
 
-def test_inner_ring_becomes_hole():
+def test_inner_ring_becomes_hole() -> None:
     rel = {"members": [
         way((0, 0), (4, 0), (4, 4), (0, 4), (0, 0), role="outer"),
         way((1, 1), (2, 1), (2, 2), (1, 2), (1, 1), role="inner"),
@@ -38,7 +40,7 @@ def test_inner_ring_becomes_hole():
     assert len(g.interiors) == 1
 
 
-def test_two_outer_rings_make_multipolygon():
+def test_two_outer_rings_make_multipolygon() -> None:
     rel = {"members": [
         way((0, 0), (1, 0), (1, 1), (0, 1), (0, 0), role="outer"),
         way((5, 5), (6, 5), (6, 6), (5, 6), (5, 5), role="outer"),
@@ -47,7 +49,7 @@ def test_two_outer_rings_make_multipolygon():
     assert g.geom_type == "MultiPolygon" and len(g.geoms) == 2
 
 
-def test_committed_area_is_valid_and_right_size():
+def test_committed_area_is_valid_and_right_size() -> None:
     g = load_area()
     assert g.is_valid
     to_utm = Transformer.from_crs(4326, 32643, always_xy=True).transform

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import h3
 import numpy as np
 import pandas as pd
@@ -9,30 +11,30 @@ from conftest import POLY, make_rasters, write_tif
 
 
 @pytest.fixture
-def rasters(tmp_path):
+def rasters(tmp_path: Path) -> tuple[Path, Path]:
     return make_rasters(tmp_path)
 
 
-def test_hexes_are_area_hexes_sorted(rasters):
+def test_hexes_are_area_hexes_sorted(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     assert df.index.name == "hex"
     assert list(df.index) == sorted(h3.geo_to_cells(POLY, 9))
     assert 3 <= len(df) < 30
 
 
-def test_columns_and_res_attr(rasters):
+def test_columns_and_res_attr(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     assert list(df.columns) == ["lat", "lon", "population", "households", "radiance", "multiplier", "demand"]
     assert df.attrs["res"] == 9
 
 
-def test_hex_centres_are_lat_lon(rasters):
+def test_hex_centres_are_lat_lon(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     for h, row in df.iterrows():
         assert (row.lat, row.lon) == pytest.approx(h3.cell_to_latlng(h))
 
 
-def test_population_is_pixels_in_hex(rasters):
+def test_population_is_pixels_in_hex(rasters: tuple[Path, Path]) -> None:
     from catchment.load import worldpop_pixels
     df = build_demand(POLY, 9, *rasters)
     wp = worldpop_pixels(rasters[0])
@@ -41,18 +43,18 @@ def test_population_is_pixels_in_hex(rasters):
     assert np.allclose(df.population, expected.reindex(df.index))
 
 
-def test_households_are_population_over_household_size(rasters):
+def test_households_are_population_over_household_size(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     assert np.allclose(df.households, df.population / assumptions.HOUSEHOLD_SIZE)
 
 
-def test_household_size_is_read_from_assumptions(rasters, monkeypatch):
+def test_household_size_is_read_from_assumptions(rasters: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
     base = build_demand(POLY, 9, *rasters).households
     monkeypatch.setattr(assumptions, "HOUSEHOLD_SIZE", 9.0)
     assert np.allclose(build_demand(POLY, 9, *rasters).households, base / 2)
 
 
-def test_nan_radiance_takes_the_minimum(tmp_path):
+def test_nan_radiance_takes_the_minimum(tmp_path: Path) -> None:
     wp, _ = make_rasters(tmp_path)
     arr = np.arange(100).reshape(10, 10) + 5.0
     arr[:, :5] = -9999
@@ -62,14 +64,14 @@ def test_nan_radiance_takes_the_minimum(tmp_path):
     assert df.radiance.min() >= 5.0
 
 
-def test_all_nan_radiance_fails_loudly(tmp_path):
+def test_all_nan_radiance_fails_loudly(tmp_path: Path) -> None:
     wp, _ = make_rasters(tmp_path)
     vi = write_tif(tmp_path / "vn.tif", np.full((10, 10), -9999.0), 0.002, -9999)
     with pytest.raises(ValueError, match="VIIRS has no data"):
         build_demand(POLY, 9, wp, vi)
 
 
-def test_multipliers_hit_bounds_and_follow_radiance(rasters):
+def test_multipliers_hit_bounds_and_follow_radiance(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     assert df.multiplier.min() == pytest.approx(assumptions.M_LOW)
     assert df.multiplier.max() == pytest.approx(assumptions.M_HIGH)
@@ -77,46 +79,46 @@ def test_multipliers_hit_bounds_and_follow_radiance(rasters):
     assert (np.diff(m) >= -1e-12).all()
 
 
-def test_multiplier_bounds_are_read_from_assumptions(rasters, monkeypatch):
+def test_multiplier_bounds_are_read_from_assumptions(rasters: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(assumptions, "M_LOW", 0.8)
     monkeypatch.setattr(assumptions, "M_HIGH", 1.2)
     df = build_demand(POLY, 9, *rasters)
     assert df.multiplier.min() == pytest.approx(0.8) and df.multiplier.max() == pytest.approx(1.2)
 
 
-def test_flat_radiance_gives_midpoint_multiplier(tmp_path):
+def test_flat_radiance_gives_midpoint_multiplier(tmp_path: Path) -> None:
     wp, _ = make_rasters(tmp_path)
     vi = write_tif(tmp_path / "flat.tif", np.full((10, 10), 3.0), 0.002, -9999)
     df = build_demand(POLY, 9, wp, vi)
     assert (df.multiplier == (assumptions.M_LOW + assumptions.M_HIGH) / 2).all()
 
 
-def test_demand_matches_calibration_target(rasters):
+def test_demand_matches_calibration_target(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     assert df.demand.sum() / df.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
 
 
-def test_flat_radiance_still_matches_calibration_target(tmp_path):
+def test_flat_radiance_still_matches_calibration_target(tmp_path: Path) -> None:
     wp, _ = make_rasters(tmp_path)
     vi = write_tif(tmp_path / "flat.tif", np.full((10, 10), 3.0), 0.002, -9999)
     df = build_demand(POLY, 9, wp, vi)
     assert df.demand.sum() / df.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
 
 
-def test_capture_share_is_stored_in_attrs(rasters):
+def test_capture_share_is_stored_in_attrs(rasters: tuple[Path, Path]) -> None:
     df = build_demand(POLY, 9, *rasters)
     share = df.attrs.get("capture_share")
     assert share is not None
     assert np.allclose(df.demand, df.households * df.multiplier * share)
 
 
-def test_res_changes_the_hexes(rasters):
+def test_res_changes_the_hexes(rasters: tuple[Path, Path]) -> None:
     d9, d8 = build_demand(POLY, 9, *rasters), build_demand(POLY, 8, *rasters)
     assert {h3.get_resolution(h) for h in d8.index} == {8}
     assert len(d8) < len(d9) and d8.attrs["res"] == 8
 
 
-def test_attrs_round_trip_through_parquet(rasters, tmp_path):
+def test_attrs_round_trip_through_parquet(rasters: tuple[Path, Path], tmp_path: Path) -> None:
     df = build_demand(POLY, 9, *rasters)
     df.to_parquet(tmp_path / "d.parquet")
     back = pd.read_parquet(tmp_path / "d.parquet")

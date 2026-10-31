@@ -1,13 +1,18 @@
+from collections.abc import Callable, Iterable, Sequence
+from pathlib import Path
+from typing import Any
+
 import h3
 import numpy as np
+import numpy.typing as npt
 import rasterio
 from rasterio.transform import from_origin
-from shapely.geometry import box
+from shapely.geometry import Polygon, box
 
-POLY = box(77.045, 28.445, 77.055, 28.455)   # ~1 km box: a handful of res-9 hexes
+POLY: Polygon = box(77.045, 28.445, 77.055, 28.455)   # ~1 km box: a handful of res-9 hexes
 
 
-def write_tif(path, arr, pixel, nodata):
+def write_tif(path: Path, arr: npt.NDArray[Any], pixel: float, nodata: float) -> Path:
     with rasterio.open(path, "w", driver="GTiff", height=arr.shape[0], width=arr.shape[1], count=1,
                        dtype="float32", crs="EPSG:4326", transform=from_origin(77.04, 28.46, pixel, pixel),
                        nodata=nodata) as dst:
@@ -15,7 +20,7 @@ def write_tif(path, arr, pixel, nodata):
     return path
 
 
-def make_rasters(tmp_path):
+def make_rasters(tmp_path: Path) -> tuple[Path, Path]:
     """WorldPop-like 100 m pixels (40x40) and coarser VIIRS-like pixels (10x10), covering POLY."""
     rng = np.random.default_rng(0)
     wp = write_tif(tmp_path / "wp.tif", rng.integers(0, 50, (40, 40)) * 0.1 + 1, 0.0005, -99999)
@@ -23,29 +28,33 @@ def make_rasters(tmp_path):
     return wp, vi
 
 
-RES = 9
-FAR = 0.00005   # a far-side snap sits FAR degrees (~5 m, same hex) east of the point
+RES: int = 9
+FAR: float = 0.00005   # a far-side snap sits FAR degrees (~5 m, same hex) east of the point
 
 
 class FakeRouter:
     """Snap j of a point is east + j * step degrees east of it, snap_m metres away. A pair takes `default` minutes
     unless `times` has (source hex, destination hex) or (source hex, source is a far-side snap, destination hex,
     destination is a far-side snap). Records the sources it is asked to time in `sources`."""
-    peak_bytes = None
+    peak_bytes: int | None = None
 
-    def __init__(self, times=None, default=1.0, east=0.0, step=0.0, snap_m=0.0):
-        self.times, self.default, self.east, self.step, self.snap_m = times or {}, default, east, step, snap_m
-        self.sources = None
+    def __init__(self, times: dict[tuple[Any, ...], float] | None = None, default: float = 1.0, east: float = 0.0,
+                 step: float = 0.0, snap_m: float = 0.0) -> None:
+        self.times: dict[tuple[Any, ...], float] = times or {}
+        self.default, self.east, self.step, self.snap_m = default, east, step, snap_m
+        self.sources: tuple[list[float], list[float]] | None = None
 
-    def snap(self, lons, lats, k=1):
+    def snap(self, lons: Iterable[float], lats: Iterable[float],
+             k: int = 1) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         lons = np.asarray(lons, float)[:, None] + self.east + self.step * np.arange(k)
         lats = np.asarray(lats, float)[:, None] + np.zeros(k)
         return lons, lats, np.full_like(lons, self.snap_m)
 
-    def minutes(self, src_lons, src_lats, dst_lons, dst_lats):
+    def minutes(self, src_lons: Sequence[float], src_lats: Sequence[float], dst_lons: Sequence[float],
+                dst_lats: Sequence[float]) -> npt.NDArray[np.float32]:
         self.sources = (list(src_lons), list(src_lats))
 
-        def side(lon, lat):
+        def side(lon: float, lat: float) -> tuple[str, bool]:
             cell = h3.latlng_to_cell(lat, lon, RES)
             return cell, bool(abs(lon - h3.cell_to_latlng(cell)[1]) > FAR / 2)
         src = [side(x, y) for x, y in zip(src_lons, src_lats)]
@@ -54,6 +63,6 @@ class FakeRouter:
                          for s in src], dtype=np.float32)
 
 
-def four_snaps(src, dst, value):
+def four_snaps(src: str, dst: str, value: float | Callable[[bool, bool], float]) -> dict[tuple[str, bool, str, bool], float]:
     """The four far-side combinations of the pair (src, dst) with `value` minutes, or value(sf, df) if callable."""
     return {(src, sf, dst, df): value(sf, df) if callable(value) else value for sf in (False, True) for df in (False, True)}

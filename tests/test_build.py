@@ -1,5 +1,6 @@
 import contextlib
 from pathlib import Path
+from typing import Never
 
 import geopandas as gpd
 import pandas as pd
@@ -10,7 +11,7 @@ from conftest import POLY, FakeRouter, make_rasters
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch):
+def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     wp, vi = make_rasters(tmp_path)
     places = tmp_path / "overture_places.parquet"
     gpd.GeoDataFrame({"operating_status": [None, None, "permanently_closed"]},
@@ -24,12 +25,12 @@ def env(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_demand_writes_res_named_parquet(env):
+def test_demand_writes_res_named_parquet(env: Path) -> None:
     assert build.main(["demand"]) == 0
     assert (env / "demand-r9.parquet").exists()
 
 
-def test_stored_capture_share_is_readable_from_the_file(env):
+def test_stored_capture_share_is_readable_from_the_file(env: Path) -> None:
     build.main(["demand"])
     back = pd.read_parquet(env / "demand-r9.parquet")
     assert back.attrs["res"] == 9
@@ -38,13 +39,13 @@ def test_stored_capture_share_is_readable_from_the_file(env):
     assert back.attrs["capture_share"] == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY / mean_m)
 
 
-def test_prints_a_summary_with_the_capture_share(env, capsys):
+def test_prints_a_summary_with_the_capture_share(env: Path, capsys: pytest.CaptureFixture[str]) -> None:
     build.main(["demand"])
     assert "capture share" in capsys.readouterr().err
 
 
-def test_write_is_atomic(env, monkeypatch):
-    def partial_write(self, path, *a, **k):
+def test_write_is_atomic(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def partial_write(self: pd.DataFrame, path: Path, *a: object, **k: object) -> Never:
         Path(path).write_bytes(b"half")
         raise OSError("disk full")
     monkeypatch.setattr(pd.DataFrame, "to_parquet", partial_write)
@@ -53,7 +54,7 @@ def test_write_is_atomic(env, monkeypatch):
     assert not (env / "demand-r9.parquet").exists()
 
 
-def test_res_writes_a_separate_file(env):
+def test_res_writes_a_separate_file(env: Path) -> None:
     build.main(["demand"])
     build.main(["demand", "--res", "8"])
     assert (env / "demand-r8.parquet").exists()
@@ -61,7 +62,7 @@ def test_res_writes_a_separate_file(env):
     assert d8.attrs["res"] == 8 and len(d8) < len(d9)
 
 
-def test_existing_output_is_skipped(env, capsys):
+def test_existing_output_is_skipped(env: Path, capsys: pytest.CaptureFixture[str]) -> None:
     build.main(["demand"])
     out = env / "demand-r9.parquet"
     out.write_bytes(b"sentinel")
@@ -69,7 +70,7 @@ def test_existing_output_is_skipped(env, capsys):
     assert out.read_bytes() == b"sentinel" and "skipping" in capsys.readouterr().err
 
 
-def test_force_rebuilds_an_existing_output(env):
+def test_force_rebuilds_an_existing_output(env: Path) -> None:
     out = env / "demand-r9.parquet"
     out.write_bytes(b"sentinel")
     assert build.main(["demand", "--force"]) == 0
@@ -77,13 +78,13 @@ def test_force_rebuilds_an_existing_output(env):
     assert pd.read_parquet(out).attrs["res"] == 9
 
 
-def test_default_runs_every_stage(env):
+def test_default_runs_every_stage(env: Path) -> None:
     build.main([])
     assert (env / "demand-r9.parquet").exists()
     assert (env / "candidates-r9-x30.parquet").exists() and (env / "table-r9-x30.parquet").exists()
 
 
-def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
+def test_reach_writes_candidates_and_table_named_by_res_and_x(env: Path) -> None:
     assert build.main(["reach"]) == 0
     assert (env / "candidates-r9-x30.parquet").exists() and (env / "table-r9-x30.parquet").exists()
     candidates = pd.read_parquet(env / "candidates-r9-x30.parquet")
@@ -92,7 +93,7 @@ def test_reach_writes_candidates_and_table_named_by_res_and_x(env):
     assert set(table.candidate) == set(candidates.index)
 
 
-def test_x_pct_writes_a_separate_file_named_by_x(env):
+def test_x_pct_writes_a_separate_file_named_by_x(env: Path) -> None:
     build.main(["reach"])
     build.main(["reach", "--x-pct", "2.5"])
     assert (env / "candidates-r9-x2.5.parquet").exists() and (env / "table-r9-x2.5.parquet").exists()
@@ -100,21 +101,21 @@ def test_x_pct_writes_a_separate_file_named_by_x(env):
     assert (env / "candidates-r9-x30.parquet").exists()
 
 
-def test_reach_builds_a_missing_demand_table_first(env):
+def test_reach_builds_a_missing_demand_table_first(env: Path) -> None:
     assert not (env / "demand-r9.parquet").exists()
     build.main(["reach"])
     assert (env / "demand-r9.parquet").exists()
     assert pd.read_parquet(env / "demand-r9.parquet").attrs["res"] == 9
 
 
-def test_reach_reads_an_existing_demand_table(env):
+def test_reach_reads_an_existing_demand_table(env: Path) -> None:
     build.main(["demand"])
     before = (env / "demand-r9.parquet").stat().st_mtime_ns
     build.main(["reach"])
     assert (env / "demand-r9.parquet").stat().st_mtime_ns == before
 
 
-def test_reach_is_skipped_only_when_both_outputs_exist(env):
+def test_reach_is_skipped_only_when_both_outputs_exist(env: Path) -> None:
     build.main(["reach"])
     (env / "table-r9-x30.parquet").unlink()
     (env / "candidates-r9-x30.parquet").write_bytes(b"sentinel")
@@ -123,7 +124,7 @@ def test_reach_is_skipped_only_when_both_outputs_exist(env):
     assert (env / "candidates-r9-x30.parquet").read_bytes() != b"sentinel"
 
 
-def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatch):
+def test_reach_prints_counts_against_0_5_time_and_memory(env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     router = FakeRouter()
     router.peak_bytes = 123_000_000
     monkeypatch.setattr(build, "served_osrm", lambda data_dir: contextlib.nullcontext(router))
@@ -134,7 +135,7 @@ def test_reach_prints_counts_against_0_5_time_and_memory(env, capsys, monkeypatc
     assert "wall time" in err and "peak RSS" in err and "osrm-routed peak 123 MB" in err
 
 
-def test_demand_without_fetched_rasters_says_to_fetch_them(env, monkeypatch, capsys):
+def test_demand_without_fetched_rasters_says_to_fetch_them(env: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr(build, "WORLDPOP", env / "worldpop.tif")
     monkeypatch.setattr(build, "VIIRS", env / "viirs.tif")
     assert build.main(["demand"]) == 1
@@ -143,7 +144,7 @@ def test_demand_without_fetched_rasters_says_to_fetch_them(env, monkeypatch, cap
     assert not (env / "demand-r9.parquet").exists()
 
 
-def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env, monkeypatch, capsys):
+def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr(build, "PLACES", env / "overture_places.parquet.gone")
     monkeypatch.setattr(build, "served_osrm", lambda data_dir: pytest.fail("OSRM started"))
     assert build.main(["reach"]) == 1
