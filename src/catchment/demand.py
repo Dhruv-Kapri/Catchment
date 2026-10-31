@@ -1,14 +1,17 @@
 """Demand per hex: households x affluence multiplier x capture share, at any H3 resolution."""
+from pathlib import Path
+
 import h3
 import numpy as np
 import pandas as pd
+from shapely.geometry.base import BaseGeometry
 
 from catchment import assumptions
 from catchment.fetch import VIIRS, WORLDPOP
 from catchment.load import viirs_at, worldpop_pixels
 
 
-def build_demand(polygon, res=9, worldpop=WORLDPOP, viirs=VIIRS):
+def build_demand(polygon: BaseGeometry, res: int = 9, worldpop: Path = WORLDPOP, viirs: Path = VIIRS) -> pd.DataFrame:
     """Demand table for every hex at res whose centre is in polygon, indexed by hex.
 
     Population is the WorldPop pixels whose centre falls in the hex (pixels in non-area hexes are dropped).

@@ -3,9 +3,12 @@ import argparse
 import resource
 import sys
 import time
+from collections.abc import Callable, Sequence
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+from shapely.geometry.base import BaseGeometry
 
 from catchment import assumptions
 from catchment.area import load_area
@@ -13,34 +16,34 @@ from catchment.demand import build_demand
 from catchment.fetch import DATA, atomic_path, VIIRS, WORLDPOP
 from catchment.reach import build_reach, served_osrm
 
-PLACES = DATA / "overture_places.parquet"
-EXPLORE_PAIRS = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
+PLACES: Path = DATA / "overture_places.parquet"
+EXPLORE_PAIRS: float = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
 
 
 class MissingInput(Exception):
     """A fetched source the stage needs is not in data/."""
 
 
-def require(paths, source):
+def require(paths: Sequence[Path], source: str) -> None:
     missing = [p.name for p in paths if not p.exists()]
     if missing:
         raise MissingInput(f"{', '.join(missing)} not found; run `catchment-fetch {source}` first")
 
 
-def demand_name(res):
+def demand_name(res: int) -> str:
     return f"demand-r{res}.parquet"
 
 
-def reach_names(res, x_pct):
+def reach_names(res: int, x_pct: float) -> list[str]:
     return [f"candidates-r{res}-x{x_pct:g}.parquet", f"table-r{res}-x{x_pct:g}.parquet"]
 
 
-def write_parquet(df, path):
+def write_parquet(df: pd.DataFrame, path: Path) -> None:
     with atomic_path(path) as tmp:
         df.to_parquet(tmp)
 
 
-def build_demand_stage(polygon, args, paths):
+def build_demand_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: Sequence[Path]) -> None:
     require([WORLDPOP, VIIRS], "worldpop viirs")
     df = build_demand(polygon, args.res, WORLDPOP, VIIRS)
     write_parquet(df, paths[0])
@@ -48,7 +51,7 @@ def build_demand_stage(polygon, args, paths):
           f"capture share {df.attrs['capture_share']:.3f}", file=sys.stderr)
 
 
-def build_reach_stage(polygon, args, paths):
+def build_reach_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: Sequence[Path]) -> None:
     require([PLACES], "overture")
     demand_path = DATA / demand_name(args.res)
     if not demand_path.exists():
@@ -76,13 +79,14 @@ def build_reach_stage(polygon, args, paths):
 
 
 # stage -> (builder(polygon, args, output paths), output names from args)
-STAGES = {
+STAGES: dict[str, tuple[Callable[[BaseGeometry, argparse.Namespace, Sequence[Path]], None],
+                       Callable[[argparse.Namespace], list[str]]]] = {
     "demand": (build_demand_stage, lambda a: [demand_name(a.res)]),
     "reach": (build_reach_stage, lambda a: reach_names(a.res, a.x_pct)),
 }
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="catchment-build", description=__doc__)
     ap.add_argument("stages", nargs="*", choices=list(STAGES), metavar="stage",
                     help=f"subset of: {', '.join(STAGES)} (default: all)")

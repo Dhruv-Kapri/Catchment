@@ -1,19 +1,22 @@
 """The area polygon: built from OSM admin relations, committed as GeoJSON."""
 import json
 import sys
+from collections.abc import Iterable, Mapping
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import requests
 from shapely.geometry import LineString, mapping, shape
+from shapely.geometry.base import BaseGeometry
 from shapely.ops import linemerge, polygonize, unary_union
 
-AREA_PATH = Path(__file__).resolve().parents[2] / "area" / "gurugram-south-delhi.geojson"
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-RELATIONS = {10398244: "Gurgaon tehsil", 21181223: "South Delhi district"}
+AREA_PATH: Path = Path(__file__).resolve().parents[2] / "area" / "gurugram-south-delhi.geojson"
+OVERPASS_URL: str = "https://overpass-api.de/api/interpreter"
+RELATIONS: dict[int, str] = {10398244: "Gurgaon tehsil", 21181223: "South Delhi district"}
 
 
-def _rings(members, role):
+def _rings(members: Iterable[Mapping[str, Any]], role: str) -> list[BaseGeometry]:
     """Polygons formed by the ways with this role, joining ways end to end."""
     lines = [
         LineString([(p["lon"], p["lat"]) for p in m["geometry"]])
@@ -25,7 +28,7 @@ def _rings(members, role):
     return list(polygonize(linemerge(lines)))
 
 
-def relation_to_geometry(element):
+def relation_to_geometry(element: Mapping[str, Any]) -> BaseGeometry:
     """Overpass relation element (`out geom`) -> shapely (Multi)Polygon."""
     members = element["members"]
     outer = unary_union(_rings(members, "outer"))
@@ -33,12 +36,12 @@ def relation_to_geometry(element):
     return outer.difference(inner)
 
 
-def load_area():
+def load_area() -> BaseGeometry:
     """The committed area as a shapely geometry (lon/lat, EPSG:4326)."""
     return shape(json.loads(AREA_PATH.read_text())["features"][0]["geometry"])
 
 
-def _fetch(ids):
+def _fetch(ids: Iterable[int]) -> dict[int, dict[str, Any]]:
     query = "[out:json][timeout:120];(" + "".join(f"rel({i});" for i in ids) + ");out geom;"
     r = requests.post(
         OVERPASS_URL,
@@ -50,11 +53,11 @@ def _fetch(ids):
     return {e["id"]: e for e in r.json()["elements"] if e["type"] == "relation"}
 
 
-def _round(obj, nd=6):
+def _round(obj: Any, nd: int = 6) -> Any:  # noqa: ANN401 - nested GeoJSON coordinates, arbitrary depth
     return [_round(x, nd) for x in obj] if isinstance(obj, (list, tuple)) else round(obj, nd)
 
 
-def build():
+def build() -> None:
     elements = _fetch(list(RELATIONS))
     geom = unary_union([relation_to_geometry(elements[i]) for i in RELATIONS])
     feature = mapping(geom)

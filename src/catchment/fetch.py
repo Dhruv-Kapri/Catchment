@@ -7,41 +7,46 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import AbstractContextManager
 from datetime import date
 from pathlib import Path
+from typing import Any, Protocol
 
 import geopandas as gpd
 import h5py
 import numpy as np
+import numpy.typing as npt
 import rasterio
 import requests
 from rasterio.mask import mask
 from rasterio.transform import from_origin
 from shapely.geometry import mapping
+from shapely.geometry.base import BaseGeometry
 
 from catchment.area import load_area
 
-DATA = Path(__file__).resolve().parents[2] / "data"
-RAW = DATA / "raw"
-WORLDPOP = DATA / "worldpop.tif"
-VIIRS = DATA / "viirs.tif"
+DATA: Path = Path(__file__).resolve().parents[2] / "data"
+RAW: Path = DATA / "raw"
+WORLDPOP: Path = DATA / "worldpop.tif"
+VIIRS: Path = DATA / "viirs.tif"
 
-WORLDPOP_URL = (
+WORLDPOP_URL: str = (
     "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/IND/v1/100m/"
     "constrained/ind_pop_2025_CN_100m_R2025A_v1.tif"
 )
-BM_BASE = "https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5200/VNP46A4/2025/001"
-BM_LAYER = "HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/NearNadir_Composite_Snow_Free"
-BM_NODATA = -9999.0
-OVERTURE_RELEASE = "2026-10-21.0"
-OSM_URL = "https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf"
-OSM_BUFFER_M = 5000
-HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
-LAADS_TOKEN_PAGE = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
+BM_BASE: str = "https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5200/VNP46A4/2025/001"
+BM_LAYER: str = "HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/NearNadir_Composite_Snow_Free"
+BM_NODATA: float = -9999.0
+OVERTURE_RELEASE: str = "2026-10-21.0"
+OSM_URL: str = "https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf"
+OSM_BUFFER_M: int = 5000
+HDF5_SIGNATURE: bytes = b"\x89HDF\r\n\x1a\n"
+LAADS_TOKEN_PAGE: str = "https://ladsweb.modaps.eosdis.nasa.gov/tools-and-services/data-download-scripts/"
 
 
 @contextlib.contextmanager
-def atomic_path(dest):
+def atomic_path(dest: Path | str) -> Iterator[Path]:
     """Yield dest's .part path to write to; on success rename it onto dest, on error remove it."""
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +65,14 @@ class SourceError(Exception):
 
 # ---- resumable downloader -------------------------------------------------
 
-def download(url, dest, headers=None, session=requests):
+class HttpGetter(Protocol):
+    """What download needs from `requests`: a streaming GET usable as a context manager (tests pass a fake)."""
+
+    def get(self, url: str, *, headers: Mapping[str, str], stream: bool, timeout: float) -> AbstractContextManager[requests.Response]: ...
+
+
+def download(url: str, dest: Path | str, headers: Mapping[str, str] | None = None,
+             session: HttpGetter = requests) -> Path:
     """Download url to dest via dest.part and an atomic rename. No-op if dest exists.
 
     Resumes with a Range request; if the server answers 200 (ignores Range), restarts.
@@ -103,7 +115,7 @@ def download(url, dest, headers=None, session=requests):
 
 # ---- raster helpers -------------------------------------------------------
 
-def clip_raster(src_path, polygon, dest):
+def clip_raster(src_path: Path, polygon: BaseGeometry, dest: Path) -> None:
     """Clip a raster to polygon (lon/lat, same CRS as the raster); outside is nodata."""
     with rasterio.open(src_path) as src:
         data, transform = mask(src, [mapping(polygon)], crop=True, all_touched=True, nodata=src.nodata)
@@ -116,18 +128,18 @@ def clip_raster(src_path, polygon, dest):
     _atomic_write_tif(dest, data, profile)
 
 
-def _atomic_write_tif(dest, data, profile):
+def _atomic_write_tif(dest: Path, data: npt.NDArray[Any], profile: Mapping[str, Any]) -> None:
     with atomic_path(dest) as tmp, rasterio.open(tmp, "w", **profile) as out:
         out.write(data)
 
 
 # ---- NASA Black Marble VNP46A4 -------------------------------------------
 
-def black_marble_tile(lon, lat):
+def black_marble_tile(lon: float, lat: float) -> tuple[int, int]:
     return int((lon + 180) // 10), int((90 - lat) // 10)
 
 
-def pick_black_marble(listing, h, v):
+def pick_black_marble(listing: Mapping[str, Any], h: int, v: int) -> str:
     tag = f".h{h:02d}v{v:02d}."
     names = [e["name"] for e in listing["content"] if tag in e["name"] and e["name"].endswith(".h5")]
     if not names:
@@ -135,7 +147,7 @@ def pick_black_marble(listing, h, v):
     return sorted(names)[-1]
 
 
-def check_hdf5(path):
+def check_hdf5(path: Path) -> None:
     with open(path, "rb") as f:
         if f.read(8) != HDF5_SIGNATURE:
             raise ValueError(
@@ -145,7 +157,7 @@ def check_hdf5(path):
             )
 
 
-def black_marble_to_tif(h5_path, h, v, polygon, dest):
+def black_marble_to_tif(h5_path: Path, h: int, v: int, polygon: BaseGeometry, dest: Path) -> None:
     """Georeference the 2400x2400 tile from its index, scale, and clip to polygon."""
     n, res = 2400, 10 / 2400
     west, north = h * 10 - 180, 90 - v * 10
@@ -174,13 +186,13 @@ def black_marble_to_tif(h5_path, h, v, polygon, dest):
 
 # ---- sources --------------------------------------------------------------
 
-def fetch_worldpop(polygon):
+def fetch_worldpop(polygon: BaseGeometry) -> dict[str, Any]:
     raw = download(WORLDPOP_URL, RAW / Path(WORLDPOP_URL).name)
     clip_raster(raw, polygon, WORLDPOP)
     return {"source": WORLDPOP_URL, "files": [WORLDPOP.name]}
 
 
-def fetch_viirs(polygon):
+def fetch_viirs(polygon: BaseGeometry) -> dict[str, Any]:
     token = os.environ.get("LAADS_TOKEN")
     if not token:
         raise SourceError(
@@ -205,9 +217,9 @@ def fetch_viirs(polygon):
     return {"source": url, "layer": BM_LAYER, "files": [VIIRS.name]}
 
 
-def fetch_overture(polygon):
+def fetch_overture(polygon: BaseGeometry) -> dict[str, Any]:
     import overturemaps.core as ov
-    files = []
+    files: list[str] = []
     for kind, name in (("place", "overture_places.parquet"), ("building", "overture_buildings.parquet")):
         gdf = ov.geodataframe(kind, bbox=polygon.bounds, release=OVERTURE_RELEASE)
         gdf = gdf[gdf.intersects(polygon)]
@@ -219,14 +231,14 @@ def fetch_overture(polygon):
     return {"release": OVERTURE_RELEASE, "files": files}
 
 
-def _osmium(*args):
+def _osmium(*args: str) -> str:
     try:
         return subprocess.run(["osmium", *args], check=True, capture_output=True, text=True).stdout
     except subprocess.CalledProcessError as e:
         raise SourceError(f"osmium {args[0]} failed: {e.stderr.strip()}") from e
 
 
-def fetch_osm(polygon):
+def fetch_osm(polygon: BaseGeometry) -> dict[str, Any]:
     if shutil.which("osmium") is None:
         raise SourceError("osmium was not found on PATH; install osmium-tool with `brew install osmium-tool`")
     raw = download(OSM_URL, RAW / Path(OSM_URL).name)
@@ -243,7 +255,7 @@ def fetch_osm(polygon):
     return {"source": OSM_URL, "data_date": data_date, "buffer_m": OSM_BUFFER_M, "files": [out.name]}
 
 
-SOURCES = {
+SOURCES: dict[str, tuple[Callable[[BaseGeometry], dict[str, Any]], list[str]]] = {
     "worldpop": (fetch_worldpop, [WORLDPOP.name]),
     "viirs": (fetch_viirs, [VIIRS.name]),
     "overture": (fetch_overture, ["overture_places.parquet", "overture_buildings.parquet"]),
@@ -251,7 +263,7 @@ SOURCES = {
 }
 
 
-def _update_manifest(name, entry):
+def _update_manifest(name: str, entry: dict[str, Any]) -> None:
     path = DATA / "manifest.json"
     manifest = json.loads(path.read_text()) if path.exists() else {}
     manifest[name] = entry | {"fetched": date.today().isoformat()}
@@ -259,7 +271,7 @@ def _update_manifest(name, entry):
         tmp.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     from dotenv import load_dotenv
     load_dotenv()
     ap = argparse.ArgumentParser(prog="catchment-fetch", description=__doc__)
@@ -269,7 +281,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     DATA.mkdir(exist_ok=True)
     polygon = load_area()
-    failed = []
+    failed: list[str] = []
     for name in args.sources or SOURCES:
         fn, outputs = SOURCES[name]
         if not args.force and all((DATA / o).exists() for o in outputs):

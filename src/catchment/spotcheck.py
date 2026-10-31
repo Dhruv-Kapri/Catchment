@@ -1,17 +1,20 @@
 """Spot check: draw routes to look up in a map app and compare with the model's times."""
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from catchment import assumptions
 
-SEED = 16
-COLUMNS = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
+SEED: int = 16
+COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
            "bad_snap_before", "app_min", "app", "looked_up"]
 
 
-def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11, 14, 17), seed=SEED):
+def draw_routes(table: pd.DataFrame, candidates: pd.DataFrame, hexes: pd.DataFrame, bad: pd.DataFrame, n: int = 20,
+                n_bad: int = 5, edges: Sequence[float] = (2, 5, 8, 11, 14, 17), seed: int = SEED) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     table = table.sort_values(["candidate", "hex"], kind="stable")
     pairs = table[(table.minutes >= edges[0]) & (table.minutes <= edges[-1])]
@@ -34,7 +37,7 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
     return r[COLUMNS]
 
 
-def write_sheet(routes, path):
+def write_sheet(routes: pd.DataFrame, path: Path | str) -> bool:
     """Write the sheet unless one exists (it may hold the app times); an existing one must be the same routes."""
     path = Path(path)
     if not path.exists():
@@ -47,7 +50,7 @@ def write_sheet(routes, path):
     return False
 
 
-def compare(sheet, multiplier=assumptions.MULTIPLIER):
+def compare(sheet: pd.DataFrame, multiplier: float = assumptions.MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
     """The model's error against the app per route (worst first), and the multiplier the app times imply."""
     found = sheet[sheet.app_min.notna()].copy()
     modelled = found.free_flow_min * multiplier

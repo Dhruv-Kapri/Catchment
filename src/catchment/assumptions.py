@@ -1,39 +1,44 @@
 """Every labelled assumption the model rests on, with source, date and status. Build code reads them from here."""
 import pandas as pd
 
-HOUSEHOLD_SIZE = 4.5          # persons per household, one value for every hex
-M_LOW, M_HIGH = 0.5, 1.5      # affluence multiplier bounds
+HOUSEHOLD_SIZE: float = 4.5          # persons per household, one value for every hex
+M_LOW: float = 0.5
+M_HIGH: float = 1.5     # affluence multiplier bounds
 
 # Capture-share calibration inputs
-BLINKIT_ORDERS_Q2 = 398.9e6   # Blinkit orders, Q2 FY27 (Jul-Sep 2026)
-Q2_DAYS = 92
-BLINKIT_STORES = 2751         # at quarter end
-NCR_STORES = 400              # dark stores, all brands, NCR
-NCR_POPULATION = 30.2e6       # "New Delhi" Degree of Urbanisation city, WUP 2025, 2025 estimate
+BLINKIT_ORDERS_Q2: float = 398.9e6   # Blinkit orders, Q2 FY27 (Jul-Sep 2026)
+Q2_DAYS: int = 92
+BLINKIT_STORES: int = 2751         # at quarter end
+NCR_STORES: int = 400              # dark stores, all brands, NCR
+NCR_POPULATION: float = 30.2e6       # "New Delhi" Degree of Urbanisation city, WUP 2025, 2025 estimate
 
-PICK_AND_PACK = 3             # minutes, fixed
-MAX_PROMISE = 20              # longest promise lever, minutes
+PICK_AND_PACK: int = 3             # minutes, fixed
+MAX_PROMISE: int = 20              # longest promise lever, minutes
 
 # Plan (02-plan): default scenario, capacity, placeholder network, solver
-PROMISE, MULTIPLIER = 10, 1.4           # default scenario
-N_SLICE, N_AREA = 3, 10                 # new stores: the slice, the full area (default scenario)
-CAPACITY_FACTOR = 1.5
-BRAND_COUNTS = {"Operator": 3, "Competitor A": 4, "Competitor B": 3}   # placeholder, the slice
-SEED = 2026                             # network placement
-SCALE = 100                             # shares and capacity are integers in hundredths of an order
-TIME_LIMIT, WORKERS, SOLVER_SEED = 60, 8, 1
+PROMISE: int = 10                       # default scenario
+MULTIPLIER: float = 1.4
+N_SLICE: int = 3                        # new stores: the slice
+N_AREA: int = 10                        # new stores: the full area (default scenario)
+CAPACITY_FACTOR: float = 1.5
+BRAND_COUNTS: dict[str, int] = {"Operator": 3, "Competitor A": 4, "Competitor B": 3}   # placeholder, the slice
+SEED: int = 2026                             # network placement
+SCALE: int = 100                             # shares and capacity are integers in hundredths of an order
+TIME_LIMIT: int = 60
+WORKERS: int = 8
+SOLVER_SEED: int = 1
 
-ORDERS_PER_STORE_DAY = BLINKIT_ORDERS_Q2 / Q2_DAYS / BLINKIT_STORES
-NCR_HOUSEHOLDS = NCR_POPULATION / HOUSEHOLD_SIZE
+ORDERS_PER_STORE_DAY: float = BLINKIT_ORDERS_Q2 / Q2_DAYS / BLINKIT_STORES
+NCR_HOUSEHOLDS: float = NCR_POPULATION / HOUSEHOLD_SIZE
 # calibration target: all-brand orders per household per day
-ORDERS_PER_HOUSEHOLD_DAY = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
-SECOND_ROAD_MAX_M = 100   # a point's second road counts for snapping only within this distance
-SECOND_ROAD_GAP_M = 5     # and only if it lies more than this across the first road
-MAX_PAIR_MIN = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
-CAPACITY = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
+ORDERS_PER_HOUSEHOLD_DAY: float = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
+SECOND_ROAD_MAX_M: int = 100   # a point's second road counts for snapping only within this distance
+SECOND_ROAD_GAP_M: int = 5     # and only if it lies more than this across the first road
+MAX_PAIR_MIN: int = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
+CAPACITY: float = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
 
 
-def table():
+def table() -> pd.DataFrame:
     """The assumptions as a table: Input, Value, Source, Date, Status."""
     return pd.DataFrame(
         [
