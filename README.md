@@ -3,8 +3,9 @@
 *Where should a quick-commerce operator open its next N dark stores, and what does each one win, or
 take from the stores it already has?*
 
-> **Status: stage 0.5 done** (the whole chain run once on a slice, in `notebooks/`). Next: demand and
-> reach on the full area. The [roadmap](docs/roadmap.md) says what gets built and in what order.
+> **Status: stage 1 done** (demand and reach on the full area, built by `catchment-build`; results and the
+> spot check in `notebooks/03-area.ipynb`). Next: the plan, CP-SAT against a greedy baseline. The
+> [roadmap](docs/roadmap.md) says what gets built and in what order.
 
 ## Getting started
 
@@ -39,6 +40,10 @@ uv run jupyter nbconvert --to notebook --execute notebooks/02-plan.ipynb --outpu
 (`osrm/osrm.sh build|serve|stop`; env overrides `OSRM_DATA`, `OSRM_PORT`, `OSRM_NAME`); the notebook is kept as the stage 0.5 record and still calls them in
 `notebooks/`, so it no longer re-runs as committed. It was run with Docker's memory limit at
 3.82 GiB of 8 GiB; peak use was at most about 0.5 GB (the notebook prints it).
+
+Stage 1's notebook, `03-area`, reads what `catchment-build` wrote to `data/` and covers the snapping fix, the
+area demand map, the full-area solve time and the spot-check error. It starts and stops OSRM itself, so Docker
+must be running.
 
 ## The problem
 

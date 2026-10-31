@@ -70,6 +70,9 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 - Synthetic network generator (the operator's and competitors' existing stores), with every count's
   source and date recorded.
 - Benchmark over a grid of scenarios: covered demand CP-SAT vs greedy, solve time.
+- Stage 1 follow-ups open at the start: #22 (spot-check `compare` edge cases, a Pandas warning, the CLAUDE.md
+  status) and #23 (design smells from the type-hint pass; the duplicated notebook plan code and `solve_plan`'s loose
+  dict return bear on the move into the package).
 - **Done when:** CP-SAT returns a plan in ≤ 10 s for the default scenario, and the comparison table
   with greedy is committed (whichever wins).
 
