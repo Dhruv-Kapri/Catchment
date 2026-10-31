@@ -220,3 +220,13 @@ def test_a_longer_reach_finds_a_farther_second_road():
     x, y, wps = roads_at((0, "A"), (150, "B"))
     assert nearest_roads(wps, x, y, 2) == wps[:1]
     assert nearest_roads(wps, x, y, 2, max_m=200) == wps
+
+
+def test_same_name_prefers_a_same_named_hit_over_a_nearer_unnamed_one():
+    x, y, wps = roads_at((0, "A"), (20, ""), (30, "A"))
+    assert nearest_roads(wps, x, y, 2, same_name=True) == [wps[0], wps[2]]
+
+
+def test_same_name_without_a_same_named_hit_falls_back_to_the_nearest():
+    x, y, wps = roads_at((0, "A"), (20, "B"), (30, "C"))
+    assert nearest_roads(wps, x, y, 2, same_name=True) == [wps[0], wps[1]]
