@@ -26,6 +26,8 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   routes, and they rank 1, 7, 9, 14 and 16 of 20.
   - Route 1 (2.97 free-flow min, 11 in the app) is the worst route, so one snap may still be wrong.
   - One route does not justify a new snapping rule. The second-road rule stands (#20).
+  - The draw is stratified by free-flow band, not by place, so it did not test outskirts hexes. The 200 m reach
+    for hex centres (#20) stays open.
 
 ## 2026-10-30: Full-area solve time measured (#15)
 
