@@ -45,3 +45,20 @@ def write_sheet(routes, path):
     if not old.equals(routes[keys].reset_index(drop=True)):
         raise ValueError(f"{path} holds different routes; move it aside to draw a new sheet")
     return False
+
+
+def compare(sheet, multiplier=assumptions.MULTIPLIER):
+    """The model's error against the app per route (worst first), and the multiplier the app times imply."""
+    found = sheet[sheet.app_min.notna()].copy()
+    modelled = found.free_flow_min * multiplier
+    found["ratio"], found["implied"], found["diff_min"] = found.app_min / modelled, found.app_min / found.free_flow_min, found.app_min - modelled
+    routes = found.sort_values("ratio", ascending=False, kind="stable").reset_index(drop=True)
+    bad = routes.bad_snap_before.astype(bool)
+    r25, r75 = routes.ratio.quantile([0.25, 0.75])
+    i25, i75 = routes.implied.quantile([0.25, 0.75])
+    summary = {"n": len(routes), "n_no_app": len(sheet) - len(routes), "ratio_median": routes.ratio.median(),
+               "ratio_q25": r25, "ratio_q75": r75, "ratio_min": routes.ratio.min(), "ratio_max": routes.ratio.max(),
+               "implied_median": routes.implied.median(), "implied_q25": i25, "implied_q75": i75,
+               "ratio_median_bad": routes.ratio[bad].median(), "ratio_median_other": routes.ratio[~bad].median(),
+               "bad_snap_ranks": {int(r): int(i) + 1 for r, i in zip(routes.route[bad], routes.index[bad])}}
+    return routes, summary

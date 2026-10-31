@@ -52,6 +52,12 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
   error is reported in the notebook and later in the UI.
 - **Done when:** a demand map PNG of the area is committed, the demand table and the travel-time table
   each build from one command, and the spot-check error is written up.
+- **Done 2026-10-31:** `03-area` on the full area (4,859 hexes, 1,458 candidate sites; res 9 and X = 30 stand), the
+  demand map in `notebooks/figures/03-demand.png`, `uv run catchment-build` for the demand and travel-time tables.
+  Spot check (20 routes, Google Maps two-wheeler, Fri 30 Oct, 19:00-19:07, live estimates): the app took a median 1.28×
+  free-flow × 1.4 (25th-75th percentile 1.17-1.54); the implied multiplier is about 1.8. Changing the 1.4 default is
+  left to a decision. The default scenario returns a plan within 10 s with a tighter capacity row, gap stated (see
+  [decisions](decisions.md)).
 
 ## 2. Plan (to 18 Nov)
 
