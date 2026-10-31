@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from catchment.reach import nearest_roads, build_reach, n_top
+from catchment.reach import build_reach, n_top, nearest_roads
 from conftest import FAR, RES, FakeRouter, four_snaps
 
 AREA = box(77.04, 28.44, 77.06, 28.46)
