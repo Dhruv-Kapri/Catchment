@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -176,3 +178,12 @@ def test_write_sheet_keeps_a_sheet_drawn_from_float32_minutes(tmp_path):
     path = tmp_path / "spot-check.csv"
     write_sheet(routes, path)
     assert write_sheet(routes, path) is False
+
+
+def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm():
+    sheet = pd.read_csv(Path(__file__).parent.parent / "docs" / "spot-check.csv")
+    assert len(sheet) == 20 and sheet.app_min.notna().all()
+    assert (sheet.app_min == sheet.app_min.round()).all() and (sheet.app_min > 0).all()
+    assert (sheet.app == "Google Maps two-wheeler").all()
+    when = pd.to_datetime(sheet.looked_up, format="%Y-%m-%d %H:%M")
+    assert (when.dt.weekday < 5).all() and (when.dt.hour == 19).all()
