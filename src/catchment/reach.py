@@ -49,8 +49,8 @@ def build_reach(polygon, demand, places, res, x_pct, router, snaps=2):
     return candidates, table
 
 
-def nearest_roads(waypoints, x, y, k):
-    """The nearest hit, and for k > 1 the nearest later hit within SECOND_ROAD_MAX_M that lies more than SECOND_ROAD_GAP_M
+def nearest_roads(waypoints, x, y, k, max_m=assumptions.SECOND_ROAD_MAX_M, same_name=False):
+    """The nearest hit, and for k > 1 the nearest later hit within max_m (default SECOND_ROAD_MAX_M) that lies more than SECOND_ROAD_GAP_M
     from it along the direction from the point to it: a parallel carriageway, where the next segment of the same one lies
     across that direction. On the road itself (under 1 m) it is the nearest later hit more than the gap from the point."""
     if not waypoints:
@@ -60,7 +60,7 @@ def nearest_roads(waypoints, x, y, k):
         to_m = np.array([111_320 * math.cos(math.radians(y)), 110_574])   # degrees to metres, local equirectangular
         axis = (np.array(first["location"]) - [x, y]) * to_m / max(first["distance"], 1e-9)
         for w in waypoints[1:]:
-            if w["distance"] > assumptions.SECOND_ROAD_MAX_M:
+            if w["distance"] > max_m:
                 break
             along = abs((np.array(w["location"]) - first["location"]) * to_m @ axis) if first["distance"] >= 1 else w["distance"]
             if along > assumptions.SECOND_ROAD_GAP_M:
