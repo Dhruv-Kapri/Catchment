@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Stage 0 (setup and fetch) and 0.5 Explore (notebooks `00-demand`, `01-reach`, `02-plan` on the slice, issues
 #1-#6) done 2026-10-29: H3 res 9, candidate sites the top 30% of hexes by places count. Stage 1 (demand and reach on
-the full area, notebook `03-area`, issues #9 and #14-#20) done 2026-10-31: res 9 and X = 30 stand; the spot check puts
+the full area, notebook `03-area`, issues #9-#21) done 2026-10-31: res 9 and X = 30 stand; the spot check puts
 the app at a median 1.28× the model (implied multiplier about 1.8 against the 1.4 default, a decision still open).
 Next is stage 2 (plan: `02-plan` and the tighter capacity model into the package, the synthetic network generator).
 The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`). The repo also
