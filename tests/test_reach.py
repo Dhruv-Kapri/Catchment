@@ -207,3 +207,16 @@ def test_the_second_road_is_the_nearest_across_whatever_its_name():
     unnamed = {"location": at(8), "distance": 8.0, "name": "", "nodes": [3, 4]}
     same = {"location": at(9), "distance": 9.0, "name": "Mehrauli-Gurgaon Road", "nodes": [5, 6]}
     assert nearest_roads([first, unnamed, same], x, y, 2) == [first, unnamed]
+
+
+def roads_at(*specs):
+    """Waypoints due north of (77.05, 28.45): (metres, name) each, nearest first."""
+    x, y = 77.05, 28.45
+    return x, y, [{"location": [x, y + m / 110_574], "distance": float(m), "name": n, "nodes": [i, i + 1]}
+                  for i, (m, n) in enumerate(specs)]
+
+
+def test_a_longer_reach_finds_a_farther_second_road():
+    x, y, wps = roads_at((0, "A"), (150, "B"))
+    assert nearest_roads(wps, x, y, 2) == wps[:1]
+    assert nearest_roads(wps, x, y, 2, max_m=200) == wps
