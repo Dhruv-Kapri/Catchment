@@ -68,7 +68,7 @@ _Avoid_: radius, coverage area, polygon (a catchment is not a circle)
 A factor applied to free-flow OSRM times to stand in for traffic. A lever, not a traffic model.
 
 **Spot check**:
-A handful of routes timed by hand in a live map app at a stated time of day, compared with the
+A handful of routes timed one at a time in a live map app at a stated time of day, compared with the
 modelled travel times. It measures the error; it does not set the model.
 _Avoid_: validation, ground truth
 

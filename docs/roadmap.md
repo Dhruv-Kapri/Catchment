@@ -47,8 +47,8 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 - `00-demand` and `01-reach` move into `src/catchment/` and run on the whole area.
 - OSRM on an OSM extract clipped to the area plus a buffer (clip with `osmium` first).
 - Travel-time table, candidate site × hex, kept sparse (only pairs under the longest promise considered).
-- Spot check: about 20 routes compared by hand against a live map app at a stated time of day; the
-  hand-noted times go in `docs/spot-check.csv` ([ADR 0002](adr/0002-spot-check-times-in-repo.md)). The
+- Spot check: about 20 routes compared against a live map app at a stated time of day; the
+  app times go in `docs/spot-check.csv` ([ADR 0002](adr/0002-spot-check-times-in-repo.md)). The
   error is reported in the notebook and later in the UI.
 - **Done when:** a demand map PNG of the area is committed, the demand table and the travel-time table
   each build from one command, and the spot-check error is written up.

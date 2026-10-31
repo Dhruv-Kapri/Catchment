@@ -35,7 +35,7 @@ def draw_routes(table, candidates, hexes, bad, n=20, n_bad=5, edges=(2, 5, 8, 11
 
 
 def write_sheet(routes, path):
-    """Write the sheet unless one exists (it may hold hand-noted app times); an existing one must be the same routes."""
+    """Write the sheet unless one exists (it may hold the app times); an existing one must be the same routes."""
     path = Path(path)
     if not path.exists():
         routes.to_csv(path, index=False)
