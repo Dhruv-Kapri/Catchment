@@ -258,3 +258,11 @@ def test_compare_with_only_bad_snap_routes_has_none_for_the_other_median() -> No
 
 def test_compare_counts_bad_snap_routes_with_an_app_time() -> None:
     assert compare(app_sheet(), multiplier=1.4)[1]["n_bad"] == 2
+
+
+def test_compare_raises_when_a_found_route_has_no_bad_snap_flag() -> None:
+    # a blank cell in a hand-edited sheet reads as NaN, and bool(NaN) is True: it would count as a bad snap silently
+    sheet = app_sheet().astype({"bad_snap_before": object})
+    sheet.loc[sheet.app_min.notna().idxmax(), "bad_snap_before"] = np.nan
+    with pytest.raises(ValueError, match="bad_snap_before"):
+        compare(sheet, multiplier=1.4)

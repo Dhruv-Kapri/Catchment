@@ -52,10 +52,12 @@ def write_sheet(routes: pd.DataFrame, path: Path | str) -> bool:
 def compare(sheet: pd.DataFrame, multiplier: float = WRITE_UP_MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
     """The model's error against the app per route (worst first), and the multiplier the app times imply.
 
-    Raises ValueError if no row has an app time. The bad-snap medians are None when that group is empty."""
+    Raises ValueError if no row has an app time, or a row with one has no bad_snap_before flag. The bad-snap medians are None when that group is empty."""
     found = sheet[sheet.app_min.notna()].copy()
     if found.empty:
         raise ValueError("no app times in the sheet; fill app_min before comparing")
+    if found.bad_snap_before.isna().any():
+        raise ValueError("a route with an app time has no bad_snap_before flag; fill it with True or False")
     modelled = found.free_flow_min * multiplier
     found["ratio"], found["implied"], found["diff_min"] = found.app_min / modelled, found.app_min / found.free_flow_min, found.app_min - modelled
     routes = found.sort_values("ratio", ascending=False, kind="stable").reset_index(drop=True)
