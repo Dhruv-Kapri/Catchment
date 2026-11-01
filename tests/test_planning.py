@@ -322,27 +322,12 @@ def test_the_greedy_breaks_exact_ties_by_rank_on_fractional_demand(seed: int, ca
     assert p.sites == sites and p.demand_covered == pytest.approx(covered)
 
 
-def test_slow_traffic_coverage_is_never_more_than_the_demand_covered() -> None:
-    # Promise 8, multiplier 1.0: reach is free-flow <= 5 min; at 1.25x it is <= 4 min. B (4.5 min) and D (5 min) drop out, W and A (4 min) stay.
-    hexes = {"W": 100.0, "A": 200.0, "B": 300.0, "D": 400.0}
-    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S0", "B"): 4.5, ("S1", "D"): 5.0}
-    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=8, multiplier=1.0))
-    assert p.demand_covered == pytest.approx(1000) and p.slow_traffic_coverage == pytest.approx(300)
-
-
 def test_slow_traffic_coverage_equals_the_demand_covered_when_nothing_is_near_the_promise() -> None:
     # Promise 15, multiplier 1.0: reach is <= 12 min, at 1.25x <= 9.6 min. Every reachable pair is within 4 min.
     hexes = {"W": 100.0, "A": 200.0, "F": 300.0}
     pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S1", "F"): 3.0}
     p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0))
     assert p.demand_covered == pytest.approx(600) and p.slow_traffic_coverage == pytest.approx(600)
-
-
-def test_slow_traffic_coverage_loses_a_hex_whose_only_reach_is_near_the_promise() -> None:
-    # Promise 8, multiplier 1.0: reach <= 5 min; at 1.25x <= 4 min. S0 reaches W (1 min) and A (5 min): A drops out when slow.
-    inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
-    p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0))
-    assert p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
 
 
 def test_slow_traffic_coverage_holds_the_competitor_split_of_a_hex() -> None:
@@ -364,8 +349,8 @@ METHODS: tuple[str, ...] = typing.get_args(typing.get_type_hints(plan)["method"]
 
 
 @pytest.mark.parametrize("method", METHODS)
-def test_every_method_reports_slow_traffic_coverage(method: str) -> None:
-    # As above: S0 reaches W (1 min) and A (5 min); at promise 8, multiplier 1.0, A drops out at 1.25x.
+def test_every_method_loses_a_hex_whose_only_reach_is_near_the_promise_in_slow_traffic(method: str) -> None:
+    # S0 reaches W (1 min) and A (5 min); at promise 8, multiplier 1.0, A drops out at 1.25x.
     inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
     p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0), method)
     assert p.method == method and p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
