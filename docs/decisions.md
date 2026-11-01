@@ -3,6 +3,30 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-01: Plan (stage 2) scope
+
+- **The default congestion multiplier becomes 1.8** (the spot check's implied median, 20 routes, 30 Oct evening,
+  labelled with that caveat); the range widens to 1.0-2.5. 1.4 was an unmeasured guess, and a promise is judged at the
+  peak. The travel-time table already keeps pairs to 17 free-flow min, so nothing is rebuilt. Rules out keeping 1.4
+  as the default.
+- **The synthetic network is 57 stores, the operator and one competitor.** 57 is the area's demand over the orders per
+  store per day, which equals the NCR store count times the area's population share (the capture share is calibrated
+  on the same figures); it is computed, not hard-coded. The split follows two verified reported store counts: the
+  operator takes the market leader's, the competitor the next largest brand's. Three competitors move to Later.
+- **Competitor density scales the competitor's store count, 0×-2×**, with the operator fixed and placement nested
+  (a denser network keeps the sparser one's stores), so the lever moves results monotonically.
+- **The ≤ 10 s rule covers every scenario in the lever ranges**, the plan's gap stated, not only the default. Ranges:
+  N 1-20, capacity 0.5×-2× the default, capture share 0.5×-1.5×, promise 8-20. A range that misses (over 10 s, or a
+  plan worse than greedy) is narrowed and logged, not a blocker.
+- **Every plan metric is computed inside the 10 s**, adding households covered and slow-traffic coverage (the same
+  stores at 1.25× the scenario's multiplier: relative, so it means the same at every setting). The CP-SAT plan's
+  metrics come from its own assignment, not a second exact solve (today's `evaluate` takes 92 s).
+- **Greedy is a benchmark, not served. Three methods are benchmarked** (greedy, CP-SAT on its own, CP-SAT from the
+  greedy plan), which separates greedy's quality from what CP-SAT adds. The service runs CP-SAT from greedy unless
+  CP-SAT on its own is never worse on demand covered and is faster.
+- **Capture share stays one value for every hex**; urban or rural variation goes to Later. No ADR: each of these is a
+  lever or a configuration, cheap to reverse.
+
 ## 2026-10-31: Demand and reach (stage 1) results: spot-check error and stage close (#18)
 
 - **Res 9 and X = 30 stand.** The full area has 4,859 hexes and 1,458 candidate sites, with 59,855 default-scenario

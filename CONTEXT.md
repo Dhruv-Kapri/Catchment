@@ -91,6 +91,11 @@ _Avoid_: competitor data, real stores, competitor layer (it holds the operator's
 **Capacity**:
 The most orders per day a store can serve. Demand beyond it is lost.
 
+**Competitor density**:
+The competitor's store count as a multiple of its default count, with the operator's stores held fixed. A denser
+network keeps every store of a sparser one and adds more. A lever.
+_Avoid_: competition level, market saturation
+
 **Shared catchment**:
 Hexes reached by more than one brand. Their demand is split equally between the brands that reach them;
 within the operator, the plan assigns each hex to one of its stores that reaches it, within capacity.
@@ -110,9 +115,14 @@ _Avoid_: parameter (in the UI), knob
 One set of lever values.
 
 **Plan**:
-The sites chosen for one scenario, with its metrics (demand covered, new vs cannibalised demand per
-store, lost demand).
+The sites chosen for one scenario, with its metrics (demand and households covered, new vs cannibalised
+demand per store, lost demand, slow-traffic coverage).
 _Avoid_: solution, result, recommendation
 
 **Greedy baseline**:
 Adds the site with the largest marginal covered demand, one at a time, until N. The bar CP-SAT has to beat.
+
+**Slow-traffic coverage**:
+The demand a plan still covers when the congestion multiplier is 1.25 times the scenario's (a labelled
+assumption): the same stores, re-evaluated under slower traffic. Shows how coverage falls when traffic slows.
+_Avoid_: stress test, robustness

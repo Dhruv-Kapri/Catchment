@@ -61,20 +61,34 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 
 ## 2. Plan (to 18 Nov)
 
+Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
+
 - `02-plan` moves into `src/catchment/`: the greedy baseline and the CP-SAT model (maximise covered
-  demand; N stores; capacity; shared catchments split by brand, see [ADR 0001](adr/0001-demand-split-by-brand.md);
-  the synthetic network fixed). The CP-SAT model is the tighter one in `03-area` (#15, the tighter capacity row),
-  not `02-plan`'s 0.5 model; stage 2 re-measures its time and gap with the build-plus-solve budget, on an idle machine,
-  and aligns the "≤ 10 s" wording in CLAUDE.md and the brief with the planner's 2026-10-30 reading (a plan within
-  10 s, its gap stated; see [decisions](decisions.md)).
-- Synthetic network generator (the operator's and competitors' existing stores), with every count's
-  source and date recorded.
-- Benchmark over a grid of scenarios: covered demand CP-SAT vs greedy, solve time.
-- Stage 1 follow-ups open at the start: #22 (spot-check `compare` edge cases, a Pandas warning, the CLAUDE.md
-  status) and #23 (design smells from the type-hint pass; the duplicated notebook plan code and `solve_plan`'s loose
-  dict return bear on the move into the package).
-- **Done when:** CP-SAT returns a plan in ≤ 10 s for the default scenario, and the comparison table
-  with greedy is committed (whichever wins).
+  demand; N stores; capacity; shared catchments split by brand, see [ADR 0001](adr/0001-demand-split-by-brand.md)).
+  The CP-SAT model is the tighter one in `03-area` (#15, the tighter capacity row), not `02-plan`'s 0.5 model, with a
+  build-plus-solve budget. Two CP-SAT variants: on its own, and starting from the greedy plan. `02-plan` stays frozen
+  as the 0.5 record; the stage 2 notebook is `04-plan`. Align the "≤ 10 s" wording in CLAUDE.md and the brief with
+  the rule below.
+- Synthetic network generator: 57 existing stores (computed from the calibration), the operator and one competitor,
+  split by two verified reported store counts (the operator takes the market leader's, the competitor the next
+  largest brand's), with source and date recorded. Brands stay generic in the UI.
+- Levers and ranges: N 1-20 (default 10); promise 8-20 min (10); congestion multiplier 1.0-2.5 (default **1.8**, the
+  spot check); capacity 0.5×-2× the default 2,364; capture share 0.5×-1.5× the default; competitor density 0×-2× the
+  competitor's count, step 0.25 (1×).
+- Plan metrics, all inside the 10 s: demand and households covered, new vs cannibalised demand per new store, lost
+  demand (over capacity, unreached), slow-traffic coverage (the same stores at 1.25× the scenario's multiplier).
+- Benchmark, three-way (greedy, CP-SAT on its own, CP-SAT from greedy) on an idle machine: each lever swept across its
+  range at the default, the hardest corners, and 5 network seeds at the default. The service runs CP-SAT from greedy
+  unless CP-SAT on its own is never worse on demand covered and is faster.
+- Stage 1 follow-ups: #22 whole; from #23 the parts the move touches (`solve_plan`'s result type, the duplicated
+  notebook plan code, the build args).
+- **Done when:** any scenario in the lever ranges returns a plan with every metric within 10 s, its gap stated,
+  measured on the benchmark grid; the three-way table is committed in `04-plan` with a decision-log summary; the
+  generator places the 57 stores by verified counts, with the density lever; the default multiplier is 1.8. A range
+  whose scenarios miss 10 s or return a plan worse than greedy is narrowed and logged in [cuts](cuts.md), not a
+  blocker.
+- **If it overruns, cut in this order:** the #23 extras; the density lever (fixed at 1×, to Later); network seeds
+  5 → 2.
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
@@ -91,5 +105,8 @@ outputs), so it reads on GitHub; the clean version goes into the package in stag
 - **Ops simulator:** event-driven orders → picking → rider batching and routing, to stress-test a plan
   at the evening peak.
 - **Heuristic benchmark:** the facility-location heuristic of arXiv 2312.11494 as a second baseline.
+- **Three competitor brands** in the synthetic network, each sized by a verified store count (the first cut has one).
+- **Capture share by urban or rural hex**, for the NCR scale-up where rural areas come in (the first cut uses one
+  value for every hex; the affluence multiplier carries the difference).
 - **A real user:** a small NCR operator (pharmacy or grocery chain, D2C brand) using it on their own
   question.
