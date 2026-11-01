@@ -1,5 +1,6 @@
 import dataclasses
 import time
+import typing
 from itertools import chain
 from pathlib import Path
 
@@ -357,3 +358,14 @@ def test_slow_traffic_coverage_is_never_more_than_the_demand_covered_across_prom
     plans = [plan(random_inputs(seed), Scenario(n_new=15, promise=promise, capacity=capacity, seed=seed)) for promise in (8, 12, 20)]
     assert all(p.slow_traffic_coverage <= p.demand_covered + 1e-6 for p in plans)
     assert any(p.slow_traffic_coverage < p.demand_covered for p in plans)
+
+
+METHODS: tuple[str, ...] = typing.get_args(typing.get_type_hints(plan)["method"])   # every method plan() accepts, so a new one is covered as it lands
+
+
+@pytest.mark.parametrize("method", METHODS)
+def test_every_method_reports_slow_traffic_coverage(method: str) -> None:
+    # As above: S0 reaches W (1 min) and A (5 min); at promise 8, multiplier 1.0, A drops out at 1.25x.
+    inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
+    p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0), method)
+    assert p.method == method and p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
