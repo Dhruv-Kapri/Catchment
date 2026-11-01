@@ -67,6 +67,7 @@ def test_default_multiplier_is_the_spot_check_figure() -> None:
     row = assumptions.table().set_index("Input").loc["Default scenario"]
     assert "1.8" in row.Value and "3.9 min" in row.Value
     assert "Spot check" in row.Source and "1.79" in row.Source and row.Date == "2026-11-01"
+    assert "02-plan and 03-area ran at 1.4" in row.Source   # their committed outputs predate the change
 
 
 def test_lever_ranges() -> None:

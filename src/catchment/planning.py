@@ -80,16 +80,16 @@ class NewStore:
 
 @dataclass(frozen=True)
 class Plan:
-    """The new sites for one scenario, the network they were planned against, and the metrics."""
+    """The new sites for one scenario, and the network they were planned against."""
     scenario: Scenario
     method: str
     sites: list[str]                 # the new sites, in pick order
     network: dict[str, list[str]]    # brand -> the sites of its existing stores
     demand_covered: float            # the operator's orders a day assigned to a store
     households_covered: float        # households of the assigned hexes, whole hexes
-    new_stores: list[NewStore]       # in pick order
     lost_to_capacity: float          # reached by an open operator store but not assigned
     unreached: float                 # reached by no open operator store
+    new_stores: list[NewStore]       # in pick order
     seconds: float                   # inside plan(), load_inputs excluded
 
 
@@ -112,16 +112,35 @@ def place_network(inputs: Inputs, seed: int) -> dict[str, list[int]]:
     return placed
 
 
-def assign(inputs: Inputs, ok: npt.NDArray[np.bool_], stores: list[int], share: npt.NDArray[np.float64], capacity: float) -> npt.NDArray[np.intp]:
-    """Owner site per hex (-1: none). Nearest store first, a hex wholly to one store, a store only up to its capacity."""
-    keep = ok & np.isin(inputs.pair_site, stores)
-    site, hex_, minutes = inputs.pair_site[keep], inputs.pair_hex[keep], inputs.pair_min[keep]
-    owner, load = np.full(len(share), -1, dtype=np.intp), np.zeros(len(inputs.site_ids))
-    for j in np.lexsort((hex_, site, minutes)).tolist():
-        s, h = site[j], hex_[j]
-        if owner[h] < 0 and load[s] + share[h] <= capacity:
-            owner[h], load[s] = s, load[s] + share[h]
-    return owner
+@dataclass(frozen=True)
+class Reach:
+    """The reachable (site, hex) pairs in nearest-first order, sorted once per plan, with each hex's pairs indexed."""
+    site: npt.NDArray[np.intp]       # per pair, nearest first (ties: site rank, then hex position)
+    hex: npt.NDArray[np.intp]
+    by_hex: npt.NDArray[np.intp]     # pair positions grouped by hex
+    start: npt.NDArray[np.intp]      # hex h's pairs are by_hex[start[h]:start[h + 1]]
+
+    @classmethod
+    def build(cls, inputs: Inputs, ok: npt.NDArray[np.bool_]) -> "Reach":
+        site, hex_, minutes = inputs.pair_site[ok], inputs.pair_hex[ok], inputs.pair_min[ok]
+        order = np.lexsort((hex_, site, minutes))
+        site, hex_ = site[order], hex_[order]
+        by_hex = np.argsort(hex_, kind="stable")
+        return cls(site, hex_, by_hex, np.searchsorted(hex_[by_hex], np.arange(len(inputs.hex_ids) + 1)))
+
+    def assign(self, stores: list[int], share: npt.NDArray[np.float64], capacity: float, n_sites: int) -> npt.NDArray[np.intp]:
+        """Owner site per hex (-1: none). Walk the open stores' pairs nearest first: a hex goes wholly to one store, a store takes only up to its capacity."""
+        walk = np.flatnonzero(np.isin(self.site, stores))
+        owner, load, shares = [-1] * len(share), [0.0] * n_sites, share.tolist()
+        for s, h in zip(self.site[walk].tolist(), self.hex[walk].tolist()):
+            if owner[h] < 0 and load[s] + shares[h] <= capacity:
+                owner[h], load[s] = s, load[s] + shares[h]
+        return np.array(owner, dtype=np.intp)
+
+    def pairs_of(self, hexes: npt.NDArray[np.intp]) -> npt.NDArray[np.intp]:
+        """Positions of the pairs of the given hexes."""
+        first, length = self.start[hexes], self.start[hexes + 1] - self.start[hexes]
+        return self.by_hex[np.repeat(first - (np.cumsum(length) - length), length) + np.arange(length.sum())]
 
 
 def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method: Literal["greedy"] = "greedy") -> Plan:
@@ -133,32 +152,37 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     network = place_network(inputs, scenario.seed)
     n_sites, capacity = len(inputs.site_ids), scenario.capacity * assumptions.CAPACITY
     ok = reachable(inputs, scenario.promise, scenario.multiplier)
-    demand = inputs.demand * scenario.capture
-    rival = np.zeros(len(demand), bool)
+    rival = np.zeros(len(inputs.demand), bool)
     rival[inputs.pair_hex[ok & np.isin(inputs.pair_site, network["Competitor"])]] = True
-    share = demand / (1 + rival)                                   # ADR 0001
+    share = inputs.demand * scenario.capture / (1 + rival)   # ADR 0001
     existing = network["Operator"]
-    base = assign(inputs, ok, existing, share, capacity)
     candidate = np.ones(n_sites, bool)
     candidate[[s for ss in network.values() for s in ss]] = False
     if scenario.n_new > candidate.sum():
         raise ValueError(f"{scenario.n_new} new stores asked for, only {candidate.sum()} open candidate sites hold no store")
+    reach = Reach.build(inputs, ok)
     picked: list[int] = []
-    owner = base
+    base = owner = reach.assign(existing, share, capacity, n_sites)
+    gain = np.bincount(reach.site, weights=np.where(owner < 0, share, 0.0)[reach.hex], minlength=n_sites)   # unassigned share each site reaches, before the cap
     for _ in range(scenario.n_new):
-        gain = np.minimum(np.bincount(inputs.pair_site[ok], weights=np.where(owner < 0, share, 0.0)[inputs.pair_hex[ok]], minlength=n_sites), capacity)
-        best = int(np.argmax(np.where(candidate, gain, -1.0)))
+        best = int(np.argmax(np.where(candidate, np.minimum(gain, capacity), -1.0)))
         picked.append(best)
         candidate[best] = False
-        owner = assign(inputs, ok, existing + picked, share, capacity)
+        now = reach.assign(existing + picked, share, capacity, n_sites)
+        flipped = np.flatnonzero((now < 0) != (owner < 0))   # only these hexes change the gain: +share if newly unassigned, -share if newly assigned
+        delta = np.zeros(len(share))
+        delta[flipped] = np.where(now[flipped] < 0, share[flipped], -share[flipped])
+        pairs = reach.pairs_of(flipped)
+        gain += np.bincount(reach.site[pairs], weights=delta[reach.hex[pairs]], minlength=n_sites)
+        owner = now
     got = owner >= 0
-    reached = np.zeros(len(demand), bool)
-    reached[inputs.pair_hex[ok & np.isin(inputs.pair_site, existing + picked)]] = True
+    reached = np.zeros(len(share), bool)
+    reached[reach.hex[np.isin(reach.site, existing + picked)]] = True
     new_stores: list[NewStore] = []
     for s in picked:
         mine = owner == s
         orders, moved = float(share[mine].sum()), float(share[mine & (base >= 0)].sum())
         new_stores.append(NewStore(str(inputs.site_ids[s]), orders, orders - moved, moved))
-    return Plan(scenario, method, [str(inputs.site_ids[s]) for s in picked], {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in network.items()},
-                float(share[got].sum()), float(inputs.households[got].sum()), new_stores,
-                float(share[reached & ~got].sum()), float(share[~reached].sum()), time.perf_counter() - t0)
+    return Plan(scenario, method, [str(inputs.site_ids[s]) for s in picked],
+                {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in network.items()},
+                float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), new_stores, time.perf_counter() - t0)
