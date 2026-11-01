@@ -186,7 +186,7 @@ def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm() -> None:
     assert (sheet.app_min == sheet.app_min.round()).all() and (sheet.app_min > 0).all()
     assert (sheet.app == "Google Maps two-wheeler").all()
     when = pd.to_datetime(sheet.looked_up, format="%Y-%m-%d %H:%M")
-    assert (when.dt.weekday < 5).all() and (when.dt.hour == 19).all()
+    assert (when.dt.day_of_week < 5).all() and (when.dt.hour == 19).all()
 
 
 def app_sheet() -> pd.DataFrame:
@@ -220,3 +220,29 @@ def test_compare_bad_snap_split_and_ranks() -> None:
 def test_compare_uses_the_multiplier_argument_not_model_min() -> None:
     routes, _ = compare(app_sheet(), multiplier=2.0)
     assert routes.set_index("route").loc[4, "ratio"] == pytest.approx(14 / 20)
+
+
+def test_compare_raises_when_no_row_has_an_app_time() -> None:
+    sheet = app_sheet().assign(app_min=np.nan)
+    with pytest.raises(ValueError, match="no app times"):
+        compare(sheet, multiplier=1.4)
+    with pytest.raises(ValueError, match="no app times"):
+        compare(sheet.iloc[0:0], multiplier=1.4)
+
+
+def test_compare_with_no_bad_snap_routes_has_none_for_the_bad_median() -> None:
+    _, summary = compare(app_sheet().assign(bad_snap_before=False), multiplier=1.4)
+    assert summary["n_bad"] == 0 and summary["ratio_median_bad"] is None and summary["bad_snap_ranks"] == {}
+    assert isinstance(summary["ratio_median_other"], float) and not np.isnan(summary["ratio_median_other"])
+    assert summary["ratio_median_other"] == pytest.approx(summary["ratio_median"])
+
+
+def test_compare_with_only_bad_snap_routes_has_none_for_the_other_median() -> None:
+    _, summary = compare(app_sheet().assign(bad_snap_before=True), multiplier=1.4)
+    assert summary["n_bad"] == 3 and summary["ratio_median_other"] is None
+    assert isinstance(summary["ratio_median_bad"], float) and summary["ratio_median_bad"] == pytest.approx(summary["ratio_median"])
+    assert summary["bad_snap_ranks"] == {1: 1, 2: 2, 4: 3}
+
+
+def test_compare_counts_bad_snap_routes_with_an_app_time() -> None:
+    assert compare(app_sheet(), multiplier=1.4)[1]["n_bad"] == 2
