@@ -1,4 +1,5 @@
 """Plan new stores for a scenario: the synthetic network, a greedy plan and its metrics. `plan()` is the one entry point."""
+import numbers
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,8 +63,9 @@ class Scenario:
     def __post_init__(self) -> None:
         for lever in ("n_new", "promise"):
             value = getattr(self, lever)
-            if not isinstance(value, int) or isinstance(value, bool):
+            if not isinstance(value, numbers.Integral) or isinstance(value, bool):
                 raise TypeError(f"{lever} {value!r} must be a whole number")
+            object.__setattr__(self, lever, int(value))   # np.int64 and the like become plain ints
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
@@ -136,7 +138,7 @@ class Reach:
         walk = np.flatnonzero(np.isin(self.site, stores))
         owner, load, shares = [-1] * len(share), [0.0] * n_sites, share.tolist()
         for s, h in zip(self.site[walk].tolist(), self.hex[walk].tolist()):
-            if owner[h] < 0 and load[s] + shares[h] <= capacity:
+            if owner[h] < 0 and load[s] + shares[h] <= capacity + TOL:
                 owner[h], load[s] = s, load[s] + shares[h]
         return np.array(owner, dtype=np.intp)
 

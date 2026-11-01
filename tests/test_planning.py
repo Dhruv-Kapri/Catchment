@@ -29,7 +29,7 @@ def make_inputs(hexes: dict[str, float], pairs: Pairs, sites: list[str], stores:
 
 
 def same(a: Plan, b: Plan) -> bool:
-    return dataclasses.replace(a, seconds=0.0) == dataclasses.replace(b, seconds=0.0)
+    return dataclasses.replace(a, seconds=0.0) == dataclasses.replace(b, seconds=0.0)   # TODO build/solve seconds
 
 
 def test_scenario_defaults_are_the_documented_ones() -> None:
@@ -62,6 +62,14 @@ def test_the_ends_of_a_lever_range_are_allowed(lever: str, low: float, high: flo
 def test_the_number_of_new_stores_and_the_promise_must_be_whole_numbers(lever: str, value: float) -> None:
     with pytest.raises(TypeError, match=f"{lever} .* must be a whole number"):
         Scenario(**{lever: value})
+
+
+def test_numpy_whole_numbers_are_accepted_and_stored_as_plain_ints() -> None:
+    s = Scenario(n_new=np.int64(3), promise=np.int32(12))  # type: ignore[arg-type]
+    assert (s.n_new, s.promise) == (3, 12) and type(s.n_new) is int and type(s.promise) is int
+    for bad in (10.0, np.float64(10.0), np.bool_(True)):
+        with pytest.raises(TypeError, match="must be a whole number"):
+            Scenario(promise=bad)  # type: ignore[arg-type]
 
 
 def test_inputs_hold_positional_arrays_with_the_sites_in_rank_order() -> None:
@@ -147,6 +155,15 @@ def test_capacity_binds_and_the_excess_is_lost() -> None:
     assert p.lost_to_capacity == pytest.approx(500)
     assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(OPS)   # the operator's total
     assert p.unreached == pytest.approx(OPS - 1510)
+
+
+def test_a_hex_that_fits_a_store_exactly_is_not_refused_for_float_noise() -> None:
+    # 148.89 + 277.56 + 755.63003... is the capacity at 0.5x to the last digit, but summed in float it lands a hair above it.
+    a, b = 148.89, 277.56
+    c = 0.5 * CAPACITY - a - b
+    assert (a + b) + c > 0.5 * CAPACITY
+    p = plan(make_inputs({"A": a, "B": b, "C": c}, {("S0", "A"): 1.0, ("S0", "B"): 1.0, ("S0", "C"): 1.0}, ["S0", "S1"]), Scenario(n_new=1, capacity=0.5))
+    assert p.lost_to_capacity == 0 and p.demand_covered == pytest.approx(a + b + c)
 
 
 def test_greedy_values_a_site_at_no_more_than_one_store_can_serve() -> None:
@@ -265,7 +282,7 @@ def reference_greedy(inputs: Inputs, scenario: Scenario, network: dict[str, list
         owner: dict[int, int] = {}
         load: dict[int, float] = {}
         for s, h, _ in sorted((p for p in reach if p[0] in stores), key=lambda p: (p[2], p[0], p[1])):
-            if h not in owner and load.get(s, 0.0) + share[h] <= capacity:
+            if h not in owner and load.get(s, 0.0) + share[h] <= capacity + planning.TOL:
                 owner[h], load[s] = s, load.get(s, 0.0) + share[h]
         return owner
 
