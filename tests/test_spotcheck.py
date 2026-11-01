@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from catchment import assumptions
-from catchment.spotcheck import SEED, compare, draw_routes, write_sheet
+from catchment.spotcheck import SEED, WRITE_UP_MULTIPLIER, compare, draw_routes, write_sheet
 
 EDGES = (2, 5, 8, 11, 14, 17)
 CANDS = [f"c{i}" for i in range(4)]
@@ -105,7 +104,7 @@ def test_model_min_is_free_flow_times_multiplier() -> None:
     table, cands, hexes = make()
     r = draw_routes(table, cands, hexes, no_bad())
     assert r.model_min.notna().all()
-    assert np.allclose(r.model_min, (r.free_flow_min * assumptions.MULTIPLIER).round(2), atol=0.011)
+    assert np.allclose(r.model_min, (r.free_flow_min * WRITE_UP_MULTIPLIER).round(2), atol=0.011)
     assert (r.model_min == r.model_min.round(2)).all()
     assert (r.free_flow_min == r.free_flow_min.round(2)).all()
 
@@ -187,6 +186,13 @@ def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm() -> None:
     assert (sheet.app == "Google Maps two-wheeler").all()
     when = pd.to_datetime(sheet.looked_up, format="%Y-%m-%d %H:%M")
     assert (when.dt.day_of_week < 5).all() and (when.dt.hour == 19).all()
+
+
+def test_compare_on_the_committed_sheet_reports_the_write_up_whatever_the_default_multiplier() -> None:
+    sheet = pd.read_csv(Path(__file__).parent.parent / "docs" / "spot-check.csv")
+    _, summary = compare(sheet)
+    assert round(summary["ratio_median"], 2) == 1.28
+    assert round(summary["implied_median"], 2) == 1.79
 
 
 def app_sheet() -> pd.DataFrame:
