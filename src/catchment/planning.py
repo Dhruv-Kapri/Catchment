@@ -15,7 +15,8 @@ from catchment.build import demand_name, reach_names
 from catchment.fetch import DATA
 
 Method = Literal["greedy", "cpsat", "cpsat-from-greedy"]
-METHODS: tuple[str, ...] = get_args(Method)
+METHODS: tuple[Method, ...] = get_args(Method)
+Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC"]   # CP-SAT's proven or best-found plan; greedy's plan
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
 GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
@@ -104,7 +105,7 @@ class Plan:
     lost_to_capacity: float          # reached by an open operator store but not assigned
     unreached: float                 # reached by no open operator store
     new_stores: list[NewStore]       # in pick order
-    status: str                      # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy
+    status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy
     objective: float                 # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered)
     bound: float | None              # CP-SAT's upper bound on the objective; None for greedy
     gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None for greedy
@@ -315,10 +316,10 @@ class Solved:
     """What a method hands to the metrics: the picks (greedy: pick order; CP-SAT: by rank), the owner per hex and the claim."""
     picked: list[int]
     owner: npt.NDArray[np.intp]
-    status: str
+    status: Status
     objective: float                 # orders a day
     bound: float | None
-    built: float                     # perf_counter when the search began
+    search_start: float              # perf_counter when the search began
 
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
@@ -326,9 +327,9 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     m = build_model(p)
     if start is not None:
         hint(m, *start)
-    built = time.perf_counter()
+    search_start = time.perf_counter()
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = max(assumptions.PLAN_BUDGET - (built - t0), 0.1)
+    solver.parameters.max_time_in_seconds = max(assumptions.PLAN_BUDGET - (search_start - t0), 0.1)
     solver.parameters.num_workers = assumptions.WORKERS
     solver.parameters.random_seed = assumptions.SOLVER_SEED
     status = solver.Solve(m.model)
@@ -337,16 +338,19 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
         raise RuntimeError(f"CP-SAT found no plan within {assumptions.PLAN_BUDGET:g} s: status {name}")
     if start is not None:
         floor = int(m.share_int[start[1] >= 0].sum())   # greedy's orders, on the solver's integer scale
-        if not found or round(solver.ObjectiveValue()) < floor:   # never below greedy; with no solution the solver's bound says nothing
-            return Solved(start[0], start[1], "FEASIBLE", floor / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE if found else None, built)
+        if not found or round(solver.ObjectiveValue()) < floor:   # never below greedy (even under an OPTIMAL status: greedy checks capacity in floats, the model in hundredths, so a rounding edge can favour greedy); with no solution the bound says nothing
+            return Solved(start[0], start[1], "FEASIBLE", floor / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
-    return Solved(picked, assignment(p, m, picked, solver), name, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, built)
+    proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
+    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
 
 
 def relative_gap(objective: float, bound: float, status: str) -> float:
-    """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or both are 0. Never negative: a greedy plan kept
+    """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; infinite for a zero objective under a positive bound. Never negative: a greedy plan kept
     in place of the solver's can sit a rounding hair above the integer-scale bound."""
-    return 0.0 if status == "OPTIMAL" or objective <= 0 else max(bound - objective, 0.0) / objective
+    if status == "OPTIMAL" or bound <= objective:
+        return 0.0
+    return float("inf") if objective <= 0 else (bound - objective) / objective   # nothing served yet a positive bound: no finite ratio
 
 
 def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method: Method = "greedy") -> Plan:
@@ -358,9 +362,9 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     t0 = time.perf_counter()
     p = Problem.build(inputs, Scenario() if scenario is None else scenario)
     if method == "greedy":
-        built = time.perf_counter()
+        search_start = time.perf_counter()
         picked, owner = greedy(p)
-        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, built)
+        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start)
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
@@ -369,7 +373,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
                 covered, households, lost, unreached, new_stores, solved.status, solved.objective, solved.bound, gap,
-                solved.built - t0, searched - solved.built, time.perf_counter() - t0)
+                solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
 def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, list[NewStore]]:
