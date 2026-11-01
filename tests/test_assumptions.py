@@ -25,12 +25,13 @@ def test_table_lists_every_input() -> None:
     assert list(t.Input) == [
         # 00-demand
         "Household size", "Multiplier bounds", "Blinkit orders, Q2 FY27", "Blinkit stores",
+        "Competitor stores (next-largest brand)",
         "NCR dark stores (all brands)", "NCR population",
         # 01-reach
         "Pick-and-pack allowance", "Pairs kept in the table", "Second road for snapping",
         # 02-plan
         "Default scenario", "New stores, N", "Orders per store per day", "Capacity per store",
-        "Brands and store counts", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
+        "Brands and store counts", "Operator/competitor split", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
         "Assignment tie-break", "Integer scale", "Solver",
     ]
 
@@ -44,10 +45,16 @@ def test_table_cells_are_non_empty() -> None:
 def test_status_and_values_match_the_notebook_tables() -> None:
     t = assumptions.table().set_index("Input")
     verified = {"Household size", "Blinkit orders, Q2 FY27", "Blinkit stores", "NCR dark stores (all brands)",
-                "NCR population", "Orders per store per day"}
+                "NCR population", "Orders per store per day", "Competitor stores (next-largest brand)"}
     assert set(t.index[t.Status == "Verified"]) == verified
     assert set(t.Status) == {"Verified", "Assumption"}
-    assert t.loc[list(verified - {"Orders per store per day"}), "Date"].eq("2026-10-29").all()
+    dated = verified - {"Orders per store per day", "Competitor stores (next-largest brand)"}
+    assert t.loc[list(dated), "Date"].eq("2026-10-29").all()
+    assert t.loc["Competitor stores (next-largest brand)", "Date"] == "2026-11-01"
+    assert t.loc["Competitor stores (next-largest brand)", "Value"] == "1,240 at quarter end"
+    assert t.loc["Operator/competitor split", "Status"] == "Assumption"
+    assert "68.9%" in t.loc["Operator/competitor split", "Value"]
+    assert "39 and 18" in t.loc["Operator/competitor split", "Value"]
     assert t.loc["Household size", "Value"] == "4.5 persons"
     assert t.loc["Multiplier bounds", "Value"] == "0.5 to 1.5"
     assert t.loc["Blinkit orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
@@ -58,3 +65,16 @@ def test_status_and_values_match_the_notebook_tables() -> None:
     assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
     assert "5 m" in t.loc["Second road for snapping", "Value"] and "100 m" in t.loc["Second road for snapping", "Value"]
     assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]
+
+
+def test_brand_split_is_proportional_to_the_reported_counts() -> None:
+    assert assumptions.brand_split(57) == {"Operator": 39, "Competitor": 18}
+
+
+def test_brand_split_parts_sum_to_n() -> None:
+    for n in (1, 10, 57, 100):
+        assert sum(assumptions.brand_split(n).values()) == n
+
+
+def test_brand_split_of_zero_is_all_zeros() -> None:
+    assert assumptions.brand_split(0) == {"Operator": 0, "Competitor": 0}
