@@ -26,13 +26,6 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 - **Measured 2026-10-29**, area only: WorldPop total **4.40 million** people; Overture **81,939** places
   and **389,303** buildings (peak memory about 1 GB to fetch).
 - Overture features are kept if they intersect the area (not cut at its boundary).
-- **Verified 2026-11-01:** the next-largest brand after Blinkit (2,751 stores at quarter end) is Swiggy
-  Instamart, with 1,240 active dark stores at the end of Q2 FY27 (30 Sep 2026). Source: Swiggy Ltd Q2 FY27
-  shareholders' letter, 22 Oct 2026, p. 7 (also pp. 2, 4; definition p. 19),
-  https://www.swiggy.com/corporate/wp-content/uploads/2026/10/Q2-FY2027-Shareholder-letter.pdf. The two
-  counts set the operator/competitor split of the synthetic network. Zepto's latest count found is 1,139
-  dark stores at 31 Mar 2026 (press reports of its updated DRHP, June 2026; unverified, DRHP not checked at
-  primary source), smaller and older. Brands stay generic ("Operator", "Competitor") in anything user-facing.
 - **Verified 2026-10-29:** Geofabrik splits India into six zones with no smaller sub-regions; the
   northern zone (`asia/india/northern-zone-latest.osm.pbf`, about 214 MB) has a bbox covering Delhi
   and Gurugram. The full India extract is about 1.6 GiB.
@@ -58,6 +51,18 @@ barely has them.
 Hence the **synthetic network** (see [CONTEXT.md](../CONTEXT.md)): stores per brand, the operator's included, placed by
 demand weight, with counts sized from publicly reported figures. Reported counts vary by source and
 date; record the source and date for every number used.
+
+- **Verified 2026-11-01:** the next-largest brand after Blinkit (2,751 stores at quarter end) is Swiggy
+  Instamart, with 1,240 active dark stores at the end of Q2 FY27 (30 Sep 2026). Source: Swiggy Ltd Q2 FY27
+  shareholders' letter, 22 Oct 2026, p. 7 (also pp. 2, 4; definition p. 19),
+  https://www.swiggy.com/corporate/wp-content/uploads/2026/10/Q2-FY2027-Shareholder-letter.pdf. The two
+  counts set the operator/competitor split of the synthetic network. Zepto's latest count found is 1,139
+  dark stores at 31 Mar 2026 (press reports of its updated DRHP, June 2026; unverified, DRHP not checked at
+  primary source), smaller and older; at Zepto's stated pace of about 100 stores a quarter it may since have
+  passed 1,240, but no later count is reported. Flipkart Minutes states "over 1,000" (press, 2026; no exact
+  count). The two counts are not defined alike: Swiggy counts stores with at least one completed order on
+  the period's last day; Eternal's letter gives no definition for its "stores at the end of the period".
+  Brands stay generic ("Operator", "Competitor") in anything user-facing.
 
 ## Not used (yet)
 
