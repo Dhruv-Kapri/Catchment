@@ -4,7 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from catchment.spotcheck import SEED, WRITE_UP_MULTIPLIER, compare, draw_routes, write_sheet
+from catchment.spotcheck import (
+    SEED,
+    WRITE_UP_MULTIPLIER,
+    compare,
+    draw_routes,
+    write_sheet,
+)
 
 EDGES = (2, 5, 8, 11, 14, 17)
 CANDS = [f"c{i}" for i in range(4)]
