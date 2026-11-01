@@ -92,6 +92,7 @@ class Plan:
     households_covered: float        # households of the assigned hexes, whole hexes
     lost_to_capacity: float          # reached by an open operator store but not assigned
     unreached: float                 # reached by no open operator store
+    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered
     new_stores: list[NewStore]       # in pick order
     seconds: float                   # inside plan(), load_inputs excluded
 
@@ -146,6 +147,13 @@ class Reach:
         return self.by_hex[np.repeat(first - (np.cumsum(length) - length), length) + np.arange(length.sum())]
 
 
+def slow_traffic_coverage(inputs: Inputs, scenario: Scenario, stores: list[int], share: npt.NDArray[np.float64], capacity: float) -> float:
+    """Demand the operator's stores still cover at SLOW_TRAFFIC_FACTOR x the scenario's multiplier. The shares are held (ADR 0001: k is fixed
+    per scenario). The slow reach is a prefix of the nearest-first walk, so this is at most the normal coverage."""
+    slow = Reach.build(inputs, reachable(inputs, scenario.promise, scenario.multiplier * assumptions.SLOW_TRAFFIC_FACTOR))
+    return float(share[slow.assign(stores, share, capacity, len(inputs.site_ids)) >= 0].sum())
+
+
 def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method: Literal["greedy"] = "greedy") -> Plan:
     if method != "greedy":
         raise ValueError(f"unknown method {method!r}")
@@ -188,4 +196,4 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
         new_stores.append(NewStore(str(inputs.site_ids[s]), orders, orders - moved, moved))
     return Plan(scenario, method, [str(inputs.site_ids[s]) for s in picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in network.items()},
-                float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), new_stores, time.perf_counter() - t0)
+                float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), slow_traffic_coverage(inputs, scenario, existing + picked, share, capacity), new_stores, time.perf_counter() - t0)

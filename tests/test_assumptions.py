@@ -30,7 +30,7 @@ def test_table_lists_every_input() -> None:
         # 01-reach
         "Pick-and-pack allowance", "Pairs kept in the table", "Second road for snapping",
         # 02-plan
-        "Default scenario", "Lever ranges", "New stores, N", "Orders per store per day", "Capacity per store",
+        "Default scenario", "Lever ranges", "Slow-traffic factor", "New stores, N", "Orders per store per day", "Capacity per store",
         "Network size", "Operator/competitor split",
         "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
         "Assignment tie-break", "Integer scale", "Solver",

@@ -319,3 +319,33 @@ def test_the_greedy_breaks_exact_ties_by_rank_on_fractional_demand(seed: int, ca
     p = plan(inputs, scenario)
     sites, covered, _ = reference_greedy(inputs, scenario, p.network)
     assert p.sites == sites and p.demand_covered == pytest.approx(covered)
+
+
+def test_slow_traffic_coverage_is_never_more_than_the_demand_covered() -> None:
+    # Promise 8, multiplier 1.0: reach is free-flow <= 5 min; at 1.25x it is <= 4 min. B (4.5 min) and D (5 min) drop out, W and A (4 min) stay.
+    hexes = {"W": 100.0, "A": 200.0, "B": 300.0, "D": 400.0}
+    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S0", "B"): 4.5, ("S1", "D"): 5.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=8, multiplier=1.0))
+    assert p.demand_covered == pytest.approx(1000) and p.slow_traffic_coverage == pytest.approx(300)
+
+
+def test_slow_traffic_coverage_equals_the_demand_covered_when_nothing_is_near_the_promise() -> None:
+    # Promise 15, multiplier 1.0: reach is <= 12 min, at 1.25x <= 9.6 min. Every reachable pair is within 4 min.
+    hexes = {"W": 100.0, "A": 200.0, "F": 300.0}
+    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S1", "F"): 3.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0))
+    assert p.demand_covered == pytest.approx(600) and p.slow_traffic_coverage == pytest.approx(600)
+
+
+def test_slow_traffic_coverage_loses_a_hex_whose_only_reach_is_near_the_promise() -> None:
+    # Promise 8, multiplier 1.0: reach <= 5 min; at 1.25x <= 4 min. S0 reaches W (1 min) and A (5 min): A drops out when slow.
+    inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
+    p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0))
+    assert p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
+
+
+def test_slow_traffic_coverage_holds_the_competitor_split_of_a_hex() -> None:
+    # S0 and S1 hold one store each; both reach H (1 min), so the operator's share is half of 1,000 at either multiplier.
+    sites = ["S0", "S1", "S2"]
+    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1))
+    assert p.demand_covered == pytest.approx(500) and p.slow_traffic_coverage == pytest.approx(500)
