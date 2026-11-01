@@ -59,8 +59,10 @@ class Scenario:
     seed: int = assumptions.SEED
 
     def __post_init__(self) -> None:
-        if not isinstance(self.n_new, int):
-            raise ValueError(f"n_new {self.n_new!r} must be a whole number")
+        for lever in ("n_new", "promise"):
+            value = getattr(self, lever)
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise ValueError(f"{lever} {value!r} must be a whole number")
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
@@ -78,6 +80,7 @@ class NewStore:
 
 @dataclass(frozen=True)
 class Plan:
+    """The new sites for one scenario, the network they were planned against, and the metrics."""
     scenario: Scenario
     method: str
     sites: list[str]                 # the new sites, in pick order
@@ -99,7 +102,8 @@ def place_network(inputs: Inputs, seed: int) -> dict[str, list[int]]:
     split = assumptions.brand_split(assumptions.network_size(inputs.demand.sum()))
     ok = reachable(inputs, assumptions.PROMISE, assumptions.MULTIPLIER)
     weight = np.bincount(inputs.pair_site[ok], weights=inputs.demand[inputs.pair_hex[ok]], minlength=len(inputs.site_ids))
-    rng, placed = np.random.default_rng(seed), {}
+    rng = np.random.default_rng(seed)
+    placed: dict[str, list[int]] = {}
     for brand, n in split.items():
         if (weight > 0).sum() < n:
             raise ValueError(f"the {brand}'s {n} stores need {n} candidate sites that reach some demand at the default scenario, only {(weight > 0).sum()} do")
@@ -121,10 +125,10 @@ def assign(inputs: Inputs, ok: npt.NDArray[np.bool_], stores: list[int], share: 
 
 
 def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method: Literal["greedy"] = "greedy") -> Plan:
-    t0 = time.perf_counter()
     if method != "greedy":
         raise ValueError(f"unknown method {method!r}")
     inputs = load_inputs() if inputs is None else inputs
+    t0 = time.perf_counter()
     scenario = Scenario() if scenario is None else scenario
     network = place_network(inputs, scenario.seed)
     n_sites, capacity = len(inputs.site_ids), scenario.capacity * assumptions.CAPACITY
@@ -150,7 +154,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     got = owner >= 0
     reached = np.zeros(len(demand), bool)
     reached[inputs.pair_hex[ok & np.isin(inputs.pair_site, existing + picked)]] = True
-    new_stores = []
+    new_stores: list[NewStore] = []
     for s in picked:
         mine = owner == s
         orders, moved = float(share[mine].sum()), float(share[mine & (base >= 0)].sum())

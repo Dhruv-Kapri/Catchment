@@ -174,9 +174,10 @@ def test_the_ends_of_a_lever_range_are_allowed(lever: str, low: float, high: flo
         assert getattr(Scenario(**{lever: int(end) if lever in ("n_new", "promise") else end}), lever) == end
 
 
-def test_the_number_of_new_stores_must_be_an_integer() -> None:
-    with pytest.raises(ValueError, match="n_new"):
-        Scenario(n_new=2.5)  # type: ignore[arg-type]
+@pytest.mark.parametrize("lever, value", [("n_new", 2.5), ("n_new", True), ("promise", 8.5), ("promise", True)])
+def test_the_number_of_new_stores_and_the_promise_must_be_whole_numbers(lever: str, value: float) -> None:
+    with pytest.raises(ValueError, match=f"{lever} .* must be a whole number"):
+        Scenario(**{lever: value})
 
 
 def test_an_unknown_method_is_refused() -> None:
