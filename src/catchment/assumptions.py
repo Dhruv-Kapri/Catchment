@@ -19,8 +19,8 @@ PROMISE_RANGE: tuple[int, int] = (8, 20)                # minutes
 MULTIPLIER_RANGE: tuple[float, float] = (1.0, 2.5)
 CAPACITY_RANGE: tuple[float, float] = (0.5, 2.0)        # x the default capacity
 CAPTURE_RANGE: tuple[float, float] = (0.5, 1.5)         # x the default capture share
-COMPETITOR_DENSITY_RANGE: tuple[float, float] = (0.0, 2.0)
-COMPETITOR_DENSITY_STEP: float = 0.25
+COMPETITOR_DENSITY_RANGE: tuple[float, float] = (0.0, 2.0)   # x the default competitor store count
+COMPETITOR_DENSITY_STEP: float = 0.25   # density moves in quarters
 
 PICK_AND_PACK: int = 3                  # minutes, fixed
 MAX_PROMISE: int = 20                   # longest promise lever, minutes

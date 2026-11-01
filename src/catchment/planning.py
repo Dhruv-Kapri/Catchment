@@ -119,7 +119,7 @@ def place_network(inputs: Inputs, seed: int, density: float = 1.0) -> dict[str, 
     n_competitor = round(density * split["Competitor"])
     open_sites = int((weight > 0).sum())
     if open_sites < n_competitor:
-        raise ValueError(f"the Competitor's {n_competitor} stores need {n_competitor} candidate sites that reach some demand at the default scenario, only {open_sites} do")
+        raise ValueError(f"at competitor density {density:g}x, the Competitor's {n_competitor} stores need {n_competitor} candidate sites that reach some demand at the default scenario, only {open_sites} do")
     order = rng.choice(len(weight), size=open_sites, replace=False, p=weight / weight.sum()).tolist() if open_sites else []
     return {"Operator": operator, "Competitor": sorted(order[:n_competitor])}
 
