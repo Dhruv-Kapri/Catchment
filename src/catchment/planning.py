@@ -64,10 +64,14 @@ class Scenario:
             value = getattr(self, lever)
             if not isinstance(value, int) or isinstance(value, bool):
                 raise TypeError(f"{lever} {value!r} must be a whole number")
+        if isinstance(self.competitor_density, bool):
+            raise TypeError(f"competitor_density {self.competitor_density!r} must be a number")
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
                 raise ValueError(f"{lever} {value:g} is outside the lever range {low:g}-{high:g}")
+        if self.competitor_density % assumptions.COMPETITOR_DENSITY_STEP:
+            raise ValueError(f"competitor_density {self.competitor_density:g} is not in steps of {assumptions.COMPETITOR_DENSITY_STEP:g}")
 
 
 @dataclass(frozen=True)
@@ -100,19 +104,24 @@ def reachable(inputs: Inputs, promise: float, multiplier: float) -> npt.NDArray[
     return inputs.pair_min * multiplier + assumptions.PICK_AND_PACK <= promise + TOL
 
 
-def place_network(inputs: Inputs, seed: int) -> dict[str, list[int]]:
-    """The existing stores' site positions by brand: sized from the area's demand, weighted by the demand each site reaches at the default scenario."""
+def place_network(inputs: Inputs, seed: int, density: float = 1.0) -> dict[str, list[int]]:
+    """The existing stores' site positions by brand: sized from the area's demand, weighted by the demand each site reaches at the default scenario.
+    The operator's stores are fixed. The competitor's are the first round(density x the default count) of one seeded ordering of the remaining sites."""
     split = assumptions.brand_split(assumptions.network_size(inputs.demand.sum()))
     ok = reachable(inputs, assumptions.PROMISE, assumptions.MULTIPLIER)
     weight = np.bincount(inputs.pair_site[ok], weights=inputs.demand[inputs.pair_hex[ok]], minlength=len(inputs.site_ids))
     rng = np.random.default_rng(seed)
-    placed: dict[str, list[int]] = {}
-    for brand, n in split.items():
-        if (weight > 0).sum() < n:
-            raise ValueError(f"the {brand}'s {n} stores need {n} candidate sites that reach some demand at the default scenario, only {(weight > 0).sum()} do")
-        placed[brand] = sorted(rng.choice(len(weight), size=n, replace=False, p=weight / weight.sum()).tolist()) if n else []
-        weight[placed[brand]] = 0.0
-    return placed
+    n_operator = split["Operator"]
+    if (weight > 0).sum() < n_operator:
+        raise ValueError(f"the Operator's {n_operator} stores need {n_operator} candidate sites that reach some demand at the default scenario, only {(weight > 0).sum()} do")
+    operator = sorted(rng.choice(len(weight), size=n_operator, replace=False, p=weight / weight.sum()).tolist()) if n_operator else []
+    weight[operator] = 0.0
+    n_competitor = round(density * split["Competitor"])
+    open_sites = int((weight > 0).sum())
+    if open_sites < n_competitor:
+        raise ValueError(f"the Competitor's {n_competitor} stores need {n_competitor} candidate sites that reach some demand at the default scenario, only {open_sites} do")
+    order = rng.choice(len(weight), size=open_sites, replace=False, p=weight / weight.sum()).tolist() if open_sites else []
+    return {"Operator": operator, "Competitor": sorted(order[:n_competitor])}
 
 
 @dataclass(frozen=True)
@@ -152,7 +161,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     inputs = load_inputs() if inputs is None else inputs
     t0 = time.perf_counter()
     scenario = Scenario() if scenario is None else scenario
-    network = place_network(inputs, scenario.seed)
+    network = place_network(inputs, scenario.seed, scenario.competitor_density)
     n_sites, capacity = len(inputs.site_ids), scenario.capacity * assumptions.CAPACITY
     ok = reachable(inputs, scenario.promise, scenario.multiplier)
     rival = np.zeros(len(inputs.demand), bool)
