@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +8,8 @@ import numpy.typing as npt
 import rasterio
 from rasterio.transform import from_origin
 from shapely.geometry import Polygon, box
+
+from catchment.reach import Coords
 
 POLY: Polygon = box(77.045, 28.445, 77.055, 28.455)   # ~1 km box: a handful of res-9 hexes
 
@@ -44,7 +46,7 @@ class FakeRouter:
         self.default, self.east, self.step, self.snap_m = default, east, step, snap_m
         self.sources: tuple[list[float], list[float]] | None = None
 
-    def snap(self, lons: Iterable[float], lats: Iterable[float],
+    def snap(self, lons: Coords, lats: Coords,
              k: int = 1) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         lons = np.asarray(lons, float)[:, None] + self.east + self.step * np.arange(k)
         lats = np.asarray(lats, float)[:, None] + np.zeros(k)

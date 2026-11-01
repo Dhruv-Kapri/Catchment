@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Stages 0, 0.5 and 1 are done (stage 1 on 2026-10-31); next is stage 2 (plan). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
-`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `planning.py`: `plan()`, the stage 2 entry point). The repo also holds the
+`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`: the notebooks' placeholder plan model, `planning.py`: `plan()`, the stage 2 entry point). The repo also holds the
 product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the decision log
 (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief
 and the roadmap before starting any work; record new commands here.

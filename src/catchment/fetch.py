@@ -66,13 +66,16 @@ class SourceError(Exception):
 # ---- resumable downloader -------------------------------------------------
 
 class HttpGetter(Protocol):
-    """What download needs from `requests`: a streaming GET usable as a context manager (tests pass a fake)."""
+    """What download needs from a requests.Session: a streaming GET usable as a context manager (tests pass a fake)."""
 
     def get(self, url: str, *, headers: Mapping[str, str], stream: bool, timeout: float) -> AbstractContextManager[requests.Response]: ...
 
 
+SESSION: requests.Session = requests.Session()
+
+
 def download(url: str, dest: Path | str, headers: Mapping[str, str] | None = None,
-             session: HttpGetter = requests) -> Path:
+             session: HttpGetter = SESSION) -> Path:
     """Download url to dest via dest.part and an atomic rename. No-op if dest exists.
 
     Resumes with a Range request; if the server answers 200 (ignores Range), restarts.

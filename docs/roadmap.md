@@ -80,8 +80,8 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
 - Benchmark, three-way (greedy, CP-SAT on its own, CP-SAT from greedy) on an idle machine: each lever swept across its
   range at the default, the hardest corners, and 5 network seeds at the default. The service runs CP-SAT from greedy
   unless CP-SAT on its own is never worse on demand covered and is faster.
-- Stage 1 follow-ups: #22 whole; from #23 the parts the move touches (`solve_plan`'s result type, the duplicated
-  notebook plan code, the build args).
+- Stage 1 follow-ups: #22 whole. #23 is done: the notebooks' plan model is `catchment.explore` (typed
+  `SolveResult`); the planning module builds its own and copies nothing from the notebooks.
 - **Done when:** any scenario in the lever ranges returns a plan with every metric within 10 s, its gap stated,
   measured on the benchmark grid; the three-way table is committed in `04-plan` with a decision-log summary; the
   generator places the 57 stores by verified counts, with the density lever; the default multiplier is 1.8. A range

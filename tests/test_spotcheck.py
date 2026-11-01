@@ -11,7 +11,7 @@ CANDS = [f"c{i}" for i in range(4)]
 HEXES = [f"h{i}" for i in range(60)]
 
 
-def make(minutes: None = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def make() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Four candidates x sixty hexes; minutes sweep 0.5..29.5, so every bin and the out-of-range tails are populated."""
     rows = [(c, h, 0.5 + (i * 7 + j * 3) % 30) for i, c in enumerate(CANDS) for j, h in enumerate(HEXES)]
     table = pd.DataFrame(rows, columns=["candidate", "hex", "minutes"])
