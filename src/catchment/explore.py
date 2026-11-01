@@ -22,6 +22,8 @@ from catchment.assumptions import (
     WORKERS,
 )
 
+# Frozen at the values stages 0.5 and 1 ran with, on purpose not read from assumptions: stage 2 moves the
+# default multiplier to 1.8 and replaces the placeholder network, and the notebooks must still reproduce.
 MULTIPLIER: float = 1.4                 # the explore default scenario; stage 2 moves the default to 1.8
 BRAND_COUNTS: dict[str, int] = {"Operator": 3, "Competitor A": 4, "Competitor B": 3}   # placeholder network, the slice
 CAP_INT: int = round(CAPACITY * SCALE)  # capacity, hundredths of an order
