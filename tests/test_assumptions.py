@@ -33,7 +33,7 @@ def test_table_lists_every_input() -> None:
         "Default scenario", "Lever ranges", "New stores, N", "Orders per store per day", "Capacity per store",
         "Network size", "Operator/competitor split",
         "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
-        "Assignment tie-break", "Integer scale", "Solver",
+        "Assignment tie-break", "Integer scale", "Plan budget", "Solver",
     ]
 
 

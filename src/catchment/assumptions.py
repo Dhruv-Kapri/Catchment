@@ -33,6 +33,7 @@ CAPACITY_FACTOR: float = 1.5
 SEED: int = 2026                        # network placement
 SCALE: int = 100                        # shares and capacity are integers in hundredths of an order
 TIME_LIMIT: int = 60
+PLAN_BUDGET: float = 9.0                # seconds for everything in plan() before the metrics: the 10 s bar minus 1 s
 WORKERS: int = 8
 SOLVER_SEED: int = 1
 
@@ -86,6 +87,7 @@ def table() -> pd.DataFrame:
             ("Sites for new stores", "Any candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
             ("Assignment tie-break", "Among assignments that serve the same orders, the one with the shortest total travel time (decides new against cannibalised demand)", "No external source", "-", "Assumption"),
             ("Integer scale", f"Shares and capacity in hundredths of an order (round(orders × {SCALE})), because CP-SAT needs integers. Every metric is computed from these rounded shares", "Modelling choice", "-", "Assumption"),
+            ("Plan budget", f"{PLAN_BUDGET:g} s for everything before the metrics (network, reach, greedy, model, solve): the 10 s bar minus 1 s for the metrics. The solver gets what the build left of it", "Decision log 2026-10-30 (03-area, the tighter model's budget)", "2026-10-30", "Assumption"),
             ("Solver", f"OR-tools CP-SAT, time limit {TIME_LIMIT} s, {WORKERS} workers, random_seed {SOLVER_SEED}", "Modelling choice", "-", "Assumption"),
         ],
         columns=["Input", "Value", "Source", "Date", "Status"],
