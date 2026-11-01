@@ -13,6 +13,7 @@ from catchment.build import demand_name, reach_names
 from catchment.fetch import DATA
 
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
+GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
 
 @dataclass(frozen=True, eq=False)
@@ -71,7 +72,9 @@ class Scenario:
 
 @dataclass(frozen=True)
 class NewStore:
-    """What one new store serves, in the operator's orders a day."""
+    """What one new store serves, in the operator's orders a day. Fresh and cannibalised are judged against the base assignment
+    (existing stores only). Orders an existing store wins back with capacity a new store freed belong to no new store, so the
+    new stores' fresh orders can sum to less than the plan's gain over the existing network."""
     site: str
     orders: float          # the share of the hexes assigned to it
     fresh: float           # the part no existing operator store served in the base assignment
@@ -165,7 +168,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     base = owner = reach.assign(existing, share, capacity, n_sites)
     gain = np.bincount(reach.site, weights=np.where(owner < 0, share, 0.0)[reach.hex], minlength=n_sites)   # unassigned share each site reaches, before the cap
     for _ in range(scenario.n_new):
-        best = int(np.argmax(np.where(candidate, np.minimum(gain, capacity), -1.0)))
+        best = int(np.argmax(np.where(candidate, np.minimum(gain, capacity).round(GAIN_DP), -1.0)))   # rounded: float deltas must not break exact ties
         picked.append(best)
         candidate[best] = False
         now = reach.assign(existing + picked, share, capacity, n_sites)

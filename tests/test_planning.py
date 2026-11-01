@@ -254,7 +254,7 @@ def reference_greedy(inputs: Inputs, scenario: Scenario, network: dict[str, list
     Returns the picked sites, the demand covered and the orders of each new store."""
     position: dict[str, int] = {str(s): i for i, s in enumerate(inputs.site_ids)}
     reach: list[tuple[int, int, float]] = [(s, h, m) for s, h, m in zip(inputs.pair_site.tolist(), inputs.pair_hex.tolist(), inputs.pair_min.tolist())
-                                           if m * scenario.multiplier + PICK_AND_PACK <= scenario.promise + 1e-9]
+                                           if m * scenario.multiplier + PICK_AND_PACK <= scenario.promise + planning.TOL]
     operator, competitor = ({position[s] for s in network[b]} for b in ("Operator", "Competitor"))
     rival: set[int] = {h for s, h, _ in reach if s in competitor}
     share: list[float] = [d * scenario.capture / (2 if h in rival else 1) for h, d in enumerate(inputs.demand.tolist())]
@@ -295,3 +295,26 @@ def test_the_greedy_matches_a_from_scratch_reference(seed: int, promise: int, ca
 def test_the_reference_fixtures_do_bind_capacity() -> None:
     plans = [plan(random_inputs(seed), Scenario(n_new=15, promise=12, capacity=0.5, seed=seed)) for seed in range(5)]
     assert any(p.lost_to_capacity > 0 for p in plans)
+
+
+def twin_inputs(seed: int, n_twins: int = 15, n_hexes: int = 60) -> Inputs:
+    """Fractional demand, and sites in twins (S{i} and T{i}) that reach the same hexes in the same minutes, so a from-scratch gain ties
+    them exactly and only the lower rank (S{i}) may be picked; a gain updated by float deltas must not break those ties by rounding noise."""
+    rng = np.random.default_rng(seed)
+    hexes = {f"H{i}": float(rng.uniform(50, 300)) for i in range(n_hexes)}
+    pairs: Pairs = {}
+    for h in hexes:
+        for i in rng.choice(n_twins, size=4, replace=False).tolist():
+            m = float(rng.integers(1, 25)) / 2
+            pairs[(f"S{i}", h)], pairs[(f"T{i}", h)] = m, m
+    return make_inputs(hexes, pairs, [f"S{i}" for i in range(n_twins)] + [f"T{i}" for i in range(n_twins)], stores=9)
+
+
+@pytest.mark.parametrize("seed", range(12))
+@pytest.mark.parametrize("capacity", [0.5, 1.0])
+def test_the_greedy_breaks_exact_ties_by_rank_on_fractional_demand(seed: int, capacity: float) -> None:
+    inputs = twin_inputs(seed)
+    scenario = Scenario(n_new=12, promise=12, capacity=capacity, seed=seed)
+    p = plan(inputs, scenario)
+    sites, covered, _ = reference_greedy(inputs, scenario, p.network)
+    assert p.sites == sites and p.demand_covered == pytest.approx(covered)
