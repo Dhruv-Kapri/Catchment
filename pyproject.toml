@@ -38,5 +38,8 @@ dev = [
 catchment-fetch = "catchment.fetch:main"
 catchment-build = "catchment.build:main"
 
+[tool.ruff.lint.isort]
+known-first-party = ["catchment", "conftest"]
+
 [tool.pytest.ini_options]
 markers = ["docker: needs a running Docker daemon (deselect with -m 'not docker')"]

@@ -151,3 +151,9 @@ def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env: Pa
     err = capsys.readouterr().err
     assert "catchment-fetch overture" in err and "overture_places.parquet.gone" in err
     assert not (env / "demand-r9.parquet").exists()
+
+
+def test_stage_output_names_from_build_args() -> None:
+    args = build.BuildArgs(res=9, x_pct=30, force=False)
+    assert build.STAGES["demand"][1](args) == ["demand-r9.parquet"]
+    assert build.STAGES["reach"][1](args) == ["candidates-r9-x30.parquet", "table-r9-x30.parquet"]

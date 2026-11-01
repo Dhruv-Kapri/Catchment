@@ -1,3 +1,4 @@
+import inspect
 import json
 import shutil
 import subprocess
@@ -10,8 +11,8 @@ import h5py
 import numpy as np
 import numpy.typing as npt
 import pytest
-import requests
 import rasterio
+import requests
 from rasterio.transform import from_origin
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
@@ -300,3 +301,7 @@ def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path: 
         part.write_bytes(b"whole")
         assert not dest.exists()
     assert dest.exists() and dest.read_bytes() == b"whole" and not part.exists()
+
+
+def test_download_default_session_is_a_requests_session() -> None:
+    assert isinstance(inspect.signature(fetch.download).parameters["session"].default, requests.Session)

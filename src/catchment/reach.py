@@ -7,7 +7,7 @@ import sys
 from collections.abc import Iterator, Mapping, Sequence
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeAlias
 
 import h3
 import numpy as np
@@ -26,10 +26,13 @@ CHUNK_SRC: int = 50
 CHUNK_DST: int = 950   # one /table request; osrm-routed runs with --max-table-size 1000
 
 
+Coords: TypeAlias = Sequence[float] | npt.NDArray[np.float64]   # longitudes or latitudes, as a list or an array
+
+
 class Router(Protocol):
     """What build_reach needs from a router: OsrmRouter, or a fake in tests."""
 
-    def snap(self, lons: npt.NDArray[np.float64], lats: npt.NDArray[np.float64], k: int = 1,
+    def snap(self, lons: Coords, lats: Coords, k: int = 1,
              ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
 
     def minutes(self, src_lons: npt.NDArray[np.float64], src_lats: npt.NDArray[np.float64],
@@ -95,7 +98,7 @@ class OsrmRouter:
         self.session: requests.Session = requests.Session()
         self.peak_bytes: int | None = None   # osrm-routed's peak memory, set by served_osrm before it stops the container
 
-    def snap(self, lons: Sequence[float] | npt.NDArray[np.float64], lats: Sequence[float] | npt.NDArray[np.float64],
+    def snap(self, lons: Coords, lats: Coords,
              k: int = 1) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """The k nearest roads' points of each point (k is 1 or 2): arrays (n, k) of snapped lon, lat and distance in metres."""
         out = np.full((3, len(lons), k), np.nan)
