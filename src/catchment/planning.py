@@ -63,7 +63,7 @@ class Scenario:
         for lever in ("n_new", "promise"):
             value = getattr(self, lever)
             if not isinstance(value, int) or isinstance(value, bool):
-                raise ValueError(f"{lever} {value!r} must be a whole number")
+                raise TypeError(f"{lever} {value!r} must be a whole number")
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:

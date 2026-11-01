@@ -1,5 +1,6 @@
 import dataclasses
 import time
+from itertools import chain
 from pathlib import Path
 
 import numpy as np
@@ -59,7 +60,7 @@ def test_the_ends_of_a_lever_range_are_allowed(lever: str, low: float, high: flo
 
 @pytest.mark.parametrize("lever, value", [("n_new", 2.5), ("n_new", True), ("promise", 8.5), ("promise", True)])
 def test_the_number_of_new_stores_and_the_promise_must_be_whole_numbers(lever: str, value: float) -> None:
-    with pytest.raises(ValueError, match=f"{lever} .* must be a whole number"):
+    with pytest.raises(TypeError, match=f"{lever} .* must be a whole number"):
         Scenario(**{lever: value})
 
 
@@ -129,7 +130,7 @@ def test_a_hex_the_competitor_reaches_gives_the_operator_half_its_demand() -> No
     # S0 and S1 hold one store each (one operator, one competitor, whichever way the seed falls); both reach H.
     sites = ["S0", "S1", "S2"]
     p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1))
-    assert sorted(sum(p.network.values(), [])) == ["S0", "S1"] and len(p.network["Operator"]) == 1
+    assert sorted(chain.from_iterable(p.network.values())) == ["S0", "S1"] and len(p.network["Operator"]) == 1
     assert p.demand_covered == pytest.approx(500)
     assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(2 * OPS - 500)   # the operator's total share
 
@@ -184,7 +185,7 @@ def test_default_network_is_57_stores_split_39_18() -> None:
     hexes = {f"H{i}": 57 * OPS / 100 for i in range(100)}
     p = plan(make_inputs(hexes, {(f"S{i}", f"H{i}"): 1.0 for i in range(100)}, sites, stores=57), Scenario())
     assert (len(p.network["Operator"]), len(p.network["Competitor"])) == (39, 18)
-    stores = sum(p.network.values(), [])
+    stores = list(chain.from_iterable(p.network.values()))
     assert len(set(stores)) == 57 and len(p.sites) == 10 and not set(p.sites) & set(stores)
 
 

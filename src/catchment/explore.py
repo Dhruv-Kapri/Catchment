@@ -157,7 +157,7 @@ def solve_plan(C: Case, N: int, new_sites: npt.NDArray[np.int64] | None = None, 
     return SolveResult(status=solver.StatusName(status),
                        chosen=sorted(s for s in y if solver.Value(y[s])) if ok else [],
                        obj=solver.ObjectiveValue() / SCALE, bound=solver.BestObjectiveBound() / SCALE,
-                       pairs=len(ps), new_sites=len(new), hexes=int(len(np.unique(ph))),
+                       pairs=len(ps), new_sites=len(new), hexes=len(np.unique(ph)),
                        constrained_sites=int(constrained[np.unique(ps)].sum()),
                        build_s=t1 - t0, solve_s=t2 - t1, total_s=t2 - t0)
 

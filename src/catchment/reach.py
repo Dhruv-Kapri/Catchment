@@ -7,7 +7,7 @@ import sys
 from collections.abc import Iterator, Mapping, Sequence
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Protocol, TypeAlias
+from typing import Any, Protocol
 
 import h3
 import numpy as np
@@ -26,7 +26,7 @@ CHUNK_SRC: int = 50
 CHUNK_DST: int = 950   # one /table request; osrm-routed runs with --max-table-size 1000
 
 
-Coords: TypeAlias = Sequence[float] | npt.NDArray[np.float64]   # longitudes or latitudes, as a list or an array
+type Coords = Sequence[float] | npt.NDArray[np.float64]   # longitudes or latitudes, as a list or an array
 
 
 class Router(Protocol):
