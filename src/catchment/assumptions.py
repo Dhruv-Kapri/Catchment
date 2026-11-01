@@ -12,16 +12,24 @@ BLINKIT_STORES: int = 2751              # at quarter end
 NCR_STORES: int = 400                   # dark stores, all brands, NCR
 NCR_POPULATION: float = 30.2e6          # "New Delhi" Degree of Urbanisation city, WUP 2025, 2025 estimate
 
+# Lever ranges, inclusive (decision log, 2026-11-01)
+N_RANGE: tuple[int, int] = (1, 20)
+PROMISE_RANGE: tuple[int, int] = (8, 20)                # minutes
+MULTIPLIER_RANGE: tuple[float, float] = (1.0, 2.5)
+CAPACITY_RANGE: tuple[float, float] = (0.5, 2.0)        # x the default capacity
+CAPTURE_RANGE: tuple[float, float] = (0.5, 1.5)         # x the default capture share
+COMPETITOR_DENSITY_RANGE: tuple[float, float] = (1.0, 1.0)   # fixed at 1x until #29
+
 PICK_AND_PACK: int = 3                  # minutes, fixed
 MAX_PROMISE: int = 20                   # longest promise lever, minutes
 
 # Plan (02-plan): default scenario, capacity, placeholder network, solver
 PROMISE: int = 10                       # default scenario
-MULTIPLIER: float = 1.4                 # default scenario
+MULTIPLIER: float = 1.8                 # default scenario (the spot check, decision log 2026-11-01)
 N_SLICE: int = 3                        # new stores: the slice
 N_AREA: int = 10                        # new stores: the full area (default scenario)
 CAPACITY_FACTOR: float = 1.5
-BRAND_COUNTS: dict[str, int] = {"Operator": 3, "Competitor A": 4, "Competitor B": 3}   # placeholder, the slice
+COMPETITOR_STORES: int = 1240           # the competitor brand's reported store count; INTERIM, Unverified (issue #25)
 SEED: int = 2026                        # network placement
 SCALE: int = 100                        # shares and capacity are integers in hundredths of an order
 TIME_LIMIT: int = 60
@@ -29,6 +37,8 @@ WORKERS: int = 8
 SOLVER_SEED: int = 1
 
 ORDERS_PER_STORE_DAY: float = BLINKIT_ORDERS_Q2 / Q2_DAYS / BLINKIT_STORES
+OPERATOR_SHARE: float = BLINKIT_STORES / (BLINKIT_STORES + COMPETITOR_STORES)   # of the synthetic network's stores
+AREA_NETWORK_SIZE: int = 57             # network_size on the full area; only for the table text, the planner computes it
 NCR_HOUSEHOLDS: float = NCR_POPULATION / HOUSEHOLD_SIZE
 # calibration target: all-brand orders per household per day
 ORDERS_PER_HOUSEHOLD_DAY: float = NCR_STORES * ORDERS_PER_STORE_DAY / NCR_HOUSEHOLDS
@@ -36,6 +46,17 @@ SECOND_ROAD_MAX_M: int = 100            # a point's second road counts for snapp
 SECOND_ROAD_GAP_M: int = 5              # and only if it lies more than this across the first road
 MAX_PAIR_MIN: int = MAX_PROMISE - PICK_AND_PACK   # free-flow minutes kept in the travel-time table
 CAPACITY: float = CAPACITY_FACTOR * ORDERS_PER_STORE_DAY   # orders per store per day
+
+
+def network_size(area_demand: float) -> int:
+    """Stores in the synthetic network: the area's demand over the orders per store per day."""
+    return round(area_demand / ORDERS_PER_STORE_DAY)
+
+
+def brand_split(n_stores: int) -> dict[str, int]:
+    """The network's stores by brand, split by the reported store counts."""
+    operator = round(n_stores * OPERATOR_SHARE)
+    return {"Operator": operator, "Competitor": n_stores - operator}
 
 
 def table() -> pd.DataFrame:
@@ -51,15 +72,18 @@ def table() -> pd.DataFrame:
             ("Pick-and-pack allowance", f"{PICK_AND_PACK} min, fixed", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Pairs kept in the table", f"Free-flow ≤ {MAX_PAIR_MIN} min (longest promise {MAX_PROMISE} − {PICK_AND_PACK} at multiplier 1.0)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Second road for snapping", f"Each point snaps to its nearest road and a second road, and a pair keeps the fastest of the four times. The second road is the nearest hit within {SECOND_ROAD_MAX_M} m that lies more than {SECOND_ROAD_GAP_M} m from the first across the road (a parallel carriageway, not the next segment of the same one); none, then the nearest road repeats", "No external source; 01-reach found about one short pair in seven running out and back at an endpoint. Decision log, 2026-10-29 (fastest-of-four snapping, measured)", "-", "Assumption"),
-            ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
+            ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Spot check (docs/spot-check.csv): implied median multiplier 1.79 over 20 routes, Google Maps two-wheeler, Fri 30 Oct 2026 19:00-19:07, one evening's live estimates; decision log, 2026-11-01 (Plan scope)", "2026-11-01", "Assumption"),
+            ("Lever ranges", f"N {N_RANGE[0]}-{N_RANGE[1]}; promise {PROMISE_RANGE[0]}-{PROMISE_RANGE[1]} min; congestion multiplier {MULTIPLIER_RANGE[0]}-{MULTIPLIER_RANGE[1]}; capacity {CAPACITY_RANGE[0]}×-{CAPACITY_RANGE[1]}× the default; capture share {CAPTURE_RANGE[0]}×-{CAPTURE_RANGE[1]}× the default; competitor density {COMPETITOR_DENSITY_RANGE[0]}× (fixed until the density lever lands). All inclusive", "Decision log, 2026-11-01 (Plan scope)", "2026-11-01", "Assumption"),
             ("New stores, N", f"{N_SLICE} on the slice; {N_AREA} on the full area (the default scenario for the 10 s bar)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Orders per store per day", f"{BLINKIT_ORDERS_Q2/1e6:.1f} M orders ÷ {Q2_DAYS} days ÷ {BLINKIT_STORES:,} stores = {ORDERS_PER_STORE_DAY:,.0f}", "00-demand: Eternal Ltd shareholders' letter, 21 Oct 2026, p. 13 (orders and stores)", "2026-10-29", "Verified"),
             ("Capacity per store", f"{CAPACITY_FACTOR} × {ORDERS_PER_STORE_DAY:,.0f} = {CAPACITY:,.0f} orders per day, the same for every store of the operator. Adopted here as 00-demand and the decision log said; the 1.5 has no source (headroom over the average)", "Decision log, 2026-10-29 (Explore); issue #5. Rests on the Verified orders per store per day", "2026-10-29", "Assumption"),
-            ("Brands and store counts", f"{', '.join(f'{b} {n}' for b, n in BRAND_COUNTS.items())}: {sum(BRAND_COUNTS.values())} stores in the slice. PLACEHOLDER counts, not reported figures", "Slice demand ÷ orders per store per day = 10.5 stores' worth (00-demand), rounded to 10 and split with no market-share source. The generator with sourced counts is stage 2", "2026-10-29", "Assumption"),
-            ("Store placement", f"Sampled without replacement from the slice's candidate sites, probability ∝ the demand the site reaches at the default scenario; seed {SEED}; at most one store per site, whatever the brand", "No external source", "-", "Assumption"),
+            ("Competitor stores (next-largest brand)", f"{COMPETITOR_STORES:,} at quarter end", "Interim, not yet checked at primary source: Instamart's reported active dark stores at the end of Q2 FY27, as reported; verification is #25", "2026-11-01", "Unverified"),
+            ("Network size", f"Area demand ÷ orders per store per day = {ORDERS_PER_STORE_DAY:,.0f}, rounded: about {AREA_NETWORK_SIZE} stores on the full area. Equals the NCR store count × the area's population share, because the capture share is calibrated on the same figures", "Decision log, 2026-11-01 (Plan scope); rests on the Verified orders per store per day", "2026-11-01", "Assumption"),
+            ("Operator/competitor split", f"Operator {OPERATOR_SHARE:.1%}, competitor {1 - OPERATOR_SHARE:.1%} of the stores (Blinkit {BLINKIT_STORES:,}, competitor {COMPETITOR_STORES:,}); at {AREA_NETWORK_SIZE} stores, {brand_split(AREA_NETWORK_SIZE)['Operator']} and {brand_split(AREA_NETWORK_SIZE)['Competitor']}", "Decision log, 2026-11-01 (Plan scope); rests on the two reported store counts, the competitor's Unverified", "2026-11-01", "Assumption"),
+            ("Store placement", f"Sampled without replacement from the area's candidate sites, probability ∝ the demand the site reaches at the default promise and multiplier; the operator's stores placed first, then the competitor's; seed {SEED}; at most one store per site, whatever the brand", "No external source", "-", "Assumption"),
             ("Competitor reach", "A competitor store at a site reaches the same hexes as an operator store there (same promise, multiplier and travel times)", "No external source", "-", "Assumption"),
             ("Demand split", "A hex reached by the operator and k competitor brands gives the operator demand ÷ (1 + k); k is fixed in a scenario", "ADR 0001", "2026-10-29", "Assumption"),
-            ("Sites for new stores", "Any slice candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
+            ("Sites for new stores", "Any candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
             ("Assignment tie-break", "Among assignments that serve the same orders, the one with the shortest total travel time (decides new against cannibalised demand)", "No external source", "-", "Assumption"),
             ("Integer scale", f"Shares and capacity in hundredths of an order (round(orders × {SCALE})), because CP-SAT needs integers. Every metric is computed from these rounded shares", "Modelling choice", "-", "Assumption"),
             ("Solver", f"OR-tools CP-SAT, time limit {TIME_LIMIT} s, {WORKERS} workers, random_seed {SOLVER_SEED}", "Modelling choice", "-", "Assumption"),

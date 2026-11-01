@@ -29,8 +29,9 @@ def test_table_lists_every_input() -> None:
         # 01-reach
         "Pick-and-pack allowance", "Pairs kept in the table", "Second road for snapping",
         # 02-plan
-        "Default scenario", "New stores, N", "Orders per store per day", "Capacity per store",
-        "Brands and store counts", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
+        "Default scenario", "Lever ranges", "New stores, N", "Orders per store per day", "Capacity per store",
+        "Competitor stores (next-largest brand)", "Network size", "Operator/competitor split",
+        "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
         "Assignment tie-break", "Integer scale", "Solver",
     ]
 
@@ -46,7 +47,8 @@ def test_status_and_values_match_the_notebook_tables() -> None:
     verified = {"Household size", "Blinkit orders, Q2 FY27", "Blinkit stores", "NCR dark stores (all brands)",
                 "NCR population", "Orders per store per day"}
     assert set(t.index[t.Status == "Verified"]) == verified
-    assert set(t.Status) == {"Verified", "Assumption"}
+    assert set(t.index[t.Status == "Unverified"]) == {"Competitor stores (next-largest brand)"}
+    assert set(t.Status) == {"Verified", "Assumption", "Unverified"}
     assert t.loc[list(verified - {"Orders per store per day"}), "Date"].eq("2026-10-29").all()
     assert t.loc["Household size", "Value"] == "4.5 persons"
     assert t.loc["Multiplier bounds", "Value"] == "0.5 to 1.5"
@@ -58,3 +60,45 @@ def test_status_and_values_match_the_notebook_tables() -> None:
     assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
     assert "5 m" in t.loc["Second road for snapping", "Value"] and "100 m" in t.loc["Second road for snapping", "Value"]
     assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]
+
+
+def test_default_multiplier_is_the_spot_check_figure() -> None:
+    assert assumptions.MULTIPLIER == 1.8
+    row = assumptions.table().set_index("Input").loc["Default scenario"]
+    assert "1.8" in row.Value and "3.9 min" in row.Value
+    assert "Spot check" in row.Source and "1.79" in row.Source and row.Date == "2026-11-01"
+
+
+def test_lever_ranges() -> None:
+    assert assumptions.N_RANGE == (1, 20)
+    assert assumptions.PROMISE_RANGE == (8, 20)
+    assert assumptions.MULTIPLIER_RANGE == (1.0, 2.5)
+    assert assumptions.CAPACITY_RANGE == (0.5, 2.0)
+    assert assumptions.CAPTURE_RANGE == (0.5, 1.5)
+    assert assumptions.COMPETITOR_DENSITY_RANGE == (1.0, 1.0)
+    assert assumptions.table().set_index("Input").loc["Lever ranges", "Status"] == "Assumption"
+
+
+def test_competitor_store_count_is_interim_and_unverified() -> None:
+    row = assumptions.table().set_index("Input").loc["Competitor stores (next-largest brand)"]
+    assert assumptions.COMPETITOR_STORES == 1240
+    assert row.Value == "1,240 at quarter end" and row.Status == "Unverified" and row.Date == "2026-11-01"
+    assert "Interim" in row.Source and "#25" in row.Source
+
+
+def test_network_size_is_area_demand_over_orders_per_store_day() -> None:
+    assert assumptions.network_size(57 * assumptions.ORDERS_PER_STORE_DAY) == 57
+    assert assumptions.network_size(0.4 * assumptions.ORDERS_PER_STORE_DAY) == 0
+    assert assumptions.network_size(56.6 * assumptions.ORDERS_PER_STORE_DAY) == 57
+
+
+def test_brand_split_follows_the_reported_counts() -> None:
+    assert assumptions.OPERATOR_SHARE == pytest.approx(2751 / (2751 + 1240))
+    assert assumptions.brand_split(57) == {"Operator": 39, "Competitor": 18}
+    assert assumptions.brand_split(1) == {"Operator": 1, "Competitor": 0}
+    assert assumptions.brand_split(2) == {"Operator": 1, "Competitor": 1}
+    assert assumptions.brand_split(3) == {"Operator": 2, "Competitor": 1}
+
+
+def test_placeholder_brand_counts_are_gone() -> None:
+    assert not hasattr(assumptions, "BRAND_COUNTS")
