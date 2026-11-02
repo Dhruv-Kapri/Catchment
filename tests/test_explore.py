@@ -9,10 +9,10 @@ from catchment.explore import (
     Case,
     SolveResult,
     evaluate,
+    explore_reachable,
     greedy_plan,
     load_case,
-    place_network,
-    reachable,
+    place_placeholder_network,
     solve_plan,
     with_network,
 )
@@ -47,10 +47,10 @@ C_OP: dict[str, list[int]] = {"Operator": [1]}   # the operator's store is on c0
 
 
 def test_reachable_boundary() -> None:
-    assert reachable(5.0)
-    assert not reachable(5.01)
-    assert list(reachable(np.array([0.0, 5.0, 5.01, 17.0]))) == [True, True, False, False]
-    assert list(reachable(pd.Series([4.9, 5.2]))) == [True, False]
+    assert explore_reachable(5.0)
+    assert not explore_reachable(5.01)
+    assert list(explore_reachable(np.array([0.0, 5.0, 5.01, 17.0]))) == [True, True, False, False]
+    assert list(explore_reachable(pd.Series([4.9, 5.2]))) == [True, False]
 
 
 def test_placeholder_defaults_are_pinned() -> None:
@@ -90,7 +90,7 @@ def test_with_network_counts_competitor_brands_not_stores() -> None:
 
 
 def test_with_network_rejects_two_stores_on_one_site() -> None:
-    with pytest.raises(AssertionError, match="two stores on one site"):
+    with pytest.raises(ValueError, match="two stores on one site"):
         with_network(case(), {"Operator": [1], "A": [1]})
 
 
@@ -99,15 +99,26 @@ def test_with_network_cap_int_override() -> None:
     assert with_network(case(), C_OP).cap_int == explore.CAP_INT
 
 
+def test_with_network_cap_int_zero_is_honoured() -> None:
+    assert with_network(case(), C_OP, cap_int=0).cap_int == 0
+
+
+def test_place_placeholder_network_raises_when_no_site_reaches_demand() -> None:
+    C = dataclasses.replace(case(), ps=np.array([], dtype=np.int64), ph=np.array([], dtype=np.int64),
+                            pm=np.array([], dtype=np.float64))
+    with pytest.raises(ValueError, match="reaches any demand"):
+        place_placeholder_network(C, {"Operator": 1})
+
+
 def test_place_network_is_deterministic_with_the_right_counts() -> None:
     C = case()
     counts = {"Operator": 1, "A": 1, "B": 1}
-    a, b = place_network(C, counts, seed=7), place_network(C, counts, seed=7)
+    a, b = place_placeholder_network(C, counts, seed=7), place_placeholder_network(C, counts, seed=7)
     assert a == b
     assert list(a) == ["Operator", "A", "B"] and all(len(v) == 1 for v in a.values())
     sites = [s for v in a.values() for s in v]
     assert sorted(sites) == [0, 1, 2]   # three stores, three sites, none twice
-    assert any(place_network(C, counts, seed=s) != a for s in range(8, 40))   # the seed matters
+    assert any(place_placeholder_network(C, counts, seed=s) != a for s in range(8, 40))   # the seed matters
 
 
 def test_solve_plan_picks_the_obviously_best_site() -> None:
@@ -177,3 +188,21 @@ def test_greedy_plan_adds_the_largest_marginal_site_first() -> None:
     C = with_network(case(), C_OP)
     assert greedy_plan(C, 1) == [2]        # c2: +400 against c1: +300
     assert greedy_plan(C, 2) == [2, 0]     # then c1's h2 (h1 is already served by c0)
+
+
+def test_solve_plan_with_n_above_the_open_sites_is_infeasible() -> None:
+    C = with_network(case(), C_OP)   # two open sites
+    r = solve_plan(C, 3)
+    assert (r.status, r.chosen) == ("INFEASIBLE", [])
+
+
+def test_frozen_table_is_the_rows_03_area_ran_with() -> None:
+    t = explore.table()
+    assert list(t.columns) == ["Input", "Value", "Source", "Date", "Status"]
+    assert list(t.Input) == [
+        "Default scenario", "New stores, N", "Orders per store per day", "Capacity per store",
+        "Brands and store counts", "Store placement", "Competitor reach", "Demand split",
+        "Sites for new stores", "Assignment tie-break", "Integer scale", "Solver"]
+    row = t.set_index("Input").Value
+    assert f"multiplier {explore.MULTIPLIER}," in row["Default scenario"] and "1.8" not in row["Default scenario"]
+    assert ", ".join(f"{b} {n}" for b, n in explore.BRAND_COUNTS.items()) in row["Brands and store counts"]

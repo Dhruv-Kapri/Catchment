@@ -1,6 +1,7 @@
+import pandas as pd
 import pytest
 
-from catchment import assumptions
+from catchment import assumptions, fetch
 
 
 def test_max_pair_min_is_longest_promise_less_pick_and_pack() -> None:
@@ -112,3 +113,11 @@ def test_brand_split_parts_sum_to_n() -> None:
 
 def test_brand_split_of_zero_is_all_zeros() -> None:
     assert assumptions.brand_split(0) == {"Operator": 0, "Competitor": 0}
+
+
+def test_area_network_size_matches_the_built_demand() -> None:
+    path = fetch.DATA / "demand-r9.parquet"
+    if not path.exists():
+        pytest.skip(f"{path} not built")
+    demand = pd.read_parquet(path)["demand"]
+    assert assumptions.network_size(demand.sum()) == assumptions.AREA_NETWORK_SIZE
