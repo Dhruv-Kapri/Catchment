@@ -108,7 +108,7 @@ class Plan:
     households_covered: float        # households of the assigned hexes, whole hexes
     lost_to_capacity: float          # reached by an open operator store but not assigned
     unreached: float                 # reached by no open operator store
-    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered
+    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered for greedy and an OPTIMAL CP-SAT plan (the walk covers no more than the best assignment), not guaranteed for a FEASIBLE one (#30 checks)
     new_stores: list[NewStore]       # in pick order
     status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy
     objective: float                 # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered)

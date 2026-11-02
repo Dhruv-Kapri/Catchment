@@ -1,6 +1,5 @@
 import dataclasses
 import time
-import typing
 from itertools import chain
 from pathlib import Path
 
@@ -11,7 +10,15 @@ from ortools.sat.python import cp_model
 
 from catchment import planning
 from catchment.assumptions import CAPACITY, ORDERS_PER_STORE_DAY, PICK_AND_PACK
-from catchment.planning import Inputs, Method, Plan, Scenario, load_inputs, plan
+from catchment.planning import (
+    METHODS,
+    Inputs,
+    Method,
+    Plan,
+    Scenario,
+    load_inputs,
+    plan,
+)
 
 OPS: float = ORDERS_PER_STORE_DAY
 Pairs = dict[tuple[str, str], float]   # (site, hex) -> free-flow minutes
@@ -523,11 +530,8 @@ def test_slow_traffic_coverage_is_never_more_than_the_demand_covered_across_prom
     assert any(p.slow_traffic_coverage < p.demand_covered for p in plans)
 
 
-METHODS: tuple[str, ...] = typing.get_args(typing.get_type_hints(plan)["method"])   # every method plan() accepts, so a new one is covered as it lands
-
-
 @pytest.mark.parametrize("method", METHODS)
-def test_every_method_loses_a_hex_whose_only_reach_is_near_the_promise_in_slow_traffic(method: str) -> None:
+def test_every_method_loses_a_hex_whose_only_reach_is_near_the_promise_in_slow_traffic(method: Method) -> None:
     # S0 reaches W (1 min) and A (5 min); at promise 8, multiplier 1.0, A drops out at 1.25x.
     inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
     p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0), method)
