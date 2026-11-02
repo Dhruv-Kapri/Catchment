@@ -6,7 +6,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from catchment import assumptions
+from catchment.explore import (
+    MULTIPLIER,  # 1.4, what the spot-check write-up used; not assumptions.MULTIPLIER (1.8)
+)
 
 SEED: int = 16
 COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
@@ -28,7 +30,7 @@ def draw_routes(table: pd.DataFrame, candidates: pd.DataFrame, hexes: pd.DataFra
     r = r.astype({"minutes": float}).sort_values("minutes", kind="stable").reset_index(drop=True)   # float32 from OSRM would not survive the CSV
     r["route"] = np.arange(1, len(r) + 1)
     r["free_flow_min"] = r.minutes.round(2)
-    r["model_min"] = (r.minutes * assumptions.MULTIPLIER).round(2)
+    r["model_min"] = (r.minutes * MULTIPLIER).round(2)
     c, h = candidates.loc[r.candidate], hexes.loc[r.hex]
     r["source"] = [f"{a:.6f},{b:.6f}" for a, b in zip(c.snap_lat, c.snap_lon)]
     r["destination"] = [f"{a:.6f},{b:.6f}" for a, b in zip(h.lat, h.lon)]
@@ -50,18 +52,25 @@ def write_sheet(routes: pd.DataFrame, path: Path | str) -> bool:
     return False
 
 
-def compare(sheet: pd.DataFrame, multiplier: float = assumptions.MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """The model's error against the app per route (worst first), and the multiplier the app times imply."""
+def compare(sheet: pd.DataFrame, multiplier: float = MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """The model's error against the app per route (worst first), and the multiplier the app times imply.
+
+    Raises ValueError if no row has an app time, or a row with one has no bad_snap_before flag. The bad-snap medians are None when that group is empty."""
     found = sheet[sheet.app_min.notna()].copy()
+    if found.empty:
+        raise ValueError("no app times in the sheet; fill app_min before comparing")
+    if found.bad_snap_before.isna().any():
+        raise ValueError("a route with an app time has no bad_snap_before flag; fill it with True or False")
     modelled = found.free_flow_min * multiplier
     found["ratio"], found["implied"], found["diff_min"] = found.app_min / modelled, found.app_min / found.free_flow_min, found.app_min - modelled
     routes = found.sort_values("ratio", ascending=False, kind="stable").reset_index(drop=True)
     bad = routes.bad_snap_before.astype(bool)
     r25, r75 = routes.ratio.quantile([0.25, 0.75])
     i25, i75 = routes.implied.quantile([0.25, 0.75])
-    summary = {"n": len(routes), "n_no_app": len(sheet) - len(routes), "ratio_median": routes.ratio.median(),
+    summary = {"n": len(routes), "n_no_app": len(sheet) - len(routes), "n_bad": int(bad.sum()), "ratio_median": routes.ratio.median(),
                "ratio_q25": r25, "ratio_q75": r75, "ratio_min": routes.ratio.min(), "ratio_max": routes.ratio.max(),
                "implied_median": routes.implied.median(), "implied_q25": i25, "implied_q75": i75,
-               "ratio_median_bad": routes.ratio[bad].median(), "ratio_median_other": routes.ratio[~bad].median(),
+               "ratio_median_bad": float(routes.ratio[bad].median()) if bad.any() else None,
+               "ratio_median_other": float(routes.ratio[~bad].median()) if not bad.all() else None,
                "bad_snap_ranks": {int(r): int(i) + 1 for r, i in zip(routes.route[bad], routes.index[bad])}}
     return routes, summary

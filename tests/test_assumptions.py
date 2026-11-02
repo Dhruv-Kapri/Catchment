@@ -1,6 +1,7 @@
+import pandas as pd
 import pytest
 
-from catchment import assumptions
+from catchment import assumptions, fetch
 
 
 def test_max_pair_min_is_longest_promise_less_pick_and_pack() -> None:
@@ -25,13 +26,15 @@ def test_table_lists_every_input() -> None:
     assert list(t.Input) == [
         # 00-demand
         "Household size", "Multiplier bounds", "Blinkit orders, Q2 FY27", "Blinkit stores",
+        "Competitor stores (next-largest brand)",
         "NCR dark stores (all brands)", "NCR population",
         # 01-reach
         "Pick-and-pack allowance", "Pairs kept in the table", "Second road for snapping",
         # 02-plan
-        "Default scenario", "New stores, N", "Orders per store per day", "Capacity per store",
-        "Brands and store counts", "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
-        "Assignment tie-break", "Integer scale", "Solver",
+        "Default scenario", "Lever ranges", "Slow-traffic factor", "New stores, N", "Orders per store per day", "Capacity per store",
+        "Network size", "Operator/competitor split",
+        "Store placement", "Competitor reach", "Demand split", "Sites for new stores",
+        "Assignment tie-break", "Integer scale", "Plan budget", "Solver",
     ]
 
 
@@ -44,10 +47,17 @@ def test_table_cells_are_non_empty() -> None:
 def test_status_and_values_match_the_notebook_tables() -> None:
     t = assumptions.table().set_index("Input")
     verified = {"Household size", "Blinkit orders, Q2 FY27", "Blinkit stores", "NCR dark stores (all brands)",
-                "NCR population", "Orders per store per day"}
+                "NCR population", "Orders per store per day", "Competitor stores (next-largest brand)"}
     assert set(t.index[t.Status == "Verified"]) == verified
     assert set(t.Status) == {"Verified", "Assumption"}
-    assert t.loc[list(verified - {"Orders per store per day"}), "Date"].eq("2026-10-29").all()
+    dated = verified - {"Orders per store per day", "Competitor stores (next-largest brand)"}
+    assert t.loc[list(dated), "Date"].eq("2026-10-29").all()
+    assert t.loc["Competitor stores (next-largest brand)", "Date"] == "2026-11-01"
+    assert t.loc["Competitor stores (next-largest brand)", "Value"] == "1,240 at quarter end"
+    assert t.loc["Operator/competitor split", "Status"] == "Assumption"
+    assert "68.9%" in t.loc["Operator/competitor split", "Value"]
+    assert "39 and 18" in t.loc["Operator/competitor split", "Value"]
+    assert "both Verified" in t.loc["Operator/competitor split", "Source"]
     assert t.loc["Household size", "Value"] == "4.5 persons"
     assert t.loc["Multiplier bounds", "Value"] == "0.5 to 1.5"
     assert t.loc["Blinkit orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
@@ -58,3 +68,57 @@ def test_status_and_values_match_the_notebook_tables() -> None:
     assert t.loc["Pairs kept in the table", "Value"].startswith("Free-flow ≤ 17 min")
     assert "5 m" in t.loc["Second road for snapping", "Value"] and "100 m" in t.loc["Second road for snapping", "Value"]
     assert "2,364 orders per day" in t.loc["Capacity per store", "Value"]
+
+
+def test_default_multiplier_is_the_spot_check_figure() -> None:
+    assert assumptions.MULTIPLIER == 1.8
+    row = assumptions.table().set_index("Input").loc["Default scenario"]
+    assert "1.8" in row.Value and "3.9 min" in row.Value
+    assert "Spot check" in row.Source and "1.79" in row.Source and row.Date == "2026-11-01"
+    assert "02-plan and 03-area ran at 1.4" in row.Source   # their committed outputs predate the change
+
+
+def test_lever_ranges() -> None:
+    assert assumptions.N_RANGE == (1, 20)
+    assert assumptions.PROMISE_RANGE == (8, 20)
+    assert assumptions.MULTIPLIER_RANGE == (1.0, 2.5)
+    assert assumptions.CAPACITY_RANGE == (0.5, 2.0)
+    assert assumptions.CAPTURE_RANGE == (0.5, 1.5)
+    assert assumptions.COMPETITOR_DENSITY_RANGE == (0.0, 2.0)
+    assert assumptions.COMPETITOR_DENSITY_STEP == 0.25
+    assert assumptions.table().set_index("Input").loc["Lever ranges", "Status"] == "Assumption"
+
+
+def test_network_size_is_area_demand_over_orders_per_store_day() -> None:
+    assert assumptions.network_size(57 * assumptions.ORDERS_PER_STORE_DAY) == 57
+    assert assumptions.network_size(0.4 * assumptions.ORDERS_PER_STORE_DAY) == 0
+    assert assumptions.network_size(56.6 * assumptions.ORDERS_PER_STORE_DAY) == 57
+
+
+def test_brand_split_follows_the_reported_counts() -> None:
+    assert assumptions.OPERATOR_SHARE == pytest.approx(2751 / (2751 + 1240))
+    assert assumptions.brand_split(57) == {"Operator": 39, "Competitor": 18}
+    assert assumptions.brand_split(1) == {"Operator": 1, "Competitor": 0}
+    assert assumptions.brand_split(2) == {"Operator": 1, "Competitor": 1}
+    assert assumptions.brand_split(3) == {"Operator": 2, "Competitor": 1}
+
+
+def test_placeholder_brand_counts_are_gone() -> None:
+    assert not hasattr(assumptions, "BRAND_COUNTS")
+
+
+def test_brand_split_parts_sum_to_n() -> None:
+    for n in (1, 10, 57, 100):
+        assert sum(assumptions.brand_split(n).values()) == n
+
+
+def test_brand_split_of_zero_is_all_zeros() -> None:
+    assert assumptions.brand_split(0) == {"Operator": 0, "Competitor": 0}
+
+
+def test_area_network_size_matches_the_built_demand() -> None:
+    path = fetch.DATA / "demand-r9.parquet"
+    if not path.exists():
+        pytest.skip(f"{path} not built")
+    demand = pd.read_parquet(path)["demand"]
+    assert assumptions.network_size(demand.sum()) == assumptions.AREA_NETWORK_SIZE

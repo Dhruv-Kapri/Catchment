@@ -66,13 +66,16 @@ class SourceError(Exception):
 # ---- resumable downloader -------------------------------------------------
 
 class HttpGetter(Protocol):
-    """What download needs from `requests`: a streaming GET usable as a context manager (tests pass a fake)."""
+    """What download needs from a requests.Session: a streaming GET usable as a context manager (tests pass a fake)."""
 
     def get(self, url: str, *, headers: Mapping[str, str], stream: bool, timeout: float) -> AbstractContextManager[requests.Response]: ...
 
 
+SESSION: requests.Session = requests.Session()
+
+
 def download(url: str, dest: Path | str, headers: Mapping[str, str] | None = None,
-             session: HttpGetter = requests) -> Path:
+             session: HttpGetter = SESSION) -> Path:
     """Download url to dest via dest.part and an atomic rename. No-op if dest exists.
 
     Resumes with a Range request; if the server answers 200 (ignores Range), restarts.
@@ -192,6 +195,13 @@ def fetch_worldpop(polygon: BaseGeometry) -> dict[str, Any]:
     return {"source": WORLDPOP_URL, "files": [WORLDPOP.name]}
 
 
+def list_black_marble(session: HttpGetter = SESSION) -> dict[str, Any]:
+    """The LAADS directory listing of the Black Marble tiles, fetched through the shared session."""
+    with session.get(f"{BM_BASE}.json", headers={}, stream=False, timeout=60) as r:
+        r.raise_for_status()
+        return r.json()
+
+
 def fetch_viirs(polygon: BaseGeometry) -> dict[str, Any]:
     token = os.environ.get("LAADS_TOKEN")
     if not token:
@@ -202,9 +212,7 @@ def fetch_viirs(polygon: BaseGeometry) -> dict[str, Any]:
     lon, lat = polygon.centroid.x, polygon.centroid.y
     h, v = black_marble_tile(lon, lat)
     auth = {"Authorization": f"Bearer {token}"}
-    listing = requests.get(f"{BM_BASE}.json", timeout=60)
-    listing.raise_for_status()
-    name = pick_black_marble(listing.json(), h, v)
+    name = pick_black_marble(list_black_marble(), h, v)
     url = f"{BM_BASE}/{name}"
     raw = RAW / name
     download(url, raw, headers=auth)

@@ -4,6 +4,7 @@ import resource
 import sys
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 import geopandas as gpd
@@ -13,11 +14,19 @@ from shapely.geometry.base import BaseGeometry
 from catchment import assumptions
 from catchment.area import load_area
 from catchment.demand import build_demand
-from catchment.fetch import DATA, atomic_path, VIIRS, WORLDPOP
+from catchment.fetch import DATA, VIIRS, WORLDPOP, atomic_path
 from catchment.reach import build_reach, served_osrm
 
 PLACES: Path = DATA / "overture_places.parquet"
 EXPLORE_PAIRS: float = 1.40e6   # stage 0.5's extrapolation of the full-area table (01-reach, res 9, X 30)
+
+
+@dataclass(frozen=True)
+class BuildArgs:
+    """The build options the stages read, from the command line."""
+    res: int
+    x_pct: float
+    force: bool
 
 
 class MissingInput(Exception):
@@ -43,7 +52,7 @@ def write_parquet(df: pd.DataFrame, path: Path) -> None:
         df.to_parquet(tmp)
 
 
-def build_demand_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: Sequence[Path]) -> None:
+def build_demand_stage(polygon: BaseGeometry, args: BuildArgs, paths: Sequence[Path]) -> None:
     require([WORLDPOP, VIIRS], "worldpop viirs")
     df = build_demand(polygon, args.res, WORLDPOP, VIIRS)
     write_parquet(df, paths[0])
@@ -51,7 +60,7 @@ def build_demand_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: S
           f"capture share {df.attrs['capture_share']:.3f}", file=sys.stderr)
 
 
-def build_reach_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: Sequence[Path]) -> None:
+def build_reach_stage(polygon: BaseGeometry, args: BuildArgs, paths: Sequence[Path]) -> None:
     require([PLACES], "overture")
     demand_path = DATA / demand_name(args.res)
     if not demand_path.exists():
@@ -79,8 +88,8 @@ def build_reach_stage(polygon: BaseGeometry, args: argparse.Namespace, paths: Se
 
 
 # stage -> (builder(polygon, args, output paths), output names from args)
-STAGES: dict[str, tuple[Callable[[BaseGeometry, argparse.Namespace, Sequence[Path]], None],
-                       Callable[[argparse.Namespace], list[str]]]] = {
+STAGES: dict[str, tuple[Callable[[BaseGeometry, BuildArgs, Sequence[Path]], None],
+                       Callable[[BuildArgs], list[str]]]] = {
     "demand": (build_demand_stage, lambda a: [demand_name(a.res)]),
     "reach": (build_reach_stage, lambda a: reach_names(a.res, a.x_pct)),
 }
@@ -93,10 +102,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--res", type=int, default=9, help="H3 resolution (default: 9)")
     ap.add_argument("--x-pct", type=float, default=30, help="candidate sites: top X%% of the area's hexes by places (default: 30)")
     ap.add_argument("--force", action="store_true", help="rebuild outputs that exist")
-    args = ap.parse_args(argv)
+    ns = ap.parse_args(argv)
+    args = BuildArgs(ns.res, ns.x_pct, ns.force)
     DATA.mkdir(exist_ok=True)
     polygon = load_area()
-    for name in args.stages or STAGES:
+    for name in ns.stages or STAGES:
         fn, outputs = STAGES[name]
         paths = [DATA / o for o in outputs(args)]
         if not args.force and all(p.exists() for p in paths):

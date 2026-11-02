@@ -4,15 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stage 0 (setup and fetch) and 0.5 Explore (notebooks `00-demand`, `01-reach`, `02-plan` on the slice, issues
-#1-#6) done 2026-10-29: H3 res 9, candidate sites the top 30% of hexes by places count. Stage 1 (demand and reach on
-the full area, notebook `03-area`, issues #9-#21) done 2026-10-31: res 9 and X = 30 stand; the spot check puts
-the app at a median 1.28× the model (implied multiplier about 1.8 against the 1.4 default, a decision still open).
-Next is stage 2 (plan: `02-plan` and the tighter capacity model into the package, the synthetic network generator).
-The code is `src/catchment/` (`area.py`, `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`). The repo also
-holds the product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the
-decision log (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`).
-Read the brief and the roadmap before starting any work; record new commands here.
+Stages 0, 0.5 and 1 are done (stage 1 on 2026-10-31); next is stage 2 (plan). Results and "done when" notes are in
+`docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
+`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
+notebooks' placeholder plan model. The repo also holds the
+product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the decision log
+(`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief
+and the roadmap before starting any work; record new commands here.
 
 ## Commands
 

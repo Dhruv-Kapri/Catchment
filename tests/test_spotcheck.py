@@ -4,15 +4,20 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from catchment import assumptions
-from catchment.spotcheck import SEED, compare, draw_routes, write_sheet
+from catchment.explore import MULTIPLIER
+from catchment.spotcheck import (
+    SEED,
+    compare,
+    draw_routes,
+    write_sheet,
+)
 
 EDGES = (2, 5, 8, 11, 14, 17)
 CANDS = [f"c{i}" for i in range(4)]
 HEXES = [f"h{i}" for i in range(60)]
 
 
-def make(minutes: None = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def make() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Four candidates x sixty hexes; minutes sweep 0.5..29.5, so every bin and the out-of-range tails are populated."""
     rows = [(c, h, 0.5 + (i * 7 + j * 3) % 30) for i, c in enumerate(CANDS) for j, h in enumerate(HEXES)]
     table = pd.DataFrame(rows, columns=["candidate", "hex", "minutes"])
@@ -105,7 +110,7 @@ def test_model_min_is_free_flow_times_multiplier() -> None:
     table, cands, hexes = make()
     r = draw_routes(table, cands, hexes, no_bad())
     assert r.model_min.notna().all()
-    assert np.allclose(r.model_min, (r.free_flow_min * assumptions.MULTIPLIER).round(2), atol=0.011)
+    assert np.allclose(r.model_min, (r.free_flow_min * MULTIPLIER).round(2), atol=0.011)
     assert (r.model_min == r.model_min.round(2)).all()
     assert (r.free_flow_min == r.free_flow_min.round(2)).all()
 
@@ -186,7 +191,14 @@ def test_committed_sheet_has_every_lookup_on_a_weekday_7_to_8_pm() -> None:
     assert (sheet.app_min == sheet.app_min.round()).all() and (sheet.app_min > 0).all()
     assert (sheet.app == "Google Maps two-wheeler").all()
     when = pd.to_datetime(sheet.looked_up, format="%Y-%m-%d %H:%M")
-    assert (when.dt.weekday < 5).all() and (when.dt.hour == 19).all()
+    assert (when.dt.day_of_week < 5).all() and (when.dt.hour == 19).all()
+
+
+def test_compare_on_the_committed_sheet_reports_the_write_up_whatever_the_default_multiplier() -> None:
+    sheet = pd.read_csv(Path(__file__).parent.parent / "docs" / "spot-check.csv")
+    _, summary = compare(sheet)
+    assert round(summary["ratio_median"], 2) == 1.28
+    assert round(summary["implied_median"], 2) == 1.79
 
 
 def app_sheet() -> pd.DataFrame:
@@ -220,3 +232,37 @@ def test_compare_bad_snap_split_and_ranks() -> None:
 def test_compare_uses_the_multiplier_argument_not_model_min() -> None:
     routes, _ = compare(app_sheet(), multiplier=2.0)
     assert routes.set_index("route").loc[4, "ratio"] == pytest.approx(14 / 20)
+
+
+def test_compare_raises_when_no_row_has_an_app_time() -> None:
+    sheet = app_sheet().assign(app_min=np.nan)
+    with pytest.raises(ValueError, match="no app times"):
+        compare(sheet, multiplier=1.4)
+    with pytest.raises(ValueError, match="no app times"):
+        compare(sheet.iloc[0:0], multiplier=1.4)
+
+
+def test_compare_with_no_bad_snap_routes_has_none_for_the_bad_median() -> None:
+    _, summary = compare(app_sheet().assign(bad_snap_before=False), multiplier=1.4)
+    assert summary["n_bad"] == 0 and summary["ratio_median_bad"] is None and summary["bad_snap_ranks"] == {}
+    assert isinstance(summary["ratio_median_other"], float) and not np.isnan(summary["ratio_median_other"])
+    assert summary["ratio_median_other"] == pytest.approx(summary["ratio_median"])
+
+
+def test_compare_with_only_bad_snap_routes_has_none_for_the_other_median() -> None:
+    _, summary = compare(app_sheet().assign(bad_snap_before=True), multiplier=1.4)
+    assert summary["n_bad"] == 3 and summary["ratio_median_other"] is None
+    assert isinstance(summary["ratio_median_bad"], float) and summary["ratio_median_bad"] == pytest.approx(summary["ratio_median"])
+    assert summary["bad_snap_ranks"] == {1: 1, 2: 2, 4: 3}
+
+
+def test_compare_counts_bad_snap_routes_with_an_app_time() -> None:
+    assert compare(app_sheet(), multiplier=1.4)[1]["n_bad"] == 2
+
+
+def test_compare_raises_when_a_found_route_has_no_bad_snap_flag() -> None:
+    # a blank cell in a hand-edited sheet reads as NaN, and bool(NaN) is True: it would count as a bad snap silently
+    sheet = app_sheet().astype({"bad_snap_before": object})
+    sheet.loc[sheet.app_min.notna().idxmax(), "bad_snap_before"] = np.nan
+    with pytest.raises(ValueError, match="bad_snap_before"):
+        compare(sheet, multiplier=1.4)
