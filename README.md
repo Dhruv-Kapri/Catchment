@@ -4,7 +4,9 @@
 take from the stores it already has?*
 
 > **Status: stage 1 done** (demand and reach on the full area, built by `catchment-build`; results and the
-> spot check in `notebooks/03-area.ipynb`). Next: the plan, CP-SAT against a greedy baseline. The
+> spot check in `notebooks/03-area.ipynb`). **Stage 2 in progress:** the planner (`src/catchment/planning.py`)
+> runs greedy and two CP-SAT variants on a 57-store two-brand network, with slow-traffic coverage and a
+> competitor-density lever; the every-scenario 10 s benchmark is next. The
 > [roadmap](docs/roadmap.md) says what gets built and in what order.
 
 ## Getting started
