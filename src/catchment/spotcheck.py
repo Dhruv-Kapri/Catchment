@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from catchment.explore import MULTIPLIER
+from catchment.explore import MULTIPLIER   # 1.4, what the spot-check write-up used; not assumptions.MULTIPLIER (1.8)
 
 SEED: int = 16
 COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
