@@ -83,7 +83,8 @@ def test_lever_ranges() -> None:
     assert assumptions.MULTIPLIER_RANGE == (1.0, 2.5)
     assert assumptions.CAPACITY_RANGE == (0.5, 2.0)
     assert assumptions.CAPTURE_RANGE == (0.5, 1.5)
-    assert assumptions.COMPETITOR_DENSITY_RANGE == (1.0, 1.0)
+    assert assumptions.COMPETITOR_DENSITY_RANGE == (0.0, 2.0)
+    assert assumptions.COMPETITOR_DENSITY_STEP == 0.25
     assert assumptions.table().set_index("Input").loc["Lever ranges", "Status"] == "Assumption"
 
 

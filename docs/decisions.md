@@ -3,6 +3,19 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-01: Competitor density moves demand covered one way only while capacity is slack (#29)
+
+- **A denser competitor never raises demand covered while no store is at capacity; when capacity binds, it can.**
+  A hex goes wholly to one store and a store cannot exceed its capacity. A hex the competitor reaches gives the operator
+  half its demand (ADR 0001), and half a hex can fit in a store's spare capacity where the whole did not (two hexes of
+  0.6 × capacity: one served alone; 0.6 + 0.3 once the competitor halves one). This is a property of the model, not of
+  greedy: an exact solve has it too. The tests check the one-way move with capacity slack and pin the exception with a
+  hand-sized case.
+- On the full area, demand covered falls at every density step for N 1, 10 and 20 at capacity 0.5× and 1×
+  (default scenario: 44,698 orders a day at 0×, 39,360 at 1×, 34,802 at 2×), so the lever reads one way in practice.
+- Qualifies "so the lever moves results monotonically" in the stage 2 scope entry below. Rules out splitting a hex across
+  stores to restore monotonicity (a model change, not this lever's).
+
 ## 2026-11-01: Plan (stage 2) scope
 
 - **The default congestion multiplier becomes 1.8** (the spot check's implied median, 20 routes, 30 Oct evening,

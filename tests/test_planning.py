@@ -44,7 +44,7 @@ def test_scenario_defaults_are_the_documented_ones() -> None:
 
 LEVERS: list[tuple[str, float, float, str]] = [   # lever, below the range, above it, the range as the message states it
     ("n_new", 0, 21, "1-20"), ("promise", 7, 21, "8-20"), ("multiplier", 0.9, 2.6, "1-2.5"),
-    ("capacity", 0.4, 2.1, "0.5-2"), ("capture", 0.4, 1.6, "0.5-1.5"), ("competitor_density", 0.9, 1.1, "1-1"),
+    ("capacity", 0.4, 2.1, "0.5-2"), ("capture", 0.4, 1.6, "0.5-1.5"), ("competitor_density", -0.25, 2.25, "0-2"),
 ]
 
 
