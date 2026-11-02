@@ -492,10 +492,17 @@ def no_solution(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cp_model.CpSolver, "Solve", lambda self, model: cp_model.UNKNOWN)
 
 
-def test_cpsat_that_finds_no_solution_raises_naming_the_status(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cpsat_that_finds_no_solution_returns_an_unknown_plan_of_the_existing_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    # #27/#33: every method returns a Plan. No new sites; the metrics are the existing operator stores' alone: greedy's coverage less
+    # what its new stores won fresh (their cannibalised orders were the existing stores' already).
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, seed=0)
+    greedy = plan(inputs, scenario)
     no_solution(monkeypatch)
-    with pytest.raises(RuntimeError, match="UNKNOWN"):
-        plan(random_inputs(0), Scenario(n_new=4, promise=12, seed=0), "cpsat")
+    p = plan(inputs, scenario, "cpsat")
+    assert p.status == "UNKNOWN" and p.sites == [] and p.new_stores == [] and p.network == greedy.network
+    assert p.objective is None and p.bound is None and p.gap is None
+    assert p.demand_covered == pytest.approx(greedy.demand_covered - sum(s.fresh for s in greedy.new_stores))
+    assert 0 < p.slow_traffic_coverage <= p.demand_covered < greedy.demand_covered
 
 
 def test_cpsat_from_greedy_with_no_solution_keeps_greedys_plan(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -3,6 +3,17 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-02: CP-SAT on its own with no plan in the budget returns an UNKNOWN plan (#27, #33)
+
+- **`plan(..., "cpsat")` returns a plan with status `UNKNOWN` when CP-SAT finds no solution in the budget.** The plan has no
+  new sites, and its metrics are the existing network's alone; objective, bound and gap are None. Before, it raised
+  `RuntimeError`. Every method now returns a plan, as #27 asks. The benchmark (#30) and the stage 3 service read the failure
+  from the status instead of catching an exception. CP-SAT from greedy is unchanged: with no solution it keeps greedy's plan.
+- **Ruled out:** falling back to greedy's plan for CP-SAT on its own, because the benchmark could then not tell "CP-SAT alone
+  found nothing" from "CP-SAT matched greedy".
+- **Left open (#33):** a FEASIBLE CP-SAT plan can show slow-traffic coverage above demand covered. #30 measures whether this
+  happens on the real tables before the computation changes.
+
 ## 2026-11-01: Competitor density moves demand covered one way only while capacity is slack (#29)
 
 - **A denser competitor never raises demand covered while no store is at capacity; when capacity binds, it can.**

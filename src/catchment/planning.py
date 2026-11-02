@@ -16,7 +16,7 @@ from catchment.fetch import DATA
 
 Method = Literal["greedy", "cpsat", "cpsat-from-greedy"]
 METHODS: tuple[Method, ...] = get_args(Method)
-Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC"]   # CP-SAT's proven or best-found plan; greedy's plan
+Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC", "UNKNOWN"]   # CP-SAT's proven or best-found plan; greedy's plan; CP-SAT on its own found none
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
 GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
@@ -110,8 +110,8 @@ class Plan:
     unreached: float                 # reached by no open operator store
     slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered for greedy and an OPTIMAL CP-SAT plan (the walk covers no more than the best assignment), not guaranteed for a FEASIBLE one (#30 checks)
     new_stores: list[NewStore]       # in pick order
-    status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy
-    objective: float                 # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered)
+    status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy; "UNKNOWN": CP-SAT on its own found no plan in the budget, so no new sites and the metrics are the existing network's
+    objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
     bound: float | None              # CP-SAT's upper bound on the objective; None for greedy
     gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None for greedy
     build_seconds: float             # everything before the search: network, shares, reach, greedy hint, model
@@ -334,7 +334,7 @@ class Solved:
     picked: list[int]
     owner: npt.NDArray[np.intp]
     status: Status
-    objective: float                 # orders a day
+    objective: float | None          # orders a day; None when CP-SAT found no plan
     bound: float | None
     search_start: float              # perf_counter when the search began
 
@@ -350,9 +350,9 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     solver.parameters.num_workers = assumptions.WORKERS
     solver.parameters.random_seed = assumptions.SOLVER_SEED
     status = solver.Solve(m.model)
-    name, found = solver.StatusName(status), status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
-    if start is None and not found:
-        raise RuntimeError(f"CP-SAT found no plan within {assumptions.PLAN_BUDGET:g} s: status {name}")
+    found = status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+    if start is None and not found:   # no new sites: the plan reports the existing network alone (#27, #33)
+        return Solved([], p.base, "UNKNOWN", None, None, search_start)
     if start is not None:
         floor = int(m.share_int[start[1] >= 0].sum())   # greedy's orders, on the solver's integer scale
         if not found or round(solver.ObjectiveValue()) < floor:   # never below greedy (even under an OPTIMAL status: greedy checks capacity in floats, the model in hundredths, so a rounding edge can favour greedy); with no solution the bound says nothing
@@ -385,7 +385,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
-    gap = None if solved.bound is None else relative_gap(solved.objective, solved.bound, solved.status)
+    gap = None if solved.bound is None or solved.objective is None else relative_gap(solved.objective, solved.bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
