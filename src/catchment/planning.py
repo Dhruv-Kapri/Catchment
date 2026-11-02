@@ -104,6 +104,7 @@ class Plan:
     households_covered: float        # households of the assigned hexes, whole hexes
     lost_to_capacity: float          # reached by an open operator store but not assigned
     unreached: float                 # reached by no open operator store
+    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered
     new_stores: list[NewStore]       # in pick order
     status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy
     objective: float                 # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered)
@@ -162,6 +163,13 @@ class Reach:
         """Positions of the pairs of the given hexes."""
         first, length = self.start[hexes], self.start[hexes + 1] - self.start[hexes]
         return self.by_hex[np.repeat(first - (np.cumsum(length) - length), length) + np.arange(length.sum())]
+
+
+def cover_at_slow_traffic(inputs: Inputs, scenario: Scenario, stores: list[int], share: npt.NDArray[np.float64], capacity: float) -> float:
+    """Demand the operator's stores still cover at SLOW_TRAFFIC_FACTOR x the scenario's multiplier. The shares are held (ADR 0001: k is fixed
+    per scenario). The slow reach is a prefix of the nearest-first walk, so this is at most the nearest-first coverage of the same stores."""
+    slow = Reach.build(inputs, reachable(inputs, scenario.promise, scenario.multiplier * assumptions.SLOW_TRAFFIC_FACTOR))
+    return float(share[slow.assign(stores, share, capacity, len(inputs.site_ids)) >= 0].sum())
 
 
 @dataclass(frozen=True)
@@ -369,15 +377,15 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
     gap = None if solved.bound is None else relative_gap(solved.objective, solved.bound, solved.status)
-    covered, households, lost, unreached, new_stores = metrics(p, solved.picked, solved.owner)
+    covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, new_stores, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, solved.bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
-def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, list[NewStore]]:
-    """demand_covered, households_covered, lost_to_capacity, unreached and the new stores, for any method's picks and assignment."""
+def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, float, list[NewStore]]:
+    """demand_covered, households_covered, lost_to_capacity, unreached, slow_traffic_coverage and the new stores, for any method's picks and assignment."""
     inputs, share, reach = p.inputs, p.share, p.reach
     got = owner >= 0
     reached = np.zeros(len(share), bool)
@@ -387,4 +395,5 @@ def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple
         mine = owner == s
         orders, moved = float(share[mine].sum()), float(share[mine & (p.base >= 0)].sum())
         new_stores.append(NewStore(str(inputs.site_ids[s]), orders, orders - moved, moved))
-    return float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), new_stores
+    slow = cover_at_slow_traffic(inputs, p.scenario, p.existing + picked, share, p.capacity)
+    return float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), slow, new_stores

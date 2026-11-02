@@ -1,5 +1,6 @@
 import dataclasses
 import time
+import typing
 from itertools import chain
 from pathlib import Path
 
@@ -497,3 +498,37 @@ def test_cpsat_from_greedy_with_no_solution_keeps_greedys_plan(monkeypatch: pyte
     p = plan(inputs, scenario, "cpsat-from-greedy")
     assert p.sites == greedy.sites and p.demand_covered == pytest.approx(greedy.demand_covered)
     assert p.status == "FEASIBLE" and p.objective == pytest.approx(greedy.objective, abs=0.05) and p.bound is None and p.gap is None
+
+
+def test_slow_traffic_coverage_equals_the_demand_covered_when_nothing_is_near_the_promise() -> None:
+    # Promise 15, multiplier 1.0: reach is <= 12 min, at 1.25x <= 9.6 min. Every reachable pair is within 4 min.
+    hexes = {"W": 100.0, "A": 200.0, "F": 300.0}
+    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S1", "F"): 3.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0))
+    assert p.demand_covered == pytest.approx(600) and p.slow_traffic_coverage == pytest.approx(600)
+
+
+def test_slow_traffic_coverage_holds_the_competitor_split_of_a_hex() -> None:
+    # S0 and S1 hold one store each; both reach H (1 min), so the operator's share is half of 1,000 at either multiplier.
+    sites = ["S0", "S1", "S2"]
+    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1))
+    assert p.demand_covered == pytest.approx(500) and p.slow_traffic_coverage == pytest.approx(500)
+
+
+@pytest.mark.parametrize("seed", range(5))
+@pytest.mark.parametrize("capacity", [0.5, 1.0])   # seed 1 at 0.5x, promise 12, loses orders to capacity
+def test_slow_traffic_coverage_is_never_more_than_the_demand_covered_across_promises_and_capacities(seed: int, capacity: float) -> None:
+    plans = [plan(random_inputs(seed), Scenario(n_new=15, promise=promise, capacity=capacity, seed=seed)) for promise in (8, 12, 20)]
+    assert all(p.slow_traffic_coverage <= p.demand_covered + 1e-6 for p in plans)
+    assert any(p.slow_traffic_coverage < p.demand_covered for p in plans)
+
+
+METHODS: tuple[str, ...] = typing.get_args(typing.get_type_hints(plan)["method"])   # every method plan() accepts, so a new one is covered as it lands
+
+
+@pytest.mark.parametrize("method", METHODS)
+def test_every_method_loses_a_hex_whose_only_reach_is_near_the_promise_in_slow_traffic(method: str) -> None:
+    # S0 reaches W (1 min) and A (5 min); at promise 8, multiplier 1.0, A drops out at 1.25x.
+    inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
+    p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0), method)
+    assert p.method == method and p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
