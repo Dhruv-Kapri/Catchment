@@ -12,9 +12,16 @@ import pandas as pd
 from ortools.sat.python import cp_model
 
 from catchment.assumptions import (
+    BLINKIT_ORDERS_Q2,
+    BLINKIT_STORES,
     CAPACITY,
+    CAPACITY_FACTOR,
+    N_AREA,
+    N_SLICE,
+    ORDERS_PER_STORE_DAY,
     PICK_AND_PACK,
     PROMISE,
+    Q2_DAYS,
     SCALE,
     SEED,
     SOLVER_SEED,
@@ -24,12 +31,34 @@ from catchment.assumptions import (
 
 # Frozen at the values stages 0.5 and 1 ran with, on purpose not read from assumptions: stage 2 moves the
 # default multiplier to 1.8 and replaces the placeholder network, and the notebooks must still reproduce.
-MULTIPLIER: float = 1.4                 # the explore default scenario; stage 2 moves the default to 1.8
+MULTIPLIER: float = 1.4                 # what stages 0.5 and 1 and the spot-check write-up ran with; stage 2 moves the default to 1.8
 BRAND_COUNTS: dict[str, int] = {"Operator": 3, "Competitor A": 4, "Competitor B": 3}   # placeholder network, the slice
 CAP_INT: int = round(CAPACITY * SCALE)  # capacity, hundredths of an order
 
 
-def reachable(ff_min: float | npt.NDArray[np.float64] | pd.Series) -> bool | npt.NDArray[np.bool_] | pd.Series:
+def table() -> pd.DataFrame:
+    """The plan rows stages 0.5 and 1 ran with (02-plan and 03-area), frozen: Input, Value, Source, Date, Status.
+    The live ones are assumptions.table()."""
+    return pd.DataFrame(
+        [
+            ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
+            ("New stores, N", f"{N_SLICE} on the slice; {N_AREA} on the full area (the default scenario for the 10 s bar)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
+            ("Orders per store per day", f"{BLINKIT_ORDERS_Q2/1e6:.1f} M orders ÷ {Q2_DAYS} days ÷ {BLINKIT_STORES:,} stores = {ORDERS_PER_STORE_DAY:,.0f}", "00-demand: Eternal Ltd shareholders' letter, 21 Oct 2026, p. 13 (orders and stores)", "2026-10-29", "Verified"),
+            ("Capacity per store", f"{CAPACITY_FACTOR} × {ORDERS_PER_STORE_DAY:,.0f} = {CAPACITY:,.0f} orders per day, the same for every store of the operator. Adopted here as 00-demand and the decision log said; the 1.5 has no source (headroom over the average)", "Decision log, 2026-10-29 (Explore); issue #5. Rests on the Verified orders per store per day", "2026-10-29", "Assumption"),
+            ("Brands and store counts", f"{', '.join(f'{b} {n}' for b, n in BRAND_COUNTS.items())}: {sum(BRAND_COUNTS.values())} stores in the slice. PLACEHOLDER counts, not reported figures", "Slice demand ÷ orders per store per day = 10.5 stores' worth (00-demand), rounded to 10 and split with no market-share source. The generator with sourced counts is stage 2", "2026-10-29", "Assumption"),
+            ("Store placement", f"Sampled without replacement from the slice's candidate sites, probability ∝ the demand the site reaches at the default scenario; seed {SEED}; at most one store per site, whatever the brand", "No external source", "-", "Assumption"),
+            ("Competitor reach", "A competitor store at a site reaches the same hexes as an operator store there (same promise, multiplier and travel times)", "No external source", "-", "Assumption"),
+            ("Demand split", "A hex reached by the operator and k competitor brands gives the operator demand ÷ (1 + k); k is fixed in a scenario", "ADR 0001", "2026-10-29", "Assumption"),
+            ("Sites for new stores", "Any slice candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
+            ("Assignment tie-break", "Among assignments that serve the same orders, the one with the shortest total travel time (decides new against cannibalised demand)", "No external source", "-", "Assumption"),
+            ("Integer scale", f"Shares and capacity in hundredths of an order (round(orders × {SCALE})), because CP-SAT needs integers. Every metric is computed from these rounded shares", "Modelling choice", "-", "Assumption"),
+            ("Solver", f"OR-tools CP-SAT, time limit {TIME_LIMIT} s, {WORKERS} workers, random_seed {SOLVER_SEED}", "Modelling choice", "-", "Assumption"),
+        ],
+        columns=["Input", "Value", "Source", "Date", "Status"],
+    )
+
+
+def explore_reachable(ff_min: float | npt.NDArray[np.float64] | pd.Series) -> bool | npt.NDArray[np.bool_] | pd.Series:
     """Hex reachable from a site: free-flow minutes x multiplier + pick-and-pack <= promise (default scenario)."""
     return ff_min * MULTIPLIER + PICK_AND_PACK <= PROMISE + 1e-9
 
@@ -72,7 +101,7 @@ def load_case(res: int, hexes: pd.DataFrame, candidates: pd.DataFrame, table: pd
     """Every hex of `hexes`, every candidate site in rank order, and the table's pairs reachable at the default
     scenario. n_area_hexes is the hex count of the whole area (default: len(hexes)); pass it when `hexes` is a slice."""
     cand = candidates.sort_values("rank")
-    tab = table[reachable(table.minutes)]
+    tab = table[explore_reachable(table.minutes)]
     spos = pd.Series(np.arange(len(cand)), index=cand.index)
     hpos = pd.Series(np.arange(len(hexes)), index=hexes.index)
     d = hexes["demand"].to_numpy()
@@ -81,9 +110,11 @@ def load_case(res: int, hexes: pd.DataFrame, candidates: pd.DataFrame, table: pd
                 {}, np.zeros(len(d), int), np.round(d * SCALE).astype(np.int64), np.arange(len(cand)), CAP_INT)
 
 
-def place_network(C: Case, counts: dict[str, int] = BRAND_COUNTS, seed: int = SEED) -> dict[str, list[int]]:
+def place_placeholder_network(C: Case, counts: dict[str, int] = BRAND_COUNTS, seed: int = SEED) -> dict[str, list[int]]:
     rng = np.random.default_rng(seed)
     reached = np.bincount(C.ps, weights=C.demand[C.ph], minlength=len(C.sites))
+    if reached.sum() == 0:
+        raise ValueError("no site reaches any demand, so there is nothing to place stores by")
     chosen = rng.choice(len(C.sites), size=sum(counts.values()), replace=False, p=reached / reached.sum())
     labels = rng.permutation(np.repeat(list(counts), list(counts.values())))
     return {b: sorted(chosen[labels == b].tolist()) for b in counts}
@@ -96,9 +127,10 @@ def with_network(C: Case, stores: dict[str, list[int]], cap_int: int | None = No
         hit[i, C.ph[np.isin(C.ps, stores[b])]] = True
     k = hit.sum(axis=0)
     occupied = np.array(sorted(s for ss in stores.values() for s in ss))
-    assert len(occupied) == len(set(occupied)), "two stores on one site"
+    if len(occupied) != len(set(occupied)):
+        raise ValueError("two stores on one site")
     return replace(C, stores=stores, k=k, share_int=np.round(C.demand / (1 + k) * SCALE).astype(np.int64),
-                   new_sites=np.setdiff1d(np.arange(len(C.sites)), occupied), cap_int=cap_int or C.cap_int)
+                   new_sites=np.setdiff1d(np.arange(len(C.sites)), occupied), cap_int=C.cap_int if cap_int is None else cap_int)
 
 
 def solve_plan(C: Case, N: int, new_sites: npt.NDArray[np.int64] | None = None, pair_model: bool = False,

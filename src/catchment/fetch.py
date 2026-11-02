@@ -195,6 +195,13 @@ def fetch_worldpop(polygon: BaseGeometry) -> dict[str, Any]:
     return {"source": WORLDPOP_URL, "files": [WORLDPOP.name]}
 
 
+def list_black_marble(session: HttpGetter = SESSION) -> dict[str, Any]:
+    """The LAADS directory listing of the Black Marble tiles, fetched through the shared session."""
+    with session.get(f"{BM_BASE}.json", headers={}, stream=False, timeout=60) as r:
+        r.raise_for_status()
+        return r.json()
+
+
 def fetch_viirs(polygon: BaseGeometry) -> dict[str, Any]:
     token = os.environ.get("LAADS_TOKEN")
     if not token:
@@ -205,9 +212,7 @@ def fetch_viirs(polygon: BaseGeometry) -> dict[str, Any]:
     lon, lat = polygon.centroid.x, polygon.centroid.y
     h, v = black_marble_tile(lon, lat)
     auth = {"Authorization": f"Bearer {token}"}
-    listing = requests.get(f"{BM_BASE}.json", timeout=60)
-    listing.raise_for_status()
-    name = pick_black_marble(listing.json(), h, v)
+    name = pick_black_marble(list_black_marble(), h, v)
     url = f"{BM_BASE}/{name}"
     raw = RAW / name
     download(url, raw, headers=auth)

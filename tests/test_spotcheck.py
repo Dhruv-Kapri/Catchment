@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from catchment.explore import MULTIPLIER
 from catchment.spotcheck import (
     SEED,
-    WRITE_UP_MULTIPLIER,
     compare,
     draw_routes,
     write_sheet,
@@ -110,7 +110,7 @@ def test_model_min_is_free_flow_times_multiplier() -> None:
     table, cands, hexes = make()
     r = draw_routes(table, cands, hexes, no_bad())
     assert r.model_min.notna().all()
-    assert np.allclose(r.model_min, (r.free_flow_min * WRITE_UP_MULTIPLIER).round(2), atol=0.011)
+    assert np.allclose(r.model_min, (r.free_flow_min * MULTIPLIER).round(2), atol=0.011)
     assert (r.model_min == r.model_min.round(2)).all()
     assert (r.free_flow_min == r.free_flow_min.round(2)).all()
 

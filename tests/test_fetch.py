@@ -305,3 +305,27 @@ def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path: 
 
 def test_download_default_session_is_a_requests_session() -> None:
     assert isinstance(inspect.signature(fetch.download).parameters["session"].default, requests.Session)
+
+
+class ListingSession:
+    """Answers the Black Marble listing request with a JSON body and records the URL."""
+    def __init__(self, listing: dict[str, Any]) -> None:
+        self.listing: dict[str, Any] = listing
+        self.urls: list[str] = []
+
+    def get(self, url: str, *, headers: dict[str, str], stream: bool, timeout: float) -> FakeResp:
+        self.urls.append(url)
+        resp = FakeResp(200, json.dumps(self.listing).encode())
+        resp.json = lambda: self.listing   # type: ignore[attr-defined]
+        return resp
+
+
+def test_black_marble_listing_goes_through_the_given_session() -> None:
+    listing = {"content": [{"name": "VNP46A4.A2025001.h24v06.001.h5"}]}
+    s = ListingSession(listing)
+    assert fetch.list_black_marble(session=s) == listing
+    assert s.urls == [f"{fetch.BM_BASE}.json"]
+
+
+def test_list_black_marble_default_session_is_the_shared_one() -> None:
+    assert inspect.signature(fetch.list_black_marble).parameters["session"].default is fetch.SESSION
