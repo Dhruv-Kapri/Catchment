@@ -6,7 +6,7 @@ import pytest
 from test_planning import OPS, Pairs, make_inputs, random_inputs
 
 from catchment import assumptions
-from catchment.planning import Inputs, Scenario, place_network, plan
+from catchment.planning import METHODS, Inputs, Method, Scenario, place_network, plan
 
 SEEDS: list[int] = list(range(40))
 SITES: list[str] = [f"S{i}" for i in range(10)]
@@ -101,9 +101,15 @@ def test_an_off_step_density_is_refused_naming_the_lever_and_the_step(density: f
         Scenario(competitor_density=density)
 
 
-def test_a_bool_density_is_refused() -> None:
+@pytest.mark.parametrize("density", [True, np.bool_(True)])
+def test_a_bool_density_is_refused(density: object) -> None:
     with pytest.raises(TypeError, match="competitor_density"):
-        Scenario(competitor_density=True)
+        Scenario(competitor_density=density)   # type: ignore[arg-type]
+
+
+def test_an_off_step_density_by_float_noise_shows_the_value_it_got() -> None:
+    with pytest.raises(ValueError, match=r"competitor_density 0\.75000000000\d+ is not in steps of 0\.25"):
+        Scenario(competitor_density=0.75 + 1e-12)
 
 
 def test_density_zero_has_no_competitor_stores() -> None:
@@ -127,10 +133,11 @@ def test_a_denser_network_contains_a_sparser_one_and_the_count_is_the_rounded_mu
             assert set(sparse) <= set(dense)
 
 
-def test_demand_covered_does_not_rise_with_competitor_density_while_capacity_is_slack() -> None:
+@pytest.mark.parametrize("method", METHODS)
+def test_demand_covered_does_not_rise_with_competitor_density_while_capacity_is_slack(method: Method) -> None:
     for seed in range(8):
         inputs = random_inputs(seed)
-        plans = [plan(inputs, Scenario(n_new=3, promise=12, capacity=2.0, competitor_density=d, seed=seed)) for d in DENSITIES]
+        plans = [plan(inputs, Scenario(n_new=3, promise=12, capacity=2.0, competitor_density=d, seed=seed), method) for d in DENSITIES]
         covered = [p.demand_covered for p in plans]
         assert all(p.lost_to_capacity == 0 for p in plans)   # capacity is slack here (see the next test for when it binds)
         assert all(b <= a + 1e-6 for a, b in pairwise(covered)), (seed, covered)

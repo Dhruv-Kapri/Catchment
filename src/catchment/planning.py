@@ -70,14 +70,14 @@ class Scenario:
             if not isinstance(value, numbers.Integral) or isinstance(value, bool):
                 raise TypeError(f"{lever} {value!r} must be a whole number")
             object.__setattr__(self, lever, int(value))   # np.int64 and the like become plain ints
-        if isinstance(self.competitor_density, bool):
+        if isinstance(self.competitor_density, bool | np.bool_):
             raise TypeError(f"competitor_density {self.competitor_density!r} must be a number")
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
                 raise ValueError(f"{lever} {value:g} is outside the lever range {low:g}-{high:g}")
         if self.competitor_density % assumptions.COMPETITOR_DENSITY_STEP:
-            raise ValueError(f"competitor_density {self.competitor_density:g} is not in steps of {assumptions.COMPETITOR_DENSITY_STEP:g}")
+            raise ValueError(f"competitor_density {self.competitor_density!r} is not in steps of {assumptions.COMPETITOR_DENSITY_STEP:g}")
 
 
 @dataclass(frozen=True)
