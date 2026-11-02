@@ -6,13 +6,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from ortools.sat.python import cp_model
 
 from catchment import planning
 from catchment.assumptions import CAPACITY, ORDERS_PER_STORE_DAY, PICK_AND_PACK
-from catchment.planning import Inputs, Plan, Scenario, load_inputs, plan
+from catchment.planning import Inputs, Method, Plan, Scenario, load_inputs, plan
 
 OPS: float = ORDERS_PER_STORE_DAY
 Pairs = dict[tuple[str, str], float]   # (site, hex) -> free-flow minutes
+CPSAT: list[Method] = ["cpsat", "cpsat-from-greedy"]
 
 
 def make_inputs(hexes: dict[str, float], pairs: Pairs, sites: list[str], stores: int = 1, households: dict[str, float] | None = None) -> Inputs:
@@ -29,7 +31,8 @@ def make_inputs(hexes: dict[str, float], pairs: Pairs, sites: list[str], stores:
 
 
 def same(a: Plan, b: Plan) -> bool:
-    return dataclasses.replace(a, seconds=0.0) == dataclasses.replace(b, seconds=0.0)
+    zero = {"seconds": 0.0, "build_seconds": 0.0, "solve_seconds": 0.0}
+    return dataclasses.replace(a, **zero) == dataclasses.replace(b, **zero)
 
 
 def test_scenario_defaults_are_the_documented_ones() -> None:
@@ -62,6 +65,14 @@ def test_the_ends_of_a_lever_range_are_allowed(lever: str, low: float, high: flo
 def test_the_number_of_new_stores_and_the_promise_must_be_whole_numbers(lever: str, value: float) -> None:
     with pytest.raises(TypeError, match=f"{lever} .* must be a whole number"):
         Scenario(**{lever: value})
+
+
+def test_numpy_whole_numbers_are_accepted_and_stored_as_plain_ints() -> None:
+    s = Scenario(n_new=np.int64(3), promise=np.int32(12))  # type: ignore[arg-type]
+    assert (s.n_new, s.promise) == (3, 12) and type(s.n_new) is int and type(s.promise) is int
+    for bad in (10.0, np.float64(10.0), np.bool_(True)):
+        with pytest.raises(TypeError, match="must be a whole number"):
+            Scenario(promise=bad)  # type: ignore[arg-type]
 
 
 def test_inputs_hold_positional_arrays_with_the_sites_in_rank_order() -> None:
@@ -147,6 +158,15 @@ def test_capacity_binds_and_the_excess_is_lost() -> None:
     assert p.lost_to_capacity == pytest.approx(500)
     assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(OPS)   # the operator's total
     assert p.unreached == pytest.approx(OPS - 1510)
+
+
+def test_a_hex_that_fits_a_store_exactly_is_not_refused_for_float_noise() -> None:
+    # 148.89 + 277.56 + 755.63003... is the capacity at 0.5x to the last digit, but summed in float it lands a hair above it.
+    a, b = 148.89, 277.56
+    c = 0.5 * CAPACITY - a - b
+    assert (a + b) + c > 0.5 * CAPACITY
+    p = plan(make_inputs({"A": a, "B": b, "C": c}, {("S0", "A"): 1.0, ("S0", "B"): 1.0, ("S0", "C"): 1.0}, ["S0", "S1"]), Scenario(n_new=1, capacity=0.5))
+    assert p.lost_to_capacity == 0 and p.demand_covered == pytest.approx(a + b + c)
 
 
 def test_greedy_values_a_site_at_no_more_than_one_store_can_serve() -> None:
@@ -265,7 +285,7 @@ def reference_greedy(inputs: Inputs, scenario: Scenario, network: dict[str, list
         owner: dict[int, int] = {}
         load: dict[int, float] = {}
         for s, h, _ in sorted((p for p in reach if p[0] in stores), key=lambda p: (p[2], p[0], p[1])):
-            if h not in owner and load.get(s, 0.0) + share[h] <= capacity:
+            if h not in owner and load.get(s, 0.0) + share[h] <= capacity + planning.TOL:
                 owner[h], load[s] = s, load.get(s, 0.0) + share[h]
         return owner
 
@@ -319,3 +339,161 @@ def test_the_greedy_breaks_exact_ties_by_rank_on_fractional_demand(seed: int, ca
     p = plan(inputs, scenario)
     sites, covered, _ = reference_greedy(inputs, scenario, p.network)
     assert p.sites == sites and p.demand_covered == pytest.approx(covered)
+
+
+# CP-SAT: both variants, and the metrics every method reports
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_finds_the_optimum_where_greedy_does_not(method: Method) -> None:
+    # G reaches b, c and g (700), the biggest site, so greedy takes it first; P reaches a, b and Q reaches c, d (600 each).
+    # Two stores: P + Q cover a-d (1,200); G + either covers 1,000. Unique optimum. S0 holds the one existing store (T, 10 orders).
+    hexes = {"T": 10.0, "a": 300.0, "b": 300.0, "c": 300.0, "d": 300.0, "g": 100.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("G", "b"): 5.0, ("G", "c"): 5.0, ("G", "g"): 5.0,
+                    ("P", "a"): 5.0, ("P", "b"): 5.0, ("Q", "c"): 5.0, ("Q", "d"): 5.0}
+    inputs, scenario = make_inputs(hexes, pairs, ["S0", "G", "P", "Q"]), Scenario(n_new=2, promise=15)
+    assert sorted(plan(inputs, scenario).sites) == ["G", "P"] and plan(inputs, scenario).demand_covered == pytest.approx(1010)
+    p = plan(inputs, scenario, method)
+    assert sorted(p.sites) == ["P", "Q"] and p.method == method
+    assert p.demand_covered == pytest.approx(1210) and p.objective == pytest.approx(1210)
+    assert p.status == "OPTIMAL" and p.gap == 0 and p.bound == pytest.approx(p.objective)
+
+
+def test_greedy_reports_a_heuristic_status_and_no_bound() -> None:
+    p = plan(make_inputs({"A": 500.0}, {("S0", "A"): 1.0}, ["S0", "S1"]), Scenario(n_new=1))
+    assert p.status == "HEURISTIC" and p.bound is None and p.gap is None
+    assert p.objective == p.demand_covered == pytest.approx(500)
+
+
+@pytest.mark.parametrize("method", [*CPSAT, "greedy"])
+def test_the_times_are_reported_and_add_up(method: Method) -> None:
+    p = plan(random_inputs(0), Scenario(n_new=4, promise=12, seed=0), method)
+    assert p.build_seconds >= 0 and p.solve_seconds >= 0
+    assert p.seconds >= p.build_seconds + p.solve_seconds - 1e-6
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 15])
+@pytest.mark.parametrize("promise", [12, 20])
+@pytest.mark.parametrize("capacity", [0.5, 1.0, 2.0])
+def test_cpsat_is_never_below_greedy(seed: int, promise: int, capacity: float) -> None:
+    inputs, scenario = random_inputs(seed), Scenario(n_new=5, promise=promise, capacity=capacity, seed=seed)
+    greedy = plan(inputs, scenario)
+    hinted = plan(inputs, scenario, "cpsat-from-greedy")
+    assert hinted.demand_covered >= greedy.demand_covered - 1e-6 and hinted.objective >= greedy.objective - 1e-6
+    alone = plan(inputs, scenario, "cpsat")
+    assert alone.status in ("OPTIMAL", "FEASIBLE")
+    if alone.status == "OPTIMAL":
+        assert alone.demand_covered >= greedy.demand_covered - 1e-6
+        assert hinted.status == "OPTIMAL" and hinted.objective == pytest.approx(alone.objective)
+
+
+def max_served(inputs: Inputs, scenario: Scenario, network: dict[str, list[str]], stores: list[str]) -> float:
+    """The most orders the operator's `stores` can serve within capacity, from a plain pair model: one boolean per (store, hex) pair,
+    each hex at most once, each store at most its capacity. Written apart from planning's model, on the same shares (ADR 0001)."""
+    site = {str(s): i for i, s in enumerate(inputs.site_ids)}
+    scale = 100
+    pairs = [(s, h) for s, h, m in zip(inputs.pair_site.tolist(), inputs.pair_hex.tolist(), inputs.pair_min.tolist())
+             if m * scenario.multiplier + PICK_AND_PACK <= scenario.promise + planning.TOL]
+    rival = {h for s, h in pairs if s in {site[c] for c in network["Competitor"]}}
+    share = [round(d * scenario.capture / (2 if h in rival else 1) * scale) for h, d in enumerate(inputs.demand.tolist())]
+    mine = {site[s] for s in stores}
+    model = cp_model.CpModel()
+    x = {(s, h): model.NewBoolVar(f"x{s}_{h}") for s, h in pairs if s in mine}
+    for h in {h for _, h in x}:
+        model.AddAtMostOne([v for (_, h2), v in x.items() if h2 == h])
+    for s in mine:
+        model.Add(sum(share[h] * v for (s2, h), v in x.items() if s2 == s) <= round(scenario.capacity * CAPACITY * scale))
+    model.Maximize(sum(share[h] * v for (_, h), v in x.items()))
+    solver = cp_model.CpSolver()
+    assert solver.Solve(model) == cp_model.OPTIMAL
+    return solver.ObjectiveValue() / scale
+
+
+@pytest.mark.parametrize("method", CPSAT)
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 15])
+@pytest.mark.parametrize("capacity", [0.5, 1.0])
+def test_the_metrics_match_an_independent_evaluation_of_the_same_stores(method: Method, seed: int, capacity: float) -> None:
+    inputs, scenario = random_inputs(seed), Scenario(n_new=4, promise=12, capacity=capacity, seed=seed)
+    p = plan(inputs, scenario, method)
+    assert p.status == "OPTIMAL"
+    assert p.demand_covered == pytest.approx(max_served(inputs, scenario, p.network, [*p.network["Operator"], *p.sites]), abs=0.01)
+    assert p.objective == pytest.approx(p.demand_covered, abs=0.01)
+    assert sum(n.orders for n in p.new_stores) <= p.demand_covered + 1e-6
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_capacity_binds_and_the_excess_is_lost(method: Method) -> None:
+    hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5), method)
+    assert p.sites == ["S1"] and p.new_stores[0].orders == pytest.approx(1000) and p.new_stores[0].orders <= 0.5 * CAPACITY
+    assert p.demand_covered == pytest.approx(1010) and p.objective == pytest.approx(1010) and p.lost_to_capacity == pytest.approx(500)
+    assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(OPS)
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_serves_the_best_hexes_within_capacity_not_the_nearest_first(method: Method) -> None:
+    # S0 (capacity 1,182 at 0.5x) reaches A (100), B (200) and D (1,000), nearest first. Greedy's walk takes A and B and loses D;
+    # the best within capacity is A + D (1,100), losing B.
+    hexes = {"A": 100.0, "B": 200.0, "D": 1000.0, "C": 50.0}
+    hh = {"A": 30.0, "B": 60.0, "D": 400.0, "C": 800.0}
+    pairs: Pairs = {("S0", "A"): 1.0, ("S0", "B"): 2.0, ("S0", "D"): 3.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"], households=hh), Scenario(n_new=1, capacity=0.5), method)
+    assert p.demand_covered == pytest.approx(1100) and p.lost_to_capacity == pytest.approx(200) and p.unreached == pytest.approx(OPS - 1300)
+    assert p.households_covered == pytest.approx(430) and p.status == "OPTIMAL"
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_a_new_store_beside_an_existing_operator_store_cannibalises(method: Method) -> None:
+    hexes = {"W": 300.0, "A": 500.0, "F": 200.0}
+    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 5.0, ("S1", "A"): 4.0, ("S2", "F"): 4.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1", "S2"]), Scenario(n_new=2, promise=15), method)
+    by_site = {n.site: n for n in p.new_stores}
+    assert set(by_site) == {"S1", "S2"} and [n.site for n in p.new_stores] == p.sites
+    assert by_site["S1"].cannibalised == pytest.approx(500) and by_site["S1"].fresh == pytest.approx(0)
+    assert by_site["S2"].fresh == pytest.approx(200) and by_site["S2"].cannibalised == pytest.approx(0)
+    assert p.demand_covered == pytest.approx(1000)
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_a_hex_the_competitor_reaches_gives_the_operator_half_its_demand(method: Method) -> None:
+    sites = ["S0", "S1", "S2"]
+    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1), method)
+    assert p.demand_covered == pytest.approx(500)
+    assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(2 * OPS - 500)
+
+
+@pytest.mark.parametrize("method", CPSAT)
+def test_cpsat_picks_exactly_n_new_sites_none_on_a_store_in_rank_order(method: Method) -> None:
+    sites = [f"S{i}" for i in range(8)]
+    pairs: Pairs = {("S0", "A"): 1.0, **{(s, "A"): 5.0 for s in sites[1:]}}
+    p = plan(make_inputs({"A": 100.0}, pairs, sites), Scenario(n_new=3, promise=15), method)
+    assert len(p.sites) == 3 and len(set(p.sites)) == 3 and "S0" not in p.sites and p.sites == sorted(p.sites)
+
+
+def test_unchosen_free_sites_still_serve_what_they_reach_in_the_assignment() -> None:
+    # N = 1 and S1 reaches A, S2 reaches B; one store must be built, but the model's objective alone would not decide which hexes
+    # a chosen site serves: whatever it reaches, within capacity, is assigned to it.
+    hexes = {"T": 10.0, "A": 300.0, "B": 200.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("S1", "A"): 5.0, ("S2", "B"): 5.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1", "S2"]), Scenario(n_new=1, promise=15), "cpsat")
+    assert p.sites == ["S1"] and p.new_stores[0].orders == pytest.approx(300) and p.demand_covered == pytest.approx(310)
+
+
+def no_solution(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cp_model.CpSolver, "Solve", lambda self, model: cp_model.UNKNOWN)
+
+
+def test_cpsat_that_finds_no_solution_raises_naming_the_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    no_solution(monkeypatch)
+    with pytest.raises(RuntimeError, match="UNKNOWN"):
+        plan(random_inputs(0), Scenario(n_new=4, promise=12, seed=0), "cpsat")
+
+
+def test_cpsat_from_greedy_with_no_solution_keeps_greedys_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, seed=0)
+    greedy = plan(inputs, scenario)
+    no_solution(monkeypatch)
+    p = plan(inputs, scenario, "cpsat-from-greedy")
+    assert p.sites == greedy.sites and p.demand_covered == pytest.approx(greedy.demand_covered)
+    assert p.status == "FEASIBLE" and p.objective == pytest.approx(greedy.objective, abs=0.05) and p.bound is None and p.gap is None
