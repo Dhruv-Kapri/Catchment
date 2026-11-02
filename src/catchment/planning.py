@@ -16,7 +16,7 @@ from catchment.fetch import DATA
 
 Method = Literal["greedy", "cpsat", "cpsat-from-greedy"]
 METHODS: tuple[Method, ...] = get_args(Method)
-Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC", "UNKNOWN"]   # CP-SAT's proven or best-found plan; greedy's plan; CP-SAT on its own found none
+Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC", "UNKNOWN"]   # CP-SAT's own plan, proven or stopped early; greedy's plan (also when CP-SAT from greedy keeps it); CP-SAT on its own found none
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
 GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
@@ -53,6 +53,13 @@ LEVER_RANGES: dict[str, tuple[float, float]] = {
     "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
 
 
+def number(lever: str, value: object, whole: bool) -> int | float:
+    """A lever's value as a plain int (whole levers) or float, refusing bools and non-numbers; -0.0 becomes 0.0, so it prints as 0.0."""
+    if not isinstance(value, numbers.Integral if whole else numbers.Real) or isinstance(value, bool | np.bool_):
+        raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'}")
+    return int(value) if whole else float(value) + 0.0   # type: ignore[call-overload]
+
+
 @dataclass(frozen=True)
 class Scenario:
     """One set of lever values, plus the network seed."""
@@ -65,13 +72,8 @@ class Scenario:
     seed: int = assumptions.SEED
 
     def __post_init__(self) -> None:
-        for lever in ("n_new", "promise"):
-            value = getattr(self, lever)
-            if not isinstance(value, numbers.Integral) or isinstance(value, bool):
-                raise TypeError(f"{lever} {value!r} must be a whole number")
-            object.__setattr__(self, lever, int(value))   # np.int64 and the like become plain ints
-        if isinstance(self.competitor_density, bool | np.bool_):
-            raise TypeError(f"competitor_density {self.competitor_density!r} must be a number")
+        for lever in LEVER_RANGES:
+            object.__setattr__(self, lever, number(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
@@ -99,21 +101,23 @@ class Plan:
     `households_covered` counts whole hexes: a hex shared with the competitor counts all its households but half its orders.
     For CP-SAT, `objective` is the solver's own value, and `demand_covered` can exceed it on a FEASIBLE plan, because the
     assignment also gives a hex to an open store that cannot reach capacity even where the solver left it uncovered.
-    A hinted plan that would fall below greedy keeps greedy's picks (status FEASIBLE; `bound` the solver's, or None if it found no solution), so it is never below greedy."""
+    A hinted plan that would fall below greedy keeps greedy's picks (status HEURISTIC, as it is greedy's plan; `bound` the solver's, or None if it found no
+    solution), so it is never below greedy. A model over `assumptions.MODEL_PAIR_CAP` is not built, as the build is outside the solver's time limit: from greedy
+    the plan is greedy's (HEURISTIC, no bound), on its own it is UNKNOWN."""
     scenario: Scenario
     method: Method
     sites: list[str]                 # the new sites, in pick order
     network: dict[str, list[str]]    # brand -> the sites of its existing stores
     demand_covered: float            # the operator's orders a day assigned to a store
     households_covered: float        # households of the assigned hexes, whole hexes
-    lost_to_capacity: float          # reached by an open operator store but not assigned
+    lost_to_capacity: float          # reached by an open operator store but not assigned; on a FEASIBLE CP-SAT plan also the hexes the solver left unassigned
     unreached: float                 # reached by no open operator store
-    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; <= demand_covered for greedy and an OPTIMAL CP-SAT plan (the walk covers no more than the best assignment), not guaranteed for a FEASIBLE one (#30 checks)
+    slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; never above demand_covered: the nearest-first walk covers no more than greedy's or an OPTIMAL plan's assignment, and a FEASIBLE CP-SAT plan's is clamped to it (#33)
     new_stores: list[NewStore]       # in pick order
-    status: Status                   # "OPTIMAL" or "FEASIBLE" from CP-SAT; "HEURISTIC" for greedy; "UNKNOWN": CP-SAT on its own found no plan in the budget, so no new sites and the metrics are the existing network's
+    status: Status                   # CP-SAT's own plan: "OPTIMAL", or "FEASIBLE" (stopped early); "HEURISTIC": greedy's plan, by method or kept by cpsat-from-greedy; "UNKNOWN": CP-SAT on its own found no plan, or the model was over the size cap, so no new sites and the metrics are the existing network's
     objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
-    bound: float | None              # CP-SAT's upper bound on the objective; None for greedy
-    gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None for greedy
+    bound: float | None              # CP-SAT's upper bound on the objective; None for greedy, and when CP-SAT found no solution or the model was not built
+    gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None without a bound, and for a zero objective under a positive bound
     build_seconds: float             # everything before the search: network, shares, reach, greedy hint, model
     solve_seconds: float             # the greedy loop, or CP-SAT's Solve
     seconds: float                   # inside plan(), load_inputs excluded: build + solve + metrics
@@ -249,9 +253,27 @@ def int_shares(p: Problem) -> npt.NDArray[np.int64]:
     return np.round(p.share * assumptions.SCALE).astype(np.int64)
 
 
-def build_model(p: Problem) -> Model:
-    """The tighter model of 03-area: x_{s,h} only at sites whose catchment can exceed capacity, a new site's capacity row tied to
-    the site being chosen, and the existing operator stores in the same at-most-one row per hex."""
+@dataclass(frozen=True)
+class Rows:
+    """The open sites' pairs grouped by hex (nearest first within a hex) and what the model's loop reads from them, computed vectorised so the
+    model's size is known before any Python loop runs."""
+    ps: npt.NDArray[np.intp]               # per pair: site
+    ph: npt.NDArray[np.intp]               # per pair: hex
+    con: npt.NDArray[np.bool_]             # per pair: its site is constrained
+    constrained: npt.NDArray[np.bool_]     # per site: can its catchment exceed capacity
+    has_free_op: npt.NDArray[np.bool_]     # per hex: an existing store that cannot hit capacity covers it
+    start: npt.NDArray[np.intp]            # hex h's pairs are ps[start[h]:start[h + 1]]
+    share_int: npt.NDArray[np.int64]
+    cap_int: int
+    is_new: npt.NDArray[np.bool_]
+
+    @property
+    def n_pairs(self) -> int:
+        """The capacity-bound (x) pairs the model gets: constrained pairs in hexes with no free existing store, the loop's bulk."""
+        return int((self.con & ~self.has_free_op[self.ph]).sum())
+
+
+def model_rows(p: Problem) -> Rows:
     n_sites, n_hex, reach = len(p.inputs.site_ids), len(p.share), p.reach
     share_int, cap_int = int_shares(p), round(p.capacity * assumptions.SCALE)
     is_new, is_op = p.candidate, np.zeros(n_sites, bool)
@@ -260,8 +282,14 @@ def build_model(p: Problem) -> Model:
     ps, ph = reach.site[pos], reach.hex[pos]
     constrained = np.bincount(ps, weights=share_int[ph], minlength=n_sites) > cap_int   # W_s > capacity
     con = constrained[ps]
-    has_free_op = np.bincount(ph, weights=(~con & is_op[ps]).astype(float), minlength=n_hex) > 0   # an existing store that cannot hit capacity covers it
-    start = np.searchsorted(ph, np.arange(n_hex + 1))
+    has_free_op = np.bincount(ph, weights=(~con & is_op[ps]).astype(float), minlength=n_hex) > 0
+    return Rows(ps, ph, con, constrained, has_free_op, np.searchsorted(ph, np.arange(n_hex + 1)), share_int, cap_int, is_new)
+
+
+def build_model(p: Problem, rows: Rows) -> Model:
+    """The tighter model of 03-area: x_{s,h} only at sites whose catchment can exceed capacity, a new site's capacity row tied to
+    the site being chosen, and the existing operator stores in the same at-most-one row per hex."""
+    ps, ph, con, has_free_op, start, share_int, cap_int, is_new = rows.ps, rows.ph, rows.con, rows.has_free_op, rows.start, rows.share_int, rows.cap_int, rows.is_new
     model = cp_model.CpModel()
     y = {int(s): model.NewBoolVar(f"y{s}") for s in np.flatnonzero(is_new)}
     model.Add(sum(y.values()) == p.scenario.n_new)
@@ -298,7 +326,7 @@ def build_model(p: Problem) -> Model:
         load = cp_model.LinearExpr.WeightedSum([v for v, _ in lst], [w for _, w in lst])
         model.Add(load <= cap_int * y[s] if is_new[s] else load <= cap_int)
     model.Maximize(cp_model.LinearExpr.WeightedSum(terms, coeffs) + const)
-    return Model(model, y, x, covered, constrained, share_int)
+    return Model(model, y, x, covered, rows.constrained, share_int)
 
 
 def hint(m: Model, picked: list[int], owner: npt.NDArray[np.intp]) -> None:
@@ -341,7 +369,13 @@ class Solved:
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     start = greedy(p) if from_greedy else None
-    m = build_model(p)
+    rows = model_rows(p)
+    if rows.n_pairs > assumptions.MODEL_PAIR_CAP:   # the build loop is outside the solver's time limit: a model this big would overrun the budget (#33)
+        search_start = time.perf_counter()
+        if start is None:
+            return Solved([], p.base, "UNKNOWN", None, None, search_start)
+        return Solved(start[0], start[1], "HEURISTIC", float(p.share[start[1] >= 0].sum()), None, search_start)
+    m = build_model(p, rows)
     if start is not None:
         hint(m, *start)
     search_start = time.perf_counter()
@@ -356,18 +390,18 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     if start is not None:
         floor = int(m.share_int[start[1] >= 0].sum())   # greedy's orders, on the solver's integer scale
         if not found or round(solver.ObjectiveValue()) < floor:   # never below greedy (even under an OPTIMAL status: greedy checks capacity in floats, the model in hundredths, so a rounding edge can favour greedy); with no solution the bound says nothing
-            return Solved(start[0], start[1], "FEASIBLE", floor / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
+            return Solved(start[0], start[1], "HEURISTIC", floor / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
     return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
 
 
-def relative_gap(objective: float, bound: float, status: str) -> float:
-    """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; infinite for a zero objective under a positive bound. Never negative: a greedy plan kept
-    in place of the solver's can sit a rounding hair above the integer-scale bound."""
+def relative_gap(objective: float, bound: float, status: str) -> float | None:
+    """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; None for a zero objective under a positive bound
+    (no finite ratio, and JSON has no infinity). Never negative: a greedy plan kept in place of the solver's can sit a rounding hair above the integer-scale bound."""
     if status == "OPTIMAL" or bound <= objective:
         return 0.0
-    return float("inf") if objective <= 0 else (bound - objective) / objective   # nothing served yet a positive bound: no finite ratio
+    return None if objective <= 0 else (bound - objective) / objective
 
 
 def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method: Method = "greedy") -> Plan:
@@ -404,5 +438,6 @@ def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple
         mine = owner == s
         orders, moved = float(share[mine].sum()), float(share[mine & (p.base >= 0)].sum())
         new_stores.append(NewStore(str(inputs.site_ids[s]), orders, orders - moved, moved))
-    slow = cover_at_slow_traffic(inputs, p.scenario, p.existing + picked, share, p.capacity)
-    return float(share[got].sum()), float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), slow, new_stores
+    covered = float(share[got].sum())
+    slow = min(cover_at_slow_traffic(inputs, p.scenario, p.existing + picked, share, p.capacity), covered)   # a time-limited CP-SAT assignment can cover less than the walk does (#33)
+    return covered, float(inputs.households[got].sum()), float(share[reached & ~got].sum()), float(share[~reached].sum()), slow, new_stores

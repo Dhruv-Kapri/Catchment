@@ -101,10 +101,22 @@ def test_an_off_step_density_is_refused_naming_the_lever_and_the_step(density: f
         Scenario(competitor_density=density)
 
 
-@pytest.mark.parametrize("density", [True, np.bool_(True)])
-def test_a_bool_density_is_refused(density: object) -> None:
-    with pytest.raises(TypeError, match="competitor_density"):
-        Scenario(competitor_density=density)   # type: ignore[arg-type]
+@pytest.mark.parametrize("lever", ["multiplier", "capacity", "capture", "competitor_density"])
+@pytest.mark.parametrize("value", [True, np.bool_(True), "1.0"])
+def test_a_float_lever_must_be_a_real_number_not_a_bool(lever: str, value: object) -> None:
+    with pytest.raises(TypeError, match=f"{lever} .* must be a number"):
+        Scenario(**{lever: value})
+
+
+@pytest.mark.parametrize("lever", ["multiplier", "capacity", "capture", "competitor_density"])
+def test_a_float_lever_is_stored_as_a_plain_float(lever: str) -> None:
+    s = Scenario(**{lever: np.float64(1.5) if lever != "competitor_density" else np.float32(1.5)})
+    assert type(getattr(s, lever)) is float and getattr(s, lever) == 1.5
+
+
+def test_a_negative_zero_density_is_stored_and_printed_as_zero() -> None:
+    s = Scenario(competitor_density=-0.0)
+    assert str(s.competitor_density) == "0.0" and "competitor_density=0.0," in repr(s)
 
 
 def test_an_off_step_density_by_float_noise_shows_the_value_it_got() -> None:

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +9,7 @@ import pytest
 from catchment.explore import MULTIPLIER
 from catchment.spotcheck import (
     SEED,
+    SPOTCHECK_MULTIPLIER,
     compare,
     draw_routes,
     write_sheet,
@@ -266,3 +269,13 @@ def test_compare_raises_when_a_found_route_has_no_bad_snap_flag() -> None:
     sheet.loc[sheet.app_min.notna().idxmax(), "bad_snap_before"] = np.nan
     with pytest.raises(ValueError, match="bad_snap_before"):
         compare(sheet, multiplier=1.4)
+
+
+def test_spotcheck_multiplier_matches_the_frozen_explore_one() -> None:
+    assert SPOTCHECK_MULTIPLIER == MULTIPLIER
+
+
+def test_importing_spotcheck_does_not_load_explore_or_ortools() -> None:
+    code = "import catchment.spotcheck, sys; print([m for m in ('catchment.explore', 'ortools') if m in sys.modules])"
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout
+    assert out.strip() == "[]"

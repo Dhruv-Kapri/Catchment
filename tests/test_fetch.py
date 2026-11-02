@@ -329,3 +329,29 @@ def test_black_marble_listing_goes_through_the_given_session() -> None:
 
 def test_list_black_marble_default_session_is_the_shared_one() -> None:
     assert inspect.signature(fetch.list_black_marble).parameters["session"].default is fetch.SESSION
+
+
+def test_fetch_viirs_picks_the_file_from_the_black_marble_listing(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    listing = {"content": [{"name": "VNP46A4.A2025001.h25v06.002.2026077000736.h5"}]}
+    calls: list[dict[str, object]] = []
+    downloaded: list[str] = []
+
+    def fake_list(*args: object, **kwargs: object) -> dict[str, Any]:
+        calls.append(kwargs)
+        return listing
+
+    def fake_download(url: str, dest: Path | str, *args: object, **kwargs: object) -> Path:
+        downloaded.append(url)
+        return Path(dest)
+
+    monkeypatch.setenv("LAADS_TOKEN", "t")
+    monkeypatch.setattr(fetch, "RAW", tmp_path)
+    monkeypatch.setattr(fetch, "list_black_marble", fake_list)
+    monkeypatch.setattr(fetch, "download", fake_download)
+    monkeypatch.setattr(fetch, "check_hdf5", lambda path: None)
+    monkeypatch.setattr(fetch, "black_marble_to_tif", lambda *a, **k: None)
+    out = fetch.fetch_viirs(box(77.0, 28.4, 77.1, 28.5))
+    assert len(calls) == 1 and "session" not in calls[0]   # the shared default session
+    assert downloaded == [f"{fetch.BM_BASE}/{listing['content'][0]['name']}"]
+    assert out["source"] == downloaded[0]
