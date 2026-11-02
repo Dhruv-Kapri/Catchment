@@ -53,7 +53,7 @@ LEVER_RANGES: dict[str, tuple[float, float]] = {
     "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
 
 
-def number(lever: str, value: object, whole: bool) -> int | float:
+def lever_value(lever: str, value: object, whole: bool) -> int | float:
     """A lever's value as a plain int (whole levers) or float, refusing bools and non-numbers; -0.0 becomes 0.0, so it prints as 0.0."""
     if not isinstance(value, numbers.Integral if whole else numbers.Real) or isinstance(value, bool | np.bool_):
         raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'}")
@@ -73,7 +73,7 @@ class Scenario:
 
     def __post_init__(self) -> None:
         for lever in LEVER_RANGES:
-            object.__setattr__(self, lever, number(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
+            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
@@ -367,6 +367,11 @@ class Solved:
     search_start: float              # perf_counter when the search began
 
 
+def kept_greedy(start: tuple[list[int], npt.NDArray[np.intp]], share_int: npt.NDArray[np.int64], bound: float | None, search_start: float) -> Solved:
+    """Greedy's plan kept by CP-SAT from greedy: status HEURISTIC, objective greedy's orders on the solver's integer scale."""
+    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start)
+
+
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     start = greedy(p) if from_greedy else None
     rows = model_rows(p)
@@ -374,7 +379,7 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
         search_start = time.perf_counter()
         if start is None:
             return Solved([], p.base, "UNKNOWN", None, None, search_start)
-        return Solved(start[0], start[1], "HEURISTIC", float(p.share[start[1] >= 0].sum()), None, search_start)
+        return kept_greedy(start, rows.share_int, None, search_start)
     m = build_model(p, rows)
     if start is not None:
         hint(m, *start)
@@ -390,7 +395,7 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
     if start is not None:
         floor = int(m.share_int[start[1] >= 0].sum())   # greedy's orders, on the solver's integer scale
         if not found or round(solver.ObjectiveValue()) < floor:   # never below greedy (even under an OPTIMAL status: greedy checks capacity in floats, the model in hundredths, so a rounding edge can favour greedy); with no solution the bound says nothing
-            return Solved(start[0], start[1], "HEURISTIC", floor / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
+            return kept_greedy(start, m.share_int, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
     return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
