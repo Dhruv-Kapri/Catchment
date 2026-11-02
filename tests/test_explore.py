@@ -206,3 +206,13 @@ def test_frozen_table_is_the_rows_03_area_ran_with() -> None:
     row = t.set_index("Input").Value
     assert f"multiplier {explore.MULTIPLIER}," in row["Default scenario"] and "1.8" not in row["Default scenario"]
     assert ", ".join(f"{b} {n}" for b, n in explore.BRAND_COUNTS.items()) in row["Brands and store counts"]
+
+
+def test_the_live_assumptions_the_frozen_notebooks_read_still_have_their_stage_1_values() -> None:
+    # explore reads these from assumptions (only MULTIPLIER and BRAND_COUNTS are frozen literals), so a stage 2+ change to one
+    # would silently change 02-plan's and 03-area's inputs and explore.table()'s rows. Values from a49625c (stage 1 closed).
+    stage_1: dict[str, float] = {
+        "BLINKIT_ORDERS_Q2": 398.9e6, "BLINKIT_STORES": 2751, "Q2_DAYS": 92, "CAPACITY_FACTOR": 1.5, "N_AREA": 10, "N_SLICE": 3,
+        "PICK_AND_PACK": 3, "PROMISE": 10, "SCALE": 100, "SEED": 2026, "SOLVER_SEED": 1, "TIME_LIMIT": 60, "WORKERS": 8}
+    assert {name: getattr(explore, name) for name in stage_1} == stage_1
+    assert explore.ORDERS_PER_STORE_DAY == pytest.approx(1576.106712183712) and explore.CAPACITY == pytest.approx(2364.160068275568)
