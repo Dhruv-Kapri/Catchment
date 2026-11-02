@@ -95,7 +95,7 @@ def test_with_network_rejects_two_stores_on_one_site() -> None:
 
 @pytest.mark.parametrize("cap_int, expected", [(123, 123), (0, 0), (None, explore.CAP_INT)])   # 0 must be honoured, not treated as falsy
 def test_with_network_cap_int_override(cap_int: int | None, expected: int) -> None:
-    kw = {} if cap_int is None else {"cap_int": cap_int}
+    kw: dict[str, int] = {} if cap_int is None else {"cap_int": cap_int}
     assert with_network(case(), C_OP, **kw).cap_int == expected
 
 

@@ -38,6 +38,7 @@ def test_a_failing_stop_does_not_hide_the_error_in_the_block(tmp_path: Path, mon
 
 ROADS_OSM = Path(__file__).parent / "fixtures" / "roads.osm"
 PORT, NAME = 5091, "catchment-osrm-test"
+RO_PORT, RO_NAME = 5092, "catchment-osrm-test-ro"   # the shared read-only router
 
 
 def docker_running() -> bool:
@@ -62,10 +63,10 @@ def road_data(tmp_path: Path) -> Path:
 @pytest.fixture(scope="module")
 def router(tmp_path_factory: pytest.TempPathFactory) -> Iterator[OsrmRouter]:
     """One served router for the tests that only query it: building the graph and starting the container is most of each test's time.
-    It shares NAME with the lifecycle tests above, which run (and stop their containers) before the first test that asks for it."""
+    Its own container name and port, so it can't clash with the lifecycle tests' containers whatever the test order."""
     data = tmp_path_factory.mktemp("roads")
     subprocess.run(["osmium", "cat", str(ROADS_OSM), "-o", str(data / "osm.osm.pbf")], check=True)
-    with served_osrm(data, PORT, NAME) as served:
+    with served_osrm(data, RO_PORT, RO_NAME) as served:
         yield served
 
 

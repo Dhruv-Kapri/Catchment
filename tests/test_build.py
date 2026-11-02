@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Never
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -31,6 +32,7 @@ def test_demand_writes_a_res_named_parquet_that_keeps_its_attrs(env: Path) -> No
     assert set(back.attrs) == {"capture_share", "res"}
     assert back.attrs["res"] == 9
     assert back.demand.sum() / back.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
+    assert back.attrs["capture_share"] == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY / np.average(back.multiplier, weights=back.households))
 
 
 def test_prints_a_summary_with_the_capture_share(env: Path, capsys: pytest.CaptureFixture[str]) -> None:
