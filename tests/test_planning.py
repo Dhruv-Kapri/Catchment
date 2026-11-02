@@ -113,14 +113,14 @@ def test_plan_with_no_scenario_uses_the_defaults() -> None:
     assert p.scenario == Scenario() and len(p.sites) == 10
 
 
-def test_plan_picks_exactly_n_new_sites_none_on_a_store() -> None:
+@pytest.mark.parametrize("method", METHODS)
+def test_plan_picks_exactly_n_new_sites_none_on_a_store(method: Method) -> None:
     sites = [f"S{i}" for i in range(8)]
-    pairs: Pairs = {("S0", "A"): 1.0, **{(s, "A"): 5.0 for s in sites[1:]}}   # only S0 reaches anything at the default reach
-    inputs = make_inputs({"A": 100.0}, pairs, sites)
-    p = plan(inputs, Scenario(n_new=3, promise=15))
+    pairs: Pairs = {("S0", "A"): 1.0, **{(s, "A"): 5.0 for s in sites[1:]}}   # only S0 reaches anything at the default reach; every other site ties at zero gain
+    p = plan(make_inputs({"A": 100.0}, pairs, sites), Scenario(n_new=3, promise=15), method)
+    assert p.sites == ["S1", "S2", "S3"]
     assert p.network == {"Operator": ["S0"], "Competitor": []}
-    assert len(p.sites) == 3 and len(set(p.sites)) == 3 and "S0" not in p.sites
-    assert p.scenario.n_new == 3 and p.method == "greedy"
+    assert p.scenario.n_new == 3 and p.method == method
 
 
 def test_greedy_prefers_demand_no_open_store_already_serves() -> None:
@@ -145,24 +145,26 @@ def test_promise_and_multiplier_decide_reach_inclusive_of_the_limit() -> None:
     assert plan(inputs, Scenario(n_new=1, promise=15, multiplier=2.5)).demand_covered == pytest.approx(100)   # 5 x 2.5 + 3 = 15.5 > 15: only W
 
 
-def test_a_hex_the_competitor_reaches_gives_the_operator_half_its_demand() -> None:
-    # S0 and S1 hold one store each (one operator, one competitor, whichever way the seed falls); both reach H.
+@pytest.mark.parametrize("method", METHODS)
+def test_a_hex_the_competitor_reaches_gives_the_operator_half_its_demand(method: Method) -> None:
+    # S0 and S1 hold one store each (one operator, one competitor, whichever way the seed falls); both reach H (1 min), so the operator's share is half of 1,000 at either multiplier.
     sites = ["S0", "S1", "S2"]
-    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1))
+    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1), method)
     assert sorted(chain.from_iterable(p.network.values())) == ["S0", "S1"] and len(p.network["Operator"]) == 1
-    assert p.demand_covered == pytest.approx(500)
+    assert p.demand_covered == pytest.approx(500) and p.slow_traffic_coverage == pytest.approx(500)
     assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(2 * OPS - 500)   # the operator's total share
 
 
-def test_capacity_binds_and_the_excess_is_lost() -> None:
+@pytest.mark.parametrize("method", METHODS)
+def test_capacity_binds_and_the_excess_is_lost(method: Method) -> None:
     # S0 holds the only store; S1 reaches A, B, C at 5 min (only at a longer promise). At capacity 0.5x a store serves 1,182 orders: two of three hexes of 500.
     hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0}
     pairs: Pairs = {("S0", "T"): 1.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0}
-    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5))
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5), method)
     store = p.new_stores[0]
     assert p.sites == ["S1"] and store.orders <= 0.5 * CAPACITY
     assert store.orders == pytest.approx(1000)
-    assert p.demand_covered == pytest.approx(1010)
+    assert p.demand_covered == pytest.approx(1010) and p.objective == pytest.approx(1010)
     assert p.lost_to_capacity == pytest.approx(500)
     assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(OPS)   # the operator's total
     assert p.unreached == pytest.approx(OPS - 1510)
@@ -195,11 +197,12 @@ def test_households_covered_is_the_households_of_the_assigned_hexes() -> None:
     assert p.demand_covered == pytest.approx(300) and p.unreached == pytest.approx(OPS - 1300)
 
 
-def test_a_new_store_beside_an_existing_operator_store_cannibalises() -> None:
+@pytest.mark.parametrize("method", METHODS)
+def test_a_new_store_beside_an_existing_operator_store_cannibalises(method: Method) -> None:
     # S0 (the operator's) serves W and A (A at 5 min). S2 wins fresh F; S1 sits 4 min from A, nearer than S0, so A moves to it.
     hexes = {"W": 300.0, "A": 500.0, "F": 200.0}
     pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 5.0, ("S1", "A"): 4.0, ("S2", "F"): 4.0}
-    p = plan(make_inputs(hexes, pairs, ["S0", "S1", "S2"]), Scenario(n_new=2, promise=15))
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1", "S2"]), Scenario(n_new=2, promise=15), method)
     by_site = {n.site: n for n in p.new_stores}
     assert p.network["Operator"] == ["S0"] and set(by_site) == {"S1", "S2"}
     assert by_site["S1"].cannibalised == pytest.approx(500) and by_site["S1"].fresh == pytest.approx(0)
@@ -263,8 +266,10 @@ def test_plan_without_inputs_loads_them_and_seconds_leave_the_load_out(monkeypat
         time.sleep(0.3)
         return inputs
     monkeypatch.setattr(planning, "load_inputs", slow_load)
+    start = time.perf_counter()
     p = plan()
-    assert same(p, plan(inputs)) and p.seconds < 0.3
+    wall = time.perf_counter() - start
+    assert same(p, plan(inputs)) and p.seconds <= wall - 0.3   # against the call's own wall time, so a slow machine can't fail it
 
 
 def random_inputs(seed: int, n_sites: int = 30, n_hexes: int = 60) -> Inputs:
@@ -430,16 +435,6 @@ def test_the_metrics_match_an_independent_evaluation_of_the_same_stores(method: 
 
 
 @pytest.mark.parametrize("method", CPSAT)
-def test_cpsat_capacity_binds_and_the_excess_is_lost(method: Method) -> None:
-    hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0}
-    pairs: Pairs = {("S0", "T"): 1.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0}
-    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5), method)
-    assert p.sites == ["S1"] and p.new_stores[0].orders == pytest.approx(1000) and p.new_stores[0].orders <= 0.5 * CAPACITY
-    assert p.demand_covered == pytest.approx(1010) and p.objective == pytest.approx(1010) and p.lost_to_capacity == pytest.approx(500)
-    assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(OPS)
-
-
-@pytest.mark.parametrize("method", CPSAT)
 def test_cpsat_serves_the_best_hexes_within_capacity_not_the_nearest_first(method: Method) -> None:
     # S0 (capacity 1,182 at 0.5x) reaches A (100), B (200) and D (1,000), nearest first. Greedy's walk takes A and B and loses D;
     # the best within capacity is A + D (1,100), losing B.
@@ -449,34 +444,6 @@ def test_cpsat_serves_the_best_hexes_within_capacity_not_the_nearest_first(metho
     p = plan(make_inputs(hexes, pairs, ["S0", "S1"], households=hh), Scenario(n_new=1, capacity=0.5), method)
     assert p.demand_covered == pytest.approx(1100) and p.lost_to_capacity == pytest.approx(200) and p.unreached == pytest.approx(OPS - 1300)
     assert p.households_covered == pytest.approx(430) and p.status == "OPTIMAL"
-
-
-@pytest.mark.parametrize("method", CPSAT)
-def test_cpsat_a_new_store_beside_an_existing_operator_store_cannibalises(method: Method) -> None:
-    hexes = {"W": 300.0, "A": 500.0, "F": 200.0}
-    pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 5.0, ("S1", "A"): 4.0, ("S2", "F"): 4.0}
-    p = plan(make_inputs(hexes, pairs, ["S0", "S1", "S2"]), Scenario(n_new=2, promise=15), method)
-    by_site = {n.site: n for n in p.new_stores}
-    assert set(by_site) == {"S1", "S2"} and [n.site for n in p.new_stores] == p.sites
-    assert by_site["S1"].cannibalised == pytest.approx(500) and by_site["S1"].fresh == pytest.approx(0)
-    assert by_site["S2"].fresh == pytest.approx(200) and by_site["S2"].cannibalised == pytest.approx(0)
-    assert p.demand_covered == pytest.approx(1000)
-
-
-@pytest.mark.parametrize("method", CPSAT)
-def test_cpsat_a_hex_the_competitor_reaches_gives_the_operator_half_its_demand(method: Method) -> None:
-    sites = ["S0", "S1", "S2"]
-    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1), method)
-    assert p.demand_covered == pytest.approx(500)
-    assert p.demand_covered + p.lost_to_capacity + p.unreached == pytest.approx(2 * OPS - 500)
-
-
-@pytest.mark.parametrize("method", CPSAT)
-def test_cpsat_picks_exactly_n_new_sites_none_on_a_store_in_rank_order(method: Method) -> None:
-    sites = [f"S{i}" for i in range(8)]
-    pairs: Pairs = {("S0", "A"): 1.0, **{(s, "A"): 5.0 for s in sites[1:]}}
-    p = plan(make_inputs({"A": 100.0}, pairs, sites), Scenario(n_new=3, promise=15), method)
-    assert len(p.sites) == 3 and len(set(p.sites)) == 3 and "S0" not in p.sites and p.sites == sorted(p.sites)
 
 
 def test_unchosen_free_sites_still_serve_what_they_reach_in_the_assignment() -> None:
@@ -520,13 +487,6 @@ def test_slow_traffic_coverage_equals_the_demand_covered_when_nothing_is_near_th
     pairs: Pairs = {("S0", "W"): 1.0, ("S0", "A"): 4.0, ("S1", "F"): 3.0}
     p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0))
     assert p.demand_covered == pytest.approx(600) and p.slow_traffic_coverage == pytest.approx(600)
-
-
-def test_slow_traffic_coverage_holds_the_competitor_split_of_a_hex() -> None:
-    # S0 and S1 hold one store each; both reach H (1 min), so the operator's share is half of 1,000 at either multiplier.
-    sites = ["S0", "S1", "S2"]
-    p = plan(make_inputs({"H": 1000.0}, {("S0", "H"): 1.0, ("S1", "H"): 1.0}, sites, stores=2), Scenario(n_new=1))
-    assert p.demand_covered == pytest.approx(500) and p.slow_traffic_coverage == pytest.approx(500)
 
 
 @pytest.mark.parametrize("seed", range(5))

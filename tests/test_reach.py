@@ -116,16 +116,10 @@ def test_pairs_over_17_minutes_are_absent_and_exactly_17_is_kept() -> None:
     assert len(got) == 12   # 2 candidates x 7 hexes, less the 2 over the cap
 
 
-def test_a_pair_keeps_the_fast_time_from_the_sites_far_side_snap() -> None:
+@pytest.mark.parametrize("site_far, hex_far", [(True, False), (False, True)], ids=["site-far-side", "hex-far-side"])
+def test_a_pair_keeps_the_fast_time_from_the_far_side_snap(site_far: bool, hex_far: bool) -> None:
     demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    router = far_side_router({(H[0], False, H[2], False): SLOW, (H[0], True, H[2], False): 2.0})
-    _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
-    assert pairs(table)[(H[0], H[2])] == 2.0
-
-
-def test_a_pair_keeps_the_fast_time_to_the_hexs_far_side_snap() -> None:
-    demand = demand_of([10, 20, 7, 9, 100, 5, 5])
-    router = far_side_router({(H[0], False, H[2], False): SLOW, (H[0], False, H[2], True): 2.0})
+    router = far_side_router({(H[0], False, H[2], False): SLOW, (H[0], site_far, H[2], hex_far): 2.0})
     _, table = build_reach(AREA, demand, places_in({H[0]: 1}), RES, 30, router)
     assert pairs(table)[(H[0], H[2])] == 2.0
 
