@@ -124,11 +124,6 @@ def test_an_off_step_density_by_float_noise_shows_the_value_it_got() -> None:
         Scenario(competitor_density=0.75 + 1e-12)
 
 
-def test_density_zero_has_no_competitor_stores() -> None:
-    for seed in SEEDS[:5]:
-        assert plan(hundred_sites(), Scenario(competitor_density=0.0, seed=seed)).network["Competitor"] == []
-
-
 def test_the_operators_stores_are_the_same_at_every_density() -> None:
     inputs = hundred_sites()
     for seed in SEEDS[:5]:

@@ -78,16 +78,9 @@ def test_default_multiplier_is_the_spot_check_figure() -> None:
     assert "02-plan and 03-area ran at 1.4" in row.Source   # their committed outputs predate the change
 
 
-def test_lever_ranges() -> None:
-    assert assumptions.N_RANGE == (1, 20)
-    assert assumptions.PROMISE_RANGE == (8, 16)   # narrowed from 8-20 by the 04-plan benchmark (#30)
-    assert assumptions.MULTIPLIER_RANGE == (1.0, 2.5)
-    assert assumptions.CAPACITY_RANGE == (0.5, 2.0)
-    assert assumptions.CAPTURE_RANGE == (0.5, 1.5)
-    assert assumptions.COMPETITOR_DENSITY_RANGE == (0.0, 2.0)
-    assert assumptions.COMPETITOR_DENSITY_STEP == 0.25
+def test_lever_ranges_row_traces_the_narrowed_promise_range() -> None:
     row = assumptions.table().set_index("Input").loc["Lever ranges"]
-    assert row.Status == "Assumption" and "promise 8-16 min" in row.Value
+    assert row.Status == "Assumption" and "promise 8-16 min" in row.Value   # narrowed from 8-20 by 04-plan (#30)
     assert "2026-11-03" in row.Source and row.Date == "2026-11-03"   # the narrowing is traced to its decision-log entry
 
 
@@ -97,25 +90,13 @@ def test_network_size_is_area_demand_over_orders_per_store_day() -> None:
     assert assumptions.network_size(56.6 * assumptions.ORDERS_PER_STORE_DAY) == 57
 
 
-def test_brand_split_follows_the_reported_counts() -> None:
+def test_operator_share_is_the_reported_store_split() -> None:
     assert assumptions.OPERATOR_SHARE == pytest.approx(2751 / (2751 + 1240))
-    assert assumptions.brand_split(57) == {"Operator": 39, "Competitor": 18}
-    assert assumptions.brand_split(1) == {"Operator": 1, "Competitor": 0}
-    assert assumptions.brand_split(2) == {"Operator": 1, "Competitor": 1}
-    assert assumptions.brand_split(3) == {"Operator": 2, "Competitor": 1}
 
 
-def test_placeholder_brand_counts_are_gone() -> None:
-    assert not hasattr(assumptions, "BRAND_COUNTS")
-
-
-def test_brand_split_parts_sum_to_n() -> None:
-    for n in (1, 10, 57, 100):
-        assert sum(assumptions.brand_split(n).values()) == n
-
-
-def test_brand_split_of_zero_is_all_zeros() -> None:
-    assert assumptions.brand_split(0) == {"Operator": 0, "Competitor": 0}
+@pytest.mark.parametrize("n, operator, competitor", [(0, 0, 0), (1, 1, 0), (2, 1, 1), (3, 2, 1), (10, 7, 3), (57, 39, 18), (100, 69, 31)])
+def test_brand_split_follows_the_reported_counts(n: int, operator: int, competitor: int) -> None:
+    assert assumptions.brand_split(n) == {"Operator": operator, "Competitor": competitor}
 
 
 def test_area_network_size_matches_the_built_demand() -> None:

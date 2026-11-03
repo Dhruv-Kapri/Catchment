@@ -24,7 +24,7 @@ uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources
 uv run catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]   # demand-r9.parquet from the fetched WorldPop and VIIRS; reach: candidates-r9-x30.parquet and table-r9-x30.parquet (builds demand if missing; builds, serves and stops OSRM itself, so Docker must run; prints sites, pairs, time, peak memory)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001; env overrides OSRM_DATA (default data/), OSRM_PORT (5001), OSRM_NAME (catchment-osrm)
-uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the container catchment-osrm-test on port 5091)
+uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the containers catchment-osrm-test on port 5091 and catchment-osrm-test-ro on 5092)
 ```
 
 ## What gets built

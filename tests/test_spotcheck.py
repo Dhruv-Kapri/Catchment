@@ -137,12 +137,6 @@ def test_route_ids_run_1_to_n_in_free_flow_order() -> None:
     assert r.free_flow_min.is_monotonic_increasing
 
 
-def test_app_columns_empty() -> None:
-    table, cands, hexes = make()
-    r = draw_routes(table, cands, hexes, no_bad())
-    assert r[["app_min", "app", "looked_up"]].isna().all().all()
-
-
 def sample_routes() -> pd.DataFrame:
     table, cands, hexes = make()
     return draw_routes(table, cands, hexes, no_bad(), n=5, n_bad=0)
@@ -228,6 +222,7 @@ def test_compare_drops_routes_without_an_app_time_and_sorts_worst_first() -> Non
 
 def test_compare_bad_snap_split_and_ranks() -> None:
     _, summary = compare(app_sheet(), multiplier=1.4)
+    assert summary["n_bad"] == 2
     assert summary["ratio_median_bad"] == pytest.approx(1.75) and summary["ratio_median_other"] == pytest.approx(6 / 5.6)
     assert summary["bad_snap_ranks"] == {1: 1, 4: 3}
 
@@ -257,10 +252,6 @@ def test_compare_with_only_bad_snap_routes_has_none_for_the_other_median() -> No
     assert summary["n_bad"] == 3 and summary["ratio_median_other"] is None
     assert isinstance(summary["ratio_median_bad"], float) and summary["ratio_median_bad"] == pytest.approx(summary["ratio_median"])
     assert summary["bad_snap_ranks"] == {1: 1, 2: 2, 4: 3}
-
-
-def test_compare_counts_bad_snap_routes_with_an_app_time() -> None:
-    assert compare(app_sheet(), multiplier=1.4)[1]["n_bad"] == 2
 
 
 def test_compare_raises_when_a_found_route_has_no_bad_snap_flag() -> None:

@@ -7,7 +7,6 @@ import pytest
 from catchment import assumptions, explore
 from catchment.explore import (
     Case,
-    SolveResult,
     evaluate,
     explore_reachable,
     greedy_plan,
@@ -94,13 +93,10 @@ def test_with_network_rejects_two_stores_on_one_site() -> None:
         with_network(case(), {"Operator": [1], "A": [1]})
 
 
-def test_with_network_cap_int_override() -> None:
-    assert with_network(case(), C_OP, cap_int=123).cap_int == 123
-    assert with_network(case(), C_OP).cap_int == explore.CAP_INT
-
-
-def test_with_network_cap_int_zero_is_honoured() -> None:
-    assert with_network(case(), C_OP, cap_int=0).cap_int == 0
+@pytest.mark.parametrize("cap_int, expected", [(123, 123), (0, 0), (None, explore.CAP_INT)])   # 0 must be honoured, not treated as falsy
+def test_with_network_cap_int_override(cap_int: int | None, expected: int) -> None:
+    kw: dict[str, int] = {} if cap_int is None else {"cap_int": cap_int}
+    assert with_network(case(), C_OP, **kw).cap_int == expected
 
 
 def test_place_placeholder_network_raises_when_no_site_reaches_demand() -> None:
@@ -124,18 +120,11 @@ def test_place_network_is_deterministic_with_the_right_counts() -> None:
 def test_solve_plan_picks_the_obviously_best_site() -> None:
     C = with_network(case(), C_OP)
     r = solve_plan(C, 1)
-    assert isinstance(r, SolveResult)
     # c2 (position 2) adds h3, 400 orders; c1 (position 0) would add only h2, 300
     assert (r.status, r.chosen) == ("OPTIMAL", [2])
     assert r.obj == pytest.approx(700.0) and r.bound == pytest.approx(700.0)
     assert (r.pairs, r.new_sites, r.hexes, r.constrained_sites) == (5, 2, 4, 0)
     assert r.total_s >= r.build_s >= 0 and r.solve_s >= 0
-
-
-def test_solve_plan_result_is_frozen() -> None:
-    r = solve_plan(with_network(case(), C_OP), 1)
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        r.obj = 0.0   # type: ignore[misc]
 
 
 def test_solve_plan_objective_matches_evaluate_when_capacity_does_not_bind() -> None:

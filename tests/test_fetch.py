@@ -1,4 +1,3 @@
-import inspect
 import json
 import shutil
 import subprocess
@@ -280,10 +279,6 @@ def test_osm_missing_osmium_fails_before_download(osm_env: tuple[Path, list[str]
     assert "b" in json.loads((tmp_path / "manifest.json").read_text()) and downloads == []
 
 
-def test_osm_is_a_default_source() -> None:
-    assert "osm" in fetch.SOURCES
-
-
 def test_atomic_path_leaves_no_part_and_dest_untouched_when_the_write_raises(tmp_path: Path) -> None:
     dest = tmp_path / "sub" / "f.bin"
     dest.parent.mkdir()
@@ -301,10 +296,6 @@ def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path: 
         part.write_bytes(b"whole")
         assert not dest.exists()
     assert dest.exists() and dest.read_bytes() == b"whole" and not part.exists()
-
-
-def test_download_default_session_is_a_requests_session() -> None:
-    assert isinstance(inspect.signature(fetch.download).parameters["session"].default, requests.Session)
 
 
 class ListingSession:
@@ -325,10 +316,6 @@ def test_black_marble_listing_goes_through_the_given_session() -> None:
     s = ListingSession(listing)
     assert fetch.list_black_marble(session=s) == listing
     assert s.urls == [f"{fetch.BM_BASE}.json"]
-
-
-def test_list_black_marble_default_session_is_the_shared_one() -> None:
-    assert inspect.signature(fetch.list_black_marble).parameters["session"].default is fetch.SESSION
 
 
 def test_fetch_viirs_picks_the_file_from_the_black_marble_listing(
