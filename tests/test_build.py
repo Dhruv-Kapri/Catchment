@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Never
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -25,18 +26,13 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-def test_demand_writes_res_named_parquet(env: Path) -> None:
+def test_demand_writes_a_res_named_parquet_that_keeps_its_attrs(env: Path) -> None:
     assert build.main(["demand"]) == 0
-    assert (env / "demand-r9.parquet").exists()
-
-
-def test_stored_capture_share_is_readable_from_the_file(env: Path) -> None:
-    build.main(["demand"])
     back = pd.read_parquet(env / "demand-r9.parquet")
+    assert set(back.attrs) == {"capture_share", "res"}
     assert back.attrs["res"] == 9
     assert back.demand.sum() / back.households.sum() == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY)
-    mean_m = (back.multiplier * back.households).sum() / back.households.sum()
-    assert back.attrs["capture_share"] == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY / mean_m)
+    assert back.attrs["capture_share"] == pytest.approx(assumptions.ORDERS_PER_HOUSEHOLD_DAY / np.average(back.multiplier, weights=back.households))
 
 
 def test_prints_a_summary_with_the_capture_share(env: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -151,11 +147,3 @@ def test_reach_without_fetched_places_says_to_fetch_them_before_any_work(env: Pa
     err = capsys.readouterr().err
     assert "catchment-fetch overture" in err and "overture_places.parquet.gone" in err
     assert not (env / "demand-r9.parquet").exists()
-
-
-def test_stage_output_names_from_build_args() -> None:
-    args = build.BuildArgs(res=9, x_pct=30, force=False)
-    _, demand_outputs = build.STAGES["demand"]
-    _, reach_outputs = build.STAGES["reach"]
-    assert demand_outputs(args) == ["demand-r9.parquet"]
-    assert reach_outputs(args) == ["candidates-r9-x30.parquet", "table-r9-x30.parquet"]

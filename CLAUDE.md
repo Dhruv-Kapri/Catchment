@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stages 0, 0.5 and 1 are done (stage 1 on 2026-10-31); next is stage 2 (plan). Results and "done when" notes are in
+Stages 0, 0.5, 1 and 2 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: the `04-plan` benchmark, CP-SAT from greedy
+served); next is stage 3 (compare and ship: the
+FastAPI service and the web map). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
 `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
 notebooks' placeholder plan model. The repo also holds the
@@ -23,7 +25,7 @@ uv run catchment-fetch [worldpop viirs overture osm] [--force]   # fetch sources
 uv run catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]   # demand-r9.parquet from the fetched WorldPop and VIIRS; reach: candidates-r9-x30.parquet and table-r9-x30.parquet (builds demand if missing; builds, serves and stops OSRM itself, so Docker must run; prints sites, pairs, time, peak memory)
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001; env overrides OSRM_DATA (default data/), OSRM_PORT (5001), OSRM_NAME (catchment-osrm)
-uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the container catchment-osrm-test on port 5091)
+uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the containers catchment-osrm-test on port 5091 and catchment-osrm-test-ro on 5092)
 ```
 
 ## What gets built
@@ -50,7 +52,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
   competitors') come only from the synthetic network; record the source and date of every reported count it uses.
 - **Demand is a model, not a forecast.** Every factor stays visible as a lever or labelled assumption;
   don't add ML forecasting.
-- **A new plan must return in ≤ 10 s** for the default scenario; measure it when the solver changes.
+- **A new plan must return in ≤ 10 s for any scenario in the lever ranges**, every metric included and its gap stated;
+  measure it on 04-plan's benchmark grid, on an idle machine, when the solver or a range changes.
 - **Type hints on every function**, tests and notebook `def`s included, and wherever a type isn't obvious
   (module constants, class attributes, empty containers). `uvx ruff check --select ANN src tests` stays clean.
 

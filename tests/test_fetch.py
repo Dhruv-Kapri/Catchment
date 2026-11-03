@@ -1,4 +1,3 @@
-import inspect
 import json
 import shutil
 import subprocess
@@ -280,10 +279,6 @@ def test_osm_missing_osmium_fails_before_download(osm_env: tuple[Path, list[str]
     assert "b" in json.loads((tmp_path / "manifest.json").read_text()) and downloads == []
 
 
-def test_osm_is_a_default_source() -> None:
-    assert "osm" in fetch.SOURCES
-
-
 def test_atomic_path_leaves_no_part_and_dest_untouched_when_the_write_raises(tmp_path: Path) -> None:
     dest = tmp_path / "sub" / "f.bin"
     dest.parent.mkdir()
@@ -301,10 +296,6 @@ def test_atomic_path_renames_the_part_onto_dest_and_makes_parent_dirs(tmp_path: 
         part.write_bytes(b"whole")
         assert not dest.exists()
     assert dest.exists() and dest.read_bytes() == b"whole" and not part.exists()
-
-
-def test_download_default_session_is_a_requests_session() -> None:
-    assert isinstance(inspect.signature(fetch.download).parameters["session"].default, requests.Session)
 
 
 class ListingSession:
@@ -327,5 +318,27 @@ def test_black_marble_listing_goes_through_the_given_session() -> None:
     assert s.urls == [f"{fetch.BM_BASE}.json"]
 
 
-def test_list_black_marble_default_session_is_the_shared_one() -> None:
-    assert inspect.signature(fetch.list_black_marble).parameters["session"].default is fetch.SESSION
+def test_fetch_viirs_picks_the_file_from_the_black_marble_listing(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    listing = {"content": [{"name": "VNP46A4.A2025001.h25v06.002.2026077000736.h5"}]}
+    calls: list[dict[str, object]] = []
+    downloaded: list[str] = []
+
+    def fake_list(*args: object, **kwargs: object) -> dict[str, Any]:
+        calls.append(kwargs)
+        return listing
+
+    def fake_download(url: str, dest: Path | str, *args: object, **kwargs: object) -> Path:
+        downloaded.append(url)
+        return Path(dest)
+
+    monkeypatch.setenv("LAADS_TOKEN", "t")
+    monkeypatch.setattr(fetch, "RAW", tmp_path)
+    monkeypatch.setattr(fetch, "list_black_marble", fake_list)
+    monkeypatch.setattr(fetch, "download", fake_download)
+    monkeypatch.setattr(fetch, "check_hdf5", lambda path: None)
+    monkeypatch.setattr(fetch, "black_marble_to_tif", lambda *a, **k: None)
+    out = fetch.fetch_viirs(box(77.0, 28.4, 77.1, 28.5))
+    assert len(calls) == 1 and "session" not in calls[0]   # the shared default session
+    assert downloaded == [f"{fetch.BM_BASE}/{listing['content'][0]['name']}"]
+    assert out["source"] == downloaded[0]

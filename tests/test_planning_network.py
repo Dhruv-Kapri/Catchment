@@ -38,7 +38,7 @@ def test_a_site_reaching_nothing_at_the_default_never_holds_a_store_whatever_the
     inputs = make_inputs(hexes, pairs, SITES[:8], stores=3)
     for seed in SEEDS:
         default_net = plan(inputs, Scenario(n_new=1, seed=seed)).network
-        assert plan(inputs, Scenario(n_new=1, seed=seed, promise=20, multiplier=1.0)).network == default_net
+        assert plan(inputs, Scenario(n_new=1, seed=seed, promise=16, multiplier=1.0)).network == default_net
         held = {s for sites in default_net.values() for s in sites}
         assert held and held <= {f"S{i}" for i in range(6)}
 
@@ -101,20 +101,27 @@ def test_an_off_step_density_is_refused_naming_the_lever_and_the_step(density: f
         Scenario(competitor_density=density)
 
 
-@pytest.mark.parametrize("density", [True, np.bool_(True)])
-def test_a_bool_density_is_refused(density: object) -> None:
-    with pytest.raises(TypeError, match="competitor_density"):
-        Scenario(competitor_density=density)   # type: ignore[arg-type]
+@pytest.mark.parametrize("lever", ["multiplier", "capacity", "capture", "competitor_density"])
+@pytest.mark.parametrize("value", [True, np.bool_(True), "1.0"])
+def test_a_float_lever_must_be_a_real_number_not_a_bool(lever: str, value: object) -> None:
+    with pytest.raises(TypeError, match=f"{lever} .* must be a number"):
+        Scenario(**{lever: value})
+
+
+@pytest.mark.parametrize("lever", ["multiplier", "capacity", "capture", "competitor_density"])
+def test_a_float_lever_is_stored_as_a_plain_float(lever: str) -> None:
+    s = Scenario(**{lever: np.float64(1.5) if lever != "competitor_density" else np.float32(1.5)})
+    assert type(getattr(s, lever)) is float and getattr(s, lever) == 1.5
+
+
+def test_a_negative_zero_density_is_stored_and_printed_as_zero() -> None:
+    s = Scenario(competitor_density=-0.0)
+    assert str(s.competitor_density) == "0.0" and "competitor_density=0.0," in repr(s)
 
 
 def test_an_off_step_density_by_float_noise_shows_the_value_it_got() -> None:
     with pytest.raises(ValueError, match=r"competitor_density 0\.75000000000\d+ is not in steps of 0\.25"):
         Scenario(competitor_density=0.75 + 1e-12)
-
-
-def test_density_zero_has_no_competitor_stores() -> None:
-    for seed in SEEDS[:5]:
-        assert plan(hundred_sites(), Scenario(competitor_density=0.0, seed=seed)).network["Competitor"] == []
 
 
 def test_the_operators_stores_are_the_same_at_every_density() -> None:

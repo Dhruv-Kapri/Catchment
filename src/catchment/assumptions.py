@@ -15,7 +15,7 @@ NCR_POPULATION: float = 30.2e6          # "New Delhi" Degree of Urbanisation cit
 
 # Lever ranges, inclusive (decision log, 2026-11-01)
 N_RANGE: tuple[int, int] = (1, 20)
-PROMISE_RANGE: tuple[int, int] = (8, 20)                # minutes
+PROMISE_RANGE: tuple[int, int] = (8, 16)                # minutes; narrowed from 8-20 by the 04-plan benchmark (#30)
 MULTIPLIER_RANGE: tuple[float, float] = (1.0, 2.5)
 CAPACITY_RANGE: tuple[float, float] = (0.5, 2.0)        # x the default capacity
 CAPTURE_RANGE: tuple[float, float] = (0.5, 1.5)         # x the default capture share
@@ -23,7 +23,7 @@ COMPETITOR_DENSITY_RANGE: tuple[float, float] = (0.0, 2.0)   # x the default com
 COMPETITOR_DENSITY_STEP: float = 0.25   # density moves in quarters
 
 PICK_AND_PACK: int = 3                  # minutes, fixed
-MAX_PROMISE: int = 20                   # longest promise lever, minutes
+MAX_PROMISE: int = 20                   # longest promise the travel-time table keeps pairs for, minutes (the lever now stops at 16)
 SLOW_TRAFFIC_FACTOR: float = 1.25       # slow-traffic coverage, x the scenario's congestion multiplier
 
 # Plan: default scenario, capacity, synthetic network, solver
@@ -35,7 +35,10 @@ CAPACITY_FACTOR: float = 1.5
 SEED: int = 2026                        # network placement
 SCALE: int = 100                        # shares and capacity are integers in hundredths of an order
 TIME_LIMIT: int = 60
-PLAN_BUDGET: float = 9.0                # seconds for everything in plan() before the metrics: the 10 s bar minus 1 s
+PLAN_BUDGET: float = 8.0                # seconds for everything in plan() before the metrics: the 10 s bar minus 2 s (metrics, and CP-SAT running past its time limit; #34)
+# Measured on the full area (res 9, 30%), 8 GB Apple Silicon: build_model takes 21-23 us per capacity-bound (x) pair (14,256 pairs 0.4 s; 247,000 5.5 s;
+# 264,753 5.7 s; 624,601 14.5 s). Above the cap the model is not built: 200,000 pairs is about 4.5 s, the most of the 8 s budget the build can take. Default scenario: 20 pairs.
+MODEL_PAIR_CAP: int = 200_000
 WORKERS: int = 8
 SOLVER_SEED: int = 1
 
@@ -77,9 +80,9 @@ def table() -> pd.DataFrame:
             ("Pairs kept in the table", f"Free-flow ≤ {MAX_PAIR_MIN} min (longest promise {MAX_PROMISE} − {PICK_AND_PACK} at multiplier 1.0)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Second road for snapping", f"Each point snaps to its nearest road and a second road, and a pair keeps the fastest of the four times. The second road is the nearest hit within {SECOND_ROAD_MAX_M} m that lies more than {SECOND_ROAD_GAP_M} m from the first across the road (a parallel carriageway, not the next segment of the same one); none, then the nearest road repeats", "No external source; 01-reach found about one short pair in seven running out and back at an endpoint. Decision log, 2026-10-29 (fastest-of-four snapping, measured)", "-", "Assumption"),
             ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Spot check (docs/spot-check.csv): implied median multiplier 1.79 over 20 routes, Google Maps two-wheeler, Fri 30 Oct 2026 19:00-19:07, one evening's live estimates; decision log, 2026-11-01 (Plan scope). Was 1.4, an unmeasured guess: 02-plan and 03-area ran at 1.4", "2026-11-01", "Assumption"),
-            ("Lever ranges", f"N {N_RANGE[0]}-{N_RANGE[1]}; promise {PROMISE_RANGE[0]}-{PROMISE_RANGE[1]} min; congestion multiplier {MULTIPLIER_RANGE[0]}-{MULTIPLIER_RANGE[1]}; capacity {CAPACITY_RANGE[0]}×-{CAPACITY_RANGE[1]}× the default; capture share {CAPTURE_RANGE[0]}×-{CAPTURE_RANGE[1]}× the default; competitor density {COMPETITOR_DENSITY_RANGE[0]:g}×-{COMPETITOR_DENSITY_RANGE[1]:g}× the default, in steps of {COMPETITOR_DENSITY_STEP:g}, default 1×. All inclusive", "Decision log, 2026-11-01 (Plan scope)", "2026-11-01", "Assumption"),
+            ("Lever ranges", f"N {N_RANGE[0]}-{N_RANGE[1]}; promise {PROMISE_RANGE[0]}-{PROMISE_RANGE[1]} min; congestion multiplier {MULTIPLIER_RANGE[0]}-{MULTIPLIER_RANGE[1]}; capacity {CAPACITY_RANGE[0]}×-{CAPACITY_RANGE[1]}× the default; capture share {CAPTURE_RANGE[0]}×-{CAPTURE_RANGE[1]}× the default; competitor density {COMPETITOR_DENSITY_RANGE[0]:g}×-{COMPETITOR_DENSITY_RANGE[1]:g}× the default, in steps of {COMPETITOR_DENSITY_STEP:g}, default 1×. All inclusive", "Decision log, 2026-11-01 (Plan scope); promise narrowed from 8-20 to 8-16, decision log 2026-11-03 (benchmark, #30)", "2026-11-03", "Assumption"),
             ("Slow-traffic factor", f"{SLOW_TRAFFIC_FACTOR}× the scenario's congestion multiplier: slow-traffic coverage is the demand the plan's stores (existing and new) still cover then, with each hex's competitor split held at the scenario's", "Decision log, 2026-11-01 (Plan scope); no external source", "2026-11-01", "Assumption"),
-            ("New stores, N", f"{N_SLICE} on the slice; {N_AREA} on the full area (the default scenario for the 10 s bar)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
+            ("New stores, N", f"{N_SLICE} on the slice; {N_AREA} on the full area (the default scenario)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Orders per store per day", f"{BLINKIT_ORDERS_Q2/1e6:.1f} M orders ÷ {Q2_DAYS} days ÷ {BLINKIT_STORES:,} stores = {ORDERS_PER_STORE_DAY:,.0f}", "00-demand: Eternal Ltd shareholders' letter, 21 Oct 2026, p. 13 (orders and stores)", "2026-10-29", "Verified"),
             ("Capacity per store", f"{CAPACITY_FACTOR} × {ORDERS_PER_STORE_DAY:,.0f} = {CAPACITY:,.0f} orders per day, the same for every store of the operator. Adopted here as 00-demand and the decision log said; the 1.5 has no source (headroom over the average)", "Decision log, 2026-10-29 (Explore); issue #5. Rests on the Verified orders per store per day", "2026-10-29", "Assumption"),
             ("Network size", f"Area demand ÷ orders per store per day = {ORDERS_PER_STORE_DAY:,.0f}, rounded: about {AREA_NETWORK_SIZE} stores on the full area. Equals the NCR store count × the area's population share, because the capture share is calibrated on the same figures", "Decision log, 2026-11-01 (Plan scope); rests on the Verified orders per store per day", "2026-11-01", "Assumption"),
@@ -90,7 +93,7 @@ def table() -> pd.DataFrame:
             ("Sites for new stores", "Any candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
             ("Assignment tie-break", "Greedy assigns each hex to its nearest open store with capacity left (nearest-first walk), which decides new against cannibalised demand. CP-SAT maximises orders only: a hex no capacity-bound store takes goes to its nearest open store, but among capacity-bound stores serving the same orders the solver's assignment stands, so its fresh/cannibalised split can differ from greedy's. Fresh and cannibalised are judged against the existing stores' nearest-first walk, for every method", "No external source", "-", "Assumption"),
             ("Integer scale", f"Shares and capacity in hundredths of an order (round(orders × {SCALE})), because CP-SAT needs integers. CP-SAT's objective and bound use these rounded shares; the plan's metrics use the unrounded ones, so they can differ from the objective by rounding", "Modelling choice", "-", "Assumption"),
-            ("Plan budget", f"{PLAN_BUDGET:g} s for everything before the metrics (network, reach, greedy, model, solve): the 10 s bar minus 1 s for the metrics. The solver gets what the build left of it", "Decision log, 2026-10-30: Full-area solve time measured (#15), the tighter model's 9 s build-plus-solve budget", "2026-10-30", "Assumption"),
+            ("Plan budget", f"{PLAN_BUDGET:g} s for everything before the metrics (network, reach, greedy, model, solve): the 10 s bar minus 2 s, for the metrics and for CP-SAT running past its time limit (seen: 2.3 s once under load). The solver gets what the build left of it. The build is outside the solver's time limit, so a CP-SAT model with more than {MODEL_PAIR_CAP:,} capacity-bound (x) pairs (about {MODEL_PAIR_CAP * 22e-6:.1f} s to build) is not built: from greedy, greedy's plan (its bound the cheap capacity bound); on its own, no plan", "Decision log, 2026-10-30: Full-area solve time measured (#15), the tighter model's 9 s build-plus-solve budget; 2026-11-02 for the size cap (#33); 2026-11-03 for 9 s to 8 s (#34)", "2026-11-03", "Assumption"),
             ("Solver", f"OR-tools CP-SAT, time limit {TIME_LIMIT} s, {WORKERS} workers, random_seed {SOLVER_SEED}", "Modelling choice", "-", "Assumption"),
         ],
         columns=["Input", "Value", "Source", "Date", "Status"],

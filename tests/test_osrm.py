@@ -1,12 +1,13 @@
 import shutil
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from catchment import reach
-from catchment.reach import served_osrm
+from catchment.reach import OsrmRouter, served_osrm
 
 OSRM = Path(__file__).parent.parent / "osrm"
 
@@ -37,6 +38,7 @@ def test_a_failing_stop_does_not_hide_the_error_in_the_block(tmp_path: Path, mon
 
 ROADS_OSM = Path(__file__).parent / "fixtures" / "roads.osm"
 PORT, NAME = 5091, "catchment-osrm-test"
+RO_PORT, RO_NAME = 5092, "catchment-osrm-test-ro"   # the shared read-only router
 
 
 def docker_running() -> bool:
@@ -56,6 +58,16 @@ def container_running() -> bool:
 def road_data(tmp_path: Path) -> Path:
     subprocess.run(["osmium", "cat", str(ROADS_OSM), "-o", str(tmp_path / "osm.osm.pbf")], check=True)
     return tmp_path
+
+
+@pytest.fixture(scope="module")
+def router(tmp_path_factory: pytest.TempPathFactory) -> Iterator[OsrmRouter]:
+    """One served router for the tests that only query it: building the graph and starting the container is most of each test's time.
+    Its own container name and port, so it can't clash with the lifecycle tests' containers whatever the test order."""
+    data = tmp_path_factory.mktemp("roads")
+    subprocess.run(["osmium", "cat", str(ROADS_OSM), "-o", str(data / "osm.osm.pbf")], check=True)
+    with served_osrm(data, RO_PORT, RO_NAME) as served:
+        yield served
 
 
 @docker
@@ -87,10 +99,9 @@ def test_the_peak_memory_is_read_before_the_container_stops(road_data: Path) -> 
 
 @docker
 @needs_docker
-def test_snap_puts_an_off_road_point_on_the_road(road_data: Path) -> None:
+def test_snap_puts_an_off_road_point_on_the_road(router: OsrmRouter) -> None:
     lon, lat = 77.0305, 28.4503   # ~33 m north of the east-west road (lat 28.4500)
-    with served_osrm(road_data, PORT, NAME) as router:
-        s_lon, s_lat, dist = router.snap([lon], [lat])
+    s_lon, s_lat, dist = router.snap([lon], [lat])
     assert s_lon.shape == s_lat.shape == dist.shape == (1, 1)
     assert s_lat[0, 0] == pytest.approx(28.4500, abs=1e-5) and 77.0300 <= s_lon[0, 0] <= 77.0310
     assert 25 < dist[0, 0] < 40
@@ -98,10 +109,9 @@ def test_snap_puts_an_off_road_point_on_the_road(road_data: Path) -> None:
 
 @docker
 @needs_docker
-def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(road_data: Path) -> None:
+def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(router: OsrmRouter) -> None:
     lon, lat = 77.0310, 28.45995   # 5.5 m south of the eastbound carriageway (lat 28.4600); the westbound is at 28.4601
-    with served_osrm(road_data, PORT, NAME) as router:
-        s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
+    s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
     assert s_lon.shape == s_lat.shape == dist.shape == (1, 2)
     assert s_lat[0] == pytest.approx([28.4600, 28.4601], abs=2e-6)   # nearest carriageway first
     assert dist[0] == pytest.approx([5.5, 16.6], abs=0.5)
@@ -109,28 +119,25 @@ def test_snap_two_roads_puts_each_carriageway_of_a_divided_road_on_a_point(road_
 
 @docker
 @needs_docker
-def test_a_point_on_a_carriageway_still_finds_the_other_one(road_data: Path) -> None:
-    with served_osrm(road_data, PORT, NAME) as router:
-        s_lon, s_lat, dist = router.snap([77.0310], [28.4600], k=2)   # exactly on a node of the eastbound carriageway
+def test_a_point_on_a_carriageway_still_finds_the_other_one(router: OsrmRouter) -> None:
+    s_lon, s_lat, dist = router.snap([77.0310], [28.4600], k=2)   # exactly on a node of the eastbound carriageway
     assert s_lat[0] == pytest.approx([28.4600, 28.4601], abs=2e-6)
     assert dist[0] == pytest.approx([0, 11.1], abs=0.5)
 
 
 @docker
 @needs_docker
-def test_a_second_road_further_than_100_m_is_not_one_and_the_nearest_repeats(road_data: Path) -> None:
+def test_a_second_road_further_than_100_m_is_not_one_and_the_nearest_repeats(router: OsrmRouter) -> None:
     lon, lat = 77.04055, 28.4501   # ~11 m north of the island road (way 12); every other road is over 700 m away
-    with served_osrm(road_data, PORT, NAME) as router:
-        s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
+    s_lon, s_lat, dist = router.snap([lon], [lat], k=2)
     assert s_lat[0] == pytest.approx([28.4500, 28.4500], abs=2e-6) and s_lon[0, 0] == s_lon[0, 1]
     assert dist[0, 0] == dist[0, 1] and dist[0, 0] == pytest.approx(11.1, abs=0.5)
 
 
 @docker
 @needs_docker
-def test_minutes_along_the_road_are_positive_and_finite(road_data: Path) -> None:
-    with served_osrm(road_data, PORT, NAME) as router:
-        m = router.minutes([77.0280, 77.0300], [28.4500, 28.4480], [77.0320], [28.4500])
+def test_minutes_along_the_road_are_positive_and_finite(router: OsrmRouter) -> None:
+    m = router.minutes([77.0280, 77.0300], [28.4500, 28.4480], [77.0320], [28.4500])
     assert m.shape == (2, 1) and m.dtype == np.float32
     assert np.isfinite(m).all() and (m > 0).all()
     assert 0.2 < m[0, 0] < 1.5   # 400 m of residential road
@@ -138,18 +145,16 @@ def test_minutes_along_the_road_are_positive_and_finite(road_data: Path) -> None
 
 @docker
 @needs_docker
-def test_a_destination_on_a_disconnected_road_is_nan(road_data: Path) -> None:
-    with served_osrm(road_data, PORT, NAME) as router:
-        m = router.minutes([77.0280], [28.4500], [77.0320, 77.0405], [28.4500, 28.4500])   # 2nd: an island road
+def test_a_destination_on_a_disconnected_road_is_nan(router: OsrmRouter) -> None:
+    m = router.minutes([77.0280], [28.4500], [77.0320, 77.0405], [28.4500, 28.4500])   # 2nd: an island road
     assert np.isfinite(m[0, 0]) and np.isnan(m[0, 1])
 
 
 @docker
 @needs_docker
-def test_chunked_requests_give_the_same_table(road_data: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_chunked_requests_give_the_same_table(router: OsrmRouter, monkeypatch: pytest.MonkeyPatch) -> None:
     src, dst = ([77.0280, 77.0300, 77.0320], [28.4500, 28.4480, 28.4520]), ([77.0290, 77.0300, 77.0310], [28.4500, 28.4520, 28.4500])
-    with served_osrm(road_data, PORT, NAME) as router:
-        whole = router.minutes(*src, *dst)
-        monkeypatch.setattr(reach, "CHUNK_SRC", 2)
-        monkeypatch.setattr(reach, "CHUNK_DST", 2)
-        assert np.array_equal(router.minutes(*src, *dst), whole)
+    whole = router.minutes(*src, *dst)
+    monkeypatch.setattr(reach, "CHUNK_SRC", 2)
+    monkeypatch.setattr(reach, "CHUNK_DST", 2)
+    assert np.array_equal(router.minutes(*src, *dst), whole)

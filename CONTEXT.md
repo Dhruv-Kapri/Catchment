@@ -51,8 +51,8 @@ congestion multiplier.
 _Avoid_: distance, ETA
 
 **Travel-time table**:
-The travel times from every candidate site to every hex, kept only up to the longest promise the levers
-allow.
+The travel times from every candidate site to every hex, kept only up to a fixed longest promise
+(`assumptions.MAX_PROMISE`, 20 min), at or above the longest the promise lever allows (16 min).
 _Avoid_: distance matrix, OD matrix (in prose)
 
 **Promise**:
