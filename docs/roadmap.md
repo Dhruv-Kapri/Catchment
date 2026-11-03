@@ -89,7 +89,7 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   blocker.
 - **If it overruns, cut in this order:** the #23 extras; the density lever (fixed at 1×, to Later); network seeds
   5 → 2.
-- **Done 2026-11-03:** `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
+- **Benchmarked 2026-11-03, not yet done** (open until #34 gives the 10 s bar headroom for a CP-SAT overshoot; see the corner below): `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
   two-brand network with the density lever, default multiplier 1.8. `04-plan` benchmarks 31 scenarios × 3 methods on the full
   area: every plan within 10 s with its gap stated (slowest 9.21 s), CP-SAT from greedy never below greedy and optimal in 28 of
   31, gain over greedy up to 5.3% where capacity binds. Six combinations off the grid, the box's worst corner included, also
