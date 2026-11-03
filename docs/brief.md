@@ -34,7 +34,8 @@ Number of new stores · delivery promise (minutes) · congestion multiplier · s
 A planner can go from "N more stores" to a defensible plan, with its trade-offs, in **under five
 minutes**, and every number in the plan traces back to a stated assumption.
 
-Engineering bars that support it: a new plan returns in **≤ 10 s**; the CP-SAT plan beats the greedy
+Engineering bars that support it: a new plan, with every metric, returns in **≤ 10 s** for any scenario in the lever
+ranges, its gap to the solver's bound stated; the CP-SAT plan beats the greedy
 baseline on covered demand (or the gap is reported honestly); travel-time error against a hand-checked
 sample is measured and shown.
 

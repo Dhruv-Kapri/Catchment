@@ -3,6 +3,51 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-03: Plan (stage 2) benchmark: CP-SAT from greedy is served, promise narrowed to 8-16, a capacity bound for every CP-SAT plan (#30)
+
+- **Benchmark (`04-plan`, final run 2026-11-03 08:51, with #33 merged).** 31 scenarios on the full area (each lever swept with the
+  others at the default, the two hardest corners, 5 network seeds) × greedy, CP-SAT on its own and CP-SAT from greedy, through
+  `plan()`. Every plan returned within 10 s with its gap stated (slowest 9.21 s; CP-SAT from greedy at most 9.07 s; greedy
+  0.02-0.11 s). CP-SAT from greedy was never below greedy and proved optimality in 28 of 31; the other 3 (capacity 0.5× and both
+  corners) stopped at the budget with gaps of 0.6-1.3%. Its gain over greedy: median 0.14%, 0 in 11 scenarios, 4.5-5.3% where
+  capacity binds or the market is largest. Load: started after 5 min under 4 (2.1), rose to 10.4 (CP-SAT's 8 workers add about 8);
+  the budget, not the load, ends the time-limited solves. Slow-traffic coverage never exceeded demand covered (0 of 93 plans before
+  #33's clamp, too).
+- **CP-SAT from greedy is the served variant.** The stage 2 rule serves CP-SAT on its own only if it is never worse on demand
+  covered and is faster. In the final run the notebook's check (tolerance 10⁻⁶) finds it worse in 3 scenarios, so the rule picks
+  CP-SAT from greedy, but by under 0.05 orders a day (rounding-level ties; it led where capacity binds, and was faster at the
+  median, 0.25 s vs 0.30 s). The pick rests as much on the earlier run of the grid (07:28, before #33; its CSV is in commit
+  e13b3d6), where it trailed by 31 and 336 orders a day (multiplier 1.0, capacity 0.5×), and on CP-SAT on its own returning no
+  plan (UNKNOWN) where CP-SAT from greedy keeps greedy's.
+- **Every CP-SAT plan with an objective states a bound** (`planning.capacity_bound`): the lower of the demand any open site
+  reaches and what the existing stores plus the N best candidate sites can serve, each at most min(capacity, the share it reaches).
+  It is valid for any choice of sites and any assignment, so it bounds demand covered too. The plan's bound is the lower of it and
+  CP-SAT's, never under the objective; where CP-SAT's is the lower, it bounds the solver's objective on rounded shares, and a
+  FEASIBLE plan's demand covered can sit slightly above it (see the `Plan` docstring). This gives a gap where #33 left a kept greedy plan or an unbuilt model with none, and caps a
+  runaway solver bound (seen: 1.65 M orders a day against the area's 89.7 k). It is loose where CP-SAT finds nothing better than
+  greedy on a binding-capacity model (16-19% in the combinations below); the gap is honest, not tight.
+- **The promise range narrows from 8-20 to 8-16** (`assumptions.PROMISE_RANGE`; cuts.md), measured before #33's size cap and the
+  capacity bound: at 19 and 20, CP-SAT found no solution in the budget in every run, so the plan carried no gap; at 18 one run took
+  10.46 s and 3 of 6 reported a 2,957% gap; 16 gave a usable gap in every run. Both failure modes are now addressed (the size cap,
+  the capacity bound), so 17-20 may pass a re-measure; re-widening is left to that. The travel-time table still keeps pairs to
+  17 free-flow min; nothing is rebuilt.
+- **Combinations off the grid pass too.** 04-plan runs six in-range combinations that widen the free-flow reach, (promise − 3) /
+  multiplier, or bind capacity at a wide reach, including the box's worst corner (promise 16, multiplier 1.0, N 20, capacity 0.5×,
+  capture 1.5×, density 0). Before #33 and the capacity bound, promise 16 × multiplier 1.0 took 12.2 s (10.3 s of build) and five
+  of them stated no gap. Now all six return within 10 s (at most 9.70 s) with a gap: the wide-reach models are over the size cap,
+  so greedy's plan returns at once with gaps of 0.6-1.3%; the binding-capacity ones keep greedy's plan or a FEASIBLE one with gaps
+  of 16-19%.
+- **Every corner of the narrowed box** (64 scenarios, each lever at its low or high end, CP-SAT from greedy, load 7-10) states a gap:
+  42 OPTIMAL, 16 HEURISTIC (gaps up to 21.9%), 6 FEASIBLE (6.8-17.4%). 63 of 64 returned within 10 s. One, N 1 × promise 8 ×
+  multiplier 1.0 × capacity 0.5× × capture 1.5× × density 2, took 11.28 s once: CP-SAT ran about 2.3 s past its time limit (build
+  0.65 s, metrics 0.03 s); three re-runs took 9.20-9.30 s. `PLAN_BUDGET` leaves 1 s for the metrics, not for a solver overshoot.
+- **The brief's and CLAUDE.md's ≤ 10 s wording** now says what is measured: any scenario in the lever ranges, every metric
+  included, its gap stated, measured on 04-plan's grid on an idle machine. It was "a new plan returns in ≤ 10 s" (brief) and
+  "for the default scenario" (CLAUDE.md).
+- **Ruled out:** serving CP-SAT on its own (not reliably never worse, can return UNKNOWN); keeping promise 18 before the fixes
+  (not repeatable within 10 s with a meaningful gap); a joint promise × multiplier limit on the scenario (the size cap covers it);
+  a tighter bound from a second solve (no time left in the budget).
+
 ## 2026-11-02: plan() edge contract: slow traffic clamped, an oversized model not built, HEURISTIC for greedy's plan, no infinite gap (#33)
 
 - **Slow-traffic coverage is `min(slow-traffic walk, demand covered)` for every method.** A time-limited (FEASIBLE) CP-SAT plan

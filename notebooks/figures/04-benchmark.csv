@@ -1,0 +1,32 @@
+group,label,n_new,promise,multiplier,capacity,capture,competitor_density,seed,covered_greedy,seconds_greedy,covered_cpsat,gain_cpsat,gain_pct_cpsat,seconds_cpsat,build_cpsat,gap_cpsat,status_cpsat,slow_above_covered_cpsat,covered_cpsat_from_greedy,gain_cpsat_from_greedy,gain_pct_cpsat_from_greedy,seconds_cpsat_from_greedy,build_cpsat_from_greedy,gap_cpsat_from_greedy,status_cpsat_from_greedy,slow_above_covered_cpsat_from_greedy,slow_above_covered_greedy,load_before
+default,default,10,10,1.8,1.0,1.0,1.0,2026,39359.9,0.04,39359.9,0.0,0.0,0.23,0.05,0.0,OPTIMAL,False,39359.9,0.0,0.0,0.25,0.07,0.0,OPTIMAL,False,False,2.1
+n_new,n_new=1,1,10,1.8,1.0,1.0,1.0,2026,28281.9,0.03,28281.9,0.0,0.0,2.24,0.05,0.0,OPTIMAL,False,28281.9,0.0,0.0,2.58,0.08,0.0,OPTIMAL,False,False,2.1
+n_new,n_new=5,5,10,1.8,1.0,1.0,1.0,2026,34048.4,0.03,34048.4,0.0,0.0,0.2,0.05,0.0,OPTIMAL,False,34048.4,0.0,0.0,0.21,0.07,0.0,OPTIMAL,False,False,2.0
+n_new,n_new=15,15,10,1.8,1.0,1.0,1.0,2026,43350.9,0.04,43380.3,29.4,0.07,0.21,0.05,0.0,OPTIMAL,False,43380.3,29.4,0.07,0.26,0.08,0.0,OPTIMAL,False,False,2.0
+n_new,n_new=20,20,10,1.8,1.0,1.0,1.0,2026,46536.5,0.04,46671.7,135.2,0.29,0.22,0.05,0.0,OPTIMAL,False,46671.7,135.2,0.29,0.28,0.07,0.0,OPTIMAL,False,False,2.0
+promise,promise=8,10,8,1.8,1.0,1.0,1.0,2026,24945.3,0.02,24981.3,36.0,0.14,0.19,0.04,0.0,OPTIMAL,False,24981.3,36.0,0.14,0.21,0.06,0.0,OPTIMAL,False,False,2.0
+promise,promise=12,10,12,1.8,1.0,1.0,1.0,2026,47784.0,0.05,48179.4,395.5,0.83,0.37,0.09,0.0,OPTIMAL,False,48179.4,395.5,0.83,0.38,0.14,0.0,OPTIMAL,False,False,2.0
+promise,promise=14,10,14,1.8,1.0,1.0,1.0,2026,52136.0,0.07,52289.8,153.7,0.29,1.12,0.23,0.0,OPTIMAL,False,52289.8,153.7,0.29,1.04,0.31,0.0,OPTIMAL,False,False,3.3
+promise,promise=16,10,16,1.8,1.0,1.0,1.0,2026,53860.8,0.1,54404.6,543.8,1.01,9.18,0.54,0.0034,FEASIBLE,False,54404.6,543.8,1.01,8.83,0.78,0.0,OPTIMAL,False,False,4.2
+multiplier,multiplier=1,10,10,1.0,1.0,1.0,1.0,2026,53842.4,0.11,54246.7,404.3,0.75,9.21,0.47,0.0033,FEASIBLE,False,54246.7,404.3,0.75,7.15,0.66,0.0,OPTIMAL,False,False,4.8
+multiplier,multiplier=1.4,10,10,1.4,1.0,1.0,1.0,2026,47784.0,0.05,48179.4,395.5,0.83,0.39,0.1,0.0,OPTIMAL,False,48179.4,395.5,0.83,0.43,0.13,0.0,OPTIMAL,False,False,5.5
+multiplier,multiplier=2.2,10,10,2.2,1.0,1.0,1.0,2026,30672.3,0.03,30723.9,51.6,0.17,0.2,0.05,0.0,OPTIMAL,False,30723.9,51.6,0.17,0.25,0.07,0.0,OPTIMAL,False,False,5.5
+multiplier,multiplier=2.5,10,10,2.5,1.0,1.0,1.0,2026,25144.6,0.02,25194.4,49.7,0.2,0.21,0.04,0.0,OPTIMAL,False,25194.4,49.7,0.2,0.23,0.06,0.0,OPTIMAL,False,False,5.5
+capacity,capacity=0.5,10,10,1.8,0.5,1.0,1.0,2026,35613.9,0.03,37348.6,1734.7,4.87,9.06,0.27,0.007,FEASIBLE,False,37224.3,1610.4,4.52,9.05,0.14,0.0107,FEASIBLE,False,False,6.3
+capacity,capacity=0.75,10,10,1.8,0.75,1.0,1.0,2026,39194.1,0.03,39246.3,52.2,0.13,0.6,0.06,0.0,OPTIMAL,False,39246.3,52.2,0.13,0.6,0.09,0.0,OPTIMAL,False,False,8.0
+capacity,capacity=1.5,10,10,1.8,1.5,1.0,1.0,2026,39359.9,0.03,39359.9,0.0,0.0,0.21,0.05,0.0,OPTIMAL,False,39359.9,0.0,0.0,0.22,0.07,0.0,OPTIMAL,False,False,8.0
+capacity,capacity=2,10,10,1.8,2.0,1.0,1.0,2026,39359.9,0.03,39359.9,0.0,0.0,0.25,0.06,0.0,OPTIMAL,False,39359.9,0.0,0.0,0.22,0.07,0.0,OPTIMAL,False,False,8.0
+capture,capture=0.5,10,10,1.8,1.0,0.5,1.0,2026,19680.0,0.03,19680.0,0.0,0.0,0.22,0.05,0.0,OPTIMAL,False,19680.0,0.0,0.0,0.24,0.07,0.0,OPTIMAL,False,False,8.0
+capture,capture=0.75,10,10,1.8,1.0,0.75,1.0,2026,29519.9,0.03,29519.9,0.0,0.0,0.2,0.05,0.0,OPTIMAL,False,29519.9,0.0,0.0,0.24,0.07,0.0,OPTIMAL,False,False,8.0
+capture,capture=1.25,10,10,1.8,1.0,1.25,1.0,2026,49134.7,0.03,49183.5,48.8,0.1,0.32,0.06,0.0,OPTIMAL,False,49183.5,48.8,0.1,0.3,0.08,0.0,OPTIMAL,False,False,8.0
+capture,capture=1.5,10,10,1.8,1.0,1.5,1.0,2026,58125.2,0.03,58341.1,215.9,0.37,9.06,0.07,0.0058,FEASIBLE,False,58341.1,215.9,0.37,4.76,0.1,0.0,OPTIMAL,False,False,8.0
+competitor_density,competitor_density=0,10,10,1.8,1.0,1.0,0.0,2026,44697.8,0.03,44889.1,191.3,0.43,0.29,0.05,0.0,OPTIMAL,False,44889.1,191.3,0.43,0.33,0.09,0.0,OPTIMAL,False,False,8.1
+competitor_density,competitor_density=0.5,10,10,1.8,1.0,1.0,0.5,2026,42229.3,0.03,42229.3,0.0,0.0,0.23,0.05,0.0,OPTIMAL,False,42229.3,0.0,0.0,0.27,0.08,0.0,OPTIMAL,False,False,8.1
+competitor_density,competitor_density=1.5,10,10,1.8,1.0,1.0,1.5,2026,37869.3,0.04,37869.3,0.0,0.0,0.25,0.06,0.0,OPTIMAL,False,37869.3,0.0,0.0,0.35,0.07,0.0,OPTIMAL,False,False,8.6
+competitor_density,competitor_density=2,10,10,1.8,1.0,1.0,2.0,2026,34801.6,0.04,34801.6,0.0,0.0,0.22,0.05,0.0,OPTIMAL,False,34801.6,0.0,0.0,0.23,0.07,0.0,OPTIMAL,False,False,8.6
+corner,"n_new=20, capacity=0.5",20,10,1.8,0.5,1.0,1.0,2026,43265.8,0.04,45635.2,2369.4,5.48,9.06,0.11,0.0114,FEASIBLE,False,45566.9,2301.1,5.32,9.07,0.17,0.0129,FEASIBLE,False,False,8.6
+corner,"capture=1.5, density=0",10,10,1.8,1.0,1.5,0.0,2026,63016.8,0.03,65962.5,2945.8,4.67,9.06,0.08,0.0061,FEASIBLE,False,65962.5,2945.8,4.67,9.07,0.11,0.006,FEASIBLE,False,False,10.4
+seed,seed=2027,10,10,1.8,1.0,1.0,1.0,2027,39166.1,0.04,39400.8,234.7,0.6,0.37,0.06,0.0,OPTIMAL,False,39400.8,234.7,0.6,0.41,0.08,0.0,OPTIMAL,False,False,10.2
+seed,seed=2028,10,10,1.8,1.0,1.0,1.0,2028,38824.1,0.04,38846.2,22.1,0.06,0.22,0.06,0.0,OPTIMAL,False,38846.2,22.1,0.06,0.27,0.07,0.0,OPTIMAL,False,False,10.2
+seed,seed=2029,10,10,1.8,1.0,1.0,1.0,2029,39121.3,0.04,39385.5,264.2,0.68,0.64,0.06,0.0,OPTIMAL,False,39385.5,264.2,0.68,0.54,0.08,0.0,OPTIMAL,False,False,10.2
+seed,seed=2030,10,10,1.8,1.0,1.0,1.0,2030,37007.8,0.04,37007.8,0.0,0.0,0.23,0.05,0.0,OPTIMAL,False,37007.8,0.0,0.0,0.24,0.07,0.0,OPTIMAL,False,False,10.2

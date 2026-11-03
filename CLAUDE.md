@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stages 0, 0.5 and 1 are done (stage 1 on 2026-10-31); next is stage 2 (plan). Results and "done when" notes are in
+Stages 0, 0.5, 1 and 2 are done (stage 2 on 2026-11-03: `04-plan` benchmark, CP-SAT from greedy served); next is stage 3
+(compare and ship: the FastAPI service and the web map). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
 `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
 notebooks' placeholder plan model. The repo also holds the
@@ -50,7 +51,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
   competitors') come only from the synthetic network; record the source and date of every reported count it uses.
 - **Demand is a model, not a forecast.** Every factor stays visible as a lever or labelled assumption;
   don't add ML forecasting.
-- **A new plan must return in ≤ 10 s** for the default scenario; measure it when the solver changes.
+- **A new plan must return in ≤ 10 s for any scenario in the lever ranges**, every metric included and its gap stated;
+  measure it on 04-plan's benchmark grid, on an idle machine, when the solver or a range changes.
 - **Type hints on every function**, tests and notebook `def`s included, and wherever a type isn't obvious
   (module constants, class attributes, empty containers). `uvx ruff check --select ANN src tests` stays clean.
 
