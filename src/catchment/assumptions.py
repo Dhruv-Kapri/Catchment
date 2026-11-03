@@ -35,9 +35,9 @@ CAPACITY_FACTOR: float = 1.5
 SEED: int = 2026                        # network placement
 SCALE: int = 100                        # shares and capacity are integers in hundredths of an order
 TIME_LIMIT: int = 60
-PLAN_BUDGET: float = 9.0                # seconds for everything in plan() before the metrics: the 10 s bar minus 1 s
+PLAN_BUDGET: float = 8.0                # seconds for everything in plan() before the metrics: the 10 s bar minus 2 s (metrics, and CP-SAT running past its time limit; #34)
 # Measured on the full area (res 9, 30%), 8 GB Apple Silicon: build_model takes 21-23 us per capacity-bound (x) pair (14,256 pairs 0.4 s; 247,000 5.5 s;
-# 264,753 5.7 s; 624,601 14.5 s). Above the cap the model is not built: 200,000 pairs is about 4.5 s, the most of the 9 s budget the build can take. Default scenario: 20 pairs.
+# 264,753 5.7 s; 624,601 14.5 s). Above the cap the model is not built: 200,000 pairs is about 4.5 s, the most of the 8 s budget the build can take. Default scenario: 20 pairs.
 MODEL_PAIR_CAP: int = 200_000
 WORKERS: int = 8
 SOLVER_SEED: int = 1
@@ -93,7 +93,7 @@ def table() -> pd.DataFrame:
             ("Sites for new stores", "Any candidate site with no store on it, of any brand", "No external source", "-", "Assumption"),
             ("Assignment tie-break", "Greedy assigns each hex to its nearest open store with capacity left (nearest-first walk), which decides new against cannibalised demand. CP-SAT maximises orders only: a hex no capacity-bound store takes goes to its nearest open store, but among capacity-bound stores serving the same orders the solver's assignment stands, so its fresh/cannibalised split can differ from greedy's. Fresh and cannibalised are judged against the existing stores' nearest-first walk, for every method", "No external source", "-", "Assumption"),
             ("Integer scale", f"Shares and capacity in hundredths of an order (round(orders × {SCALE})), because CP-SAT needs integers. CP-SAT's objective and bound use these rounded shares; the plan's metrics use the unrounded ones, so they can differ from the objective by rounding", "Modelling choice", "-", "Assumption"),
-            ("Plan budget", f"{PLAN_BUDGET:g} s for everything before the metrics (network, reach, greedy, model, solve): the 10 s bar minus 1 s for the metrics. The solver gets what the build left of it. The build is outside the solver's time limit, so a CP-SAT model with more than {MODEL_PAIR_CAP:,} capacity-bound (x) pairs (about {MODEL_PAIR_CAP * 22e-6:.1f} s to build) is not built: from greedy, greedy's plan (its bound the cheap capacity bound); on its own, no plan", "Decision log, 2026-10-30: Full-area solve time measured (#15), the tighter model's 9 s build-plus-solve budget; 2026-11-02 for the size cap (#33)", "2026-10-30", "Assumption"),
+            ("Plan budget", f"{PLAN_BUDGET:g} s for everything before the metrics (network, reach, greedy, model, solve): the 10 s bar minus 2 s, for the metrics and for CP-SAT running past its time limit (seen: 2.3 s once under load). The solver gets what the build left of it. The build is outside the solver's time limit, so a CP-SAT model with more than {MODEL_PAIR_CAP:,} capacity-bound (x) pairs (about {MODEL_PAIR_CAP * 22e-6:.1f} s to build) is not built: from greedy, greedy's plan (its bound the cheap capacity bound); on its own, no plan", "Decision log, 2026-10-30: Full-area solve time measured (#15), the tighter model's 9 s build-plus-solve budget; 2026-11-02 for the size cap (#33); 2026-11-03 for 9 s to 8 s (#34)", "2026-11-03", "Assumption"),
             ("Solver", f"OR-tools CP-SAT, time limit {TIME_LIMIT} s, {WORKERS} workers, random_seed {SOLVER_SEED}", "Modelling choice", "-", "Assumption"),
         ],
         columns=["Input", "Value", "Source", "Date", "Status"],
