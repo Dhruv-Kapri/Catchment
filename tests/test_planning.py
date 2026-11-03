@@ -376,8 +376,8 @@ def test_greedy_reports_a_heuristic_status_and_no_bound() -> None:
 @pytest.mark.parametrize("method", [*CPSAT, "greedy"])
 def test_the_times_are_reported_and_add_up(method: Method) -> None:
     p = plan(random_inputs(0), Scenario(n_new=4, promise=12, seed=0), method)
-    assert p.build_seconds >= 0 and p.solve_seconds >= 0
-    assert p.seconds >= p.build_seconds + p.solve_seconds - 1e-6
+    assert p.build_seconds > 0 and p.solve_seconds > 0   # both phases do real work
+    assert p.seconds >= p.build_seconds + p.solve_seconds - 1e-6   # the metrics come on top
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 15])
@@ -511,7 +511,8 @@ def test_cpsat_from_greedy_with_no_solution_keeps_greedys_plan(monkeypatch: pyte
     no_solution(monkeypatch)
     p = plan(inputs, scenario, "cpsat-from-greedy")
     assert p.sites == greedy.sites and p.demand_covered == pytest.approx(greedy.demand_covered)
-    assert p.status == "FEASIBLE" and p.objective == pytest.approx(greedy.objective, abs=0.05) and p.bound is None and p.gap is None
+    assert p.method == "cpsat-from-greedy" and p.status == "HEURISTIC"   # greedy's plan, not CP-SAT's stopped early
+    assert p.objective == pytest.approx(greedy.objective, abs=0.05) and p.bound is None and p.gap is None
 
 
 def test_slow_traffic_coverage_equals_the_demand_covered_when_nothing_is_near_the_promise() -> None:
@@ -543,3 +544,79 @@ def test_every_method_loses_a_hex_whose_only_reach_is_near_the_promise_in_slow_t
     inputs = make_inputs({"W": 100.0, "A": 200.0}, {("S0", "W"): 1.0, ("S0", "A"): 5.0}, ["S0", "S1"])
     p = plan(inputs, Scenario(n_new=1, promise=8, multiplier=1.0), method)
     assert p.method == method and p.demand_covered == pytest.approx(300) and p.slow_traffic_coverage == pytest.approx(100)
+
+
+def test_slow_traffic_coverage_never_exceeds_the_demand_covered_of_a_poor_assignment() -> None:
+    # S reaches A (500) and B (300) at 1 min and C (700) at 6 min; at multiplier 1.0, promise 10, C is reachable but not at 1.25x.
+    # Hand metrics an assignment that gives S only C (a time-limited CP-SAT plan can): covered 700, while the slow-traffic walk alone would take A + B = 800.
+    inputs = make_inputs({"A": 500.0, "B": 300.0, "C": 700.0}, {("S", "A"): 1.0, ("S", "B"): 1.0, ("S", "C"): 6.0}, ["S", "N"])
+    p = planning.Problem.build(inputs, Scenario(n_new=1, promise=10, multiplier=1.0, capacity=0.5))
+    assert p.existing == [0]
+    owner = np.full(len(inputs.hex_ids), -1, dtype=np.intp)
+    owner[list(inputs.hex_ids).index("C")] = 0
+    covered, _, _, _, slow, _ = planning.metrics(p, [], owner)
+    assert covered == pytest.approx(700) and slow == pytest.approx(700)
+
+
+def test_the_gap_is_none_not_infinite_for_a_zero_objective_under_a_positive_bound() -> None:
+    # JSON has no infinity (the stage 3 service); a ratio of nothing served to a positive bound has no finite value.
+    assert planning.relative_gap(0.0, 5.0, "FEASIBLE") is None
+
+
+@pytest.mark.parametrize("seed", [0, 1, 4])
+@pytest.mark.parametrize("capacity", [0.5, 1.0])
+def test_the_model_size_count_is_the_number_of_capacity_bound_pairs_the_build_creates(seed: int, capacity: float) -> None:
+    p = planning.Problem.build(random_inputs(seed), Scenario(n_new=5, promise=12, capacity=capacity, seed=seed))
+    rows = planning.model_rows(p)
+    assert rows.n_pairs == len(planning.build_model(p, rows).x)
+    assert capacity != 0.5 or rows.n_pairs > 0   # the 0.5x fixtures do bind capacity
+
+
+def test_a_model_over_the_size_cap_is_not_built(monkeypatch: pytest.MonkeyPatch) -> None:
+    # #33: the build is an uninterruptible Python loop outside the solver's time limit, so a model that would overrun the budget is not built.
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, capacity=0.5, seed=0)
+    greedy = plan(inputs, scenario)
+
+    def refuse(*args: object) -> None:
+        raise AssertionError("the model was built")
+    monkeypatch.setattr(planning, "build_model", refuse)
+    monkeypatch.setattr(planning.assumptions, "MODEL_PAIR_CAP", 0)
+    hinted = plan(inputs, scenario, "cpsat-from-greedy")
+    assert hinted.method == "cpsat-from-greedy" and hinted.status == "HEURISTIC" and hinted.sites == greedy.sites
+    assert hinted.objective == pytest.approx(greedy.objective) and hinted.bound is None and hinted.gap is None
+    assert hinted.demand_covered == pytest.approx(greedy.demand_covered)
+    alone = plan(inputs, scenario, "cpsat")
+    assert alone.status == "UNKNOWN" and alone.sites == [] and alone.objective is None and alone.bound is None and alone.gap is None
+
+
+def test_a_model_at_the_size_cap_is_built(monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, capacity=0.5, seed=0)
+    n = planning.model_rows(planning.Problem.build(inputs, scenario)).n_pairs
+    monkeypatch.setattr(planning.assumptions, "MODEL_PAIR_CAP", n)
+    assert plan(inputs, scenario, "cpsat").status == "OPTIMAL"
+
+
+def test_cpsat_from_greedy_keeps_greedys_plan_as_heuristic_when_the_solver_does_worse(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The solver's solution is below greedy's: greedy's plan stands, and the solver's bound is reported with it.
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, seed=0)
+    greedy = plan(inputs, scenario)
+    monkeypatch.setattr(cp_model.CpSolver, "Solve", lambda self, model: cp_model.FEASIBLE)
+    monkeypatch.setattr(cp_model.CpSolver, "ObjectiveValue", lambda self: 0.0)
+    monkeypatch.setattr(cp_model.CpSolver, "BestObjectiveBound", lambda self: 1e9)
+    p = plan(inputs, scenario, "cpsat-from-greedy")
+    assert p.status == "HEURISTIC" and p.sites == greedy.sites and p.bound == pytest.approx(1e7)
+    assert p.gap is not None and p.gap > 0
+
+
+def test_a_feasible_cpsat_plan_keeps_the_invariants_of_a_plan_the_solver_stopped_early(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Stopping at the first solution on one worker is deterministic and, here, short of the optimum (seed 0, capacity 0.5x, 5 new stores).
+    class FirstSolution(cp_model.CpSolver):
+        def Solve(self, model: cp_model.CpModel, solution_callback: cp_model.CpSolverSolutionCallback | None = None) -> int:
+            self.parameters.stop_after_first_solution, self.parameters.num_workers = True, 1
+            return super().Solve(model, solution_callback)
+    monkeypatch.setattr(cp_model, "CpSolver", FirstSolution)
+    p = plan(random_inputs(0), Scenario(n_new=5, promise=12, capacity=0.5, seed=0), "cpsat")
+    assert p.status == "FEASIBLE" and p.method == "cpsat"
+    assert p.objective is not None and p.bound is not None and p.objective <= p.bound
+    assert p.gap is not None and 0 < p.gap and p.gap == pytest.approx((p.bound - p.objective) / p.objective)
+    assert 0 < p.slow_traffic_coverage <= p.demand_covered
