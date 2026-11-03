@@ -13,14 +13,17 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   capacity binds or the market is largest. Load: started after 5 min under 4 (2.1), rose to 10.4 (CP-SAT's 8 workers add about 8);
   the budget, not the load, ends the time-limited solves. Slow-traffic coverage never exceeded demand covered (0 of 93 plans before
   #33's clamp, too).
-- **CP-SAT from greedy is the served variant.** CP-SAT on its own is not reliably never worse: in an earlier run of the grid it
-  trailed by 31 and 336 orders a day (multiplier 1.0, capacity 0.5×); in the final run it trailed in 3 scenarios by under 0.05
-  (rounding-level ties) and led where capacity binds. It was faster at the median in the final run (0.25 s vs 0.30 s), but the
-  stage 2 rule serves it only if it is never worse on demand covered, and on its own it can return no plan (UNKNOWN).
+- **CP-SAT from greedy is the served variant.** The stage 2 rule serves CP-SAT on its own only if it is never worse on demand
+  covered and is faster. In the final run the notebook's check (tolerance 10⁻⁶) finds it worse in 3 scenarios, so the rule picks
+  CP-SAT from greedy, but by under 0.05 orders a day (rounding-level ties; it led where capacity binds, and was faster at the
+  median, 0.25 s vs 0.30 s). The pick rests as much on the earlier run of the grid (07:28, before #33; its CSV is in commit
+  e13b3d6), where it trailed by 31 and 336 orders a day (multiplier 1.0, capacity 0.5×), and on CP-SAT on its own returning no
+  plan (UNKNOWN) where CP-SAT from greedy keeps greedy's.
 - **Every CP-SAT plan with an objective states a bound** (`planning.capacity_bound`): the lower of the demand any open site
   reaches and what the existing stores plus the N best candidate sites can serve, each at most min(capacity, the share it reaches).
   It is valid for any choice of sites and any assignment, so it bounds demand covered too. The plan's bound is the lower of it and
-  CP-SAT's, never under the objective. This gives a gap where #33 left a kept greedy plan or an unbuilt model with none, and caps a
+  CP-SAT's, never under the objective; where CP-SAT's is the lower, it bounds the solver's objective on rounded shares, and a
+  FEASIBLE plan's demand covered can sit slightly above it (see the `Plan` docstring). This gives a gap where #33 left a kept greedy plan or an unbuilt model with none, and caps a
   runaway solver bound (seen: 1.65 M orders a day against the area's 89.7 k). It is loose where CP-SAT finds nothing better than
   greedy on a binding-capacity model (16-19% in the combinations below); the gap is honest, not tight.
 - **The promise range narrows from 8-20 to 8-16** (`assumptions.PROMISE_RANGE`; cuts.md), measured before #33's size cap and the
