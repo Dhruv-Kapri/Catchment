@@ -50,7 +50,7 @@ def test_scenario_defaults_are_the_documented_ones() -> None:
 
 
 LEVERS: list[tuple[str, float, float, str]] = [   # lever, below the range, above it, the range as the message states it
-    ("n_new", 0, 21, "1-20"), ("promise", 7, 21, "8-20"), ("multiplier", 0.9, 2.6, "1-2.5"),
+    ("n_new", 0, 21, "1-20"), ("promise", 7, 17, "8-16"), ("multiplier", 0.9, 2.6, "1-2.5"),
     ("capacity", 0.4, 2.1, "0.5-2"), ("capture", 0.4, 1.6, "0.5-1.5"), ("competitor_density", -0.25, 2.25, "0-2"),
 ]
 
@@ -229,7 +229,7 @@ def test_the_network_does_not_depend_on_the_other_levers() -> None:
     sites = [f"S{i}" for i in range(100)]
     inputs = make_inputs({f"H{i}": 57 * OPS / 100 for i in range(100)}, {(f"S{i}", f"H{i}"): 1.0 for i in range(100)}, sites, stores=57)
     base = plan(inputs, Scenario()).network
-    assert plan(inputs, Scenario(promise=20, multiplier=1.0, capacity=2.0, capture=1.5, n_new=3)).network == base
+    assert plan(inputs, Scenario(promise=16, multiplier=1.0, capacity=2.0, capture=1.5, n_new=3)).network == base
 
 
 def test_more_new_stores_than_open_sites_is_refused() -> None:
@@ -310,7 +310,7 @@ def reference_greedy(inputs: Inputs, scenario: Scenario, network: dict[str, list
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 15])   # 4 and 15 at capacity 0.5x have a hex losing its store when another opens
-@pytest.mark.parametrize("promise", [12, 20])
+@pytest.mark.parametrize("promise", [12, 16])   # the top of the range
 @pytest.mark.parametrize("capacity", [0.5, 1.0, 2.0])
 def test_the_greedy_matches_a_from_scratch_reference(seed: int, promise: int, capacity: float) -> None:
     inputs = random_inputs(seed)
@@ -381,7 +381,7 @@ def test_the_times_are_reported_and_add_up(method: Method) -> None:
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 15])
-@pytest.mark.parametrize("promise", [12, 20])
+@pytest.mark.parametrize("promise", [12, 16])   # the top of the range
 @pytest.mark.parametrize("capacity", [0.5, 1.0, 2.0])
 def test_cpsat_is_never_below_greedy(seed: int, promise: int, capacity: float) -> None:
     inputs, scenario = random_inputs(seed), Scenario(n_new=5, promise=promise, capacity=capacity, seed=seed)
@@ -532,7 +532,7 @@ def test_slow_traffic_coverage_holds_the_competitor_split_of_a_hex() -> None:
 @pytest.mark.parametrize("seed", range(5))
 @pytest.mark.parametrize("capacity", [0.5, 1.0])   # seed 1 at 0.5x, promise 12, loses orders to capacity
 def test_slow_traffic_coverage_is_never_more_than_the_demand_covered_across_promises_and_capacities(seed: int, capacity: float) -> None:
-    plans = [plan(random_inputs(seed), Scenario(n_new=15, promise=promise, capacity=capacity, seed=seed)) for promise in (8, 12, 20)]
+    plans = [plan(random_inputs(seed), Scenario(n_new=15, promise=promise, capacity=capacity, seed=seed)) for promise in (8, 12, 16)]
     assert all(p.slow_traffic_coverage <= p.demand_covered + 1e-6 for p in plans)
     assert any(p.slow_traffic_coverage < p.demand_covered for p in plans)
 

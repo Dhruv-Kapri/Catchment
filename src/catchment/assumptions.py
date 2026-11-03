@@ -15,7 +15,7 @@ NCR_POPULATION: float = 30.2e6          # "New Delhi" Degree of Urbanisation cit
 
 # Lever ranges, inclusive (decision log, 2026-11-01)
 N_RANGE: tuple[int, int] = (1, 20)
-PROMISE_RANGE: tuple[int, int] = (8, 20)                # minutes
+PROMISE_RANGE: tuple[int, int] = (8, 16)                # minutes; narrowed from 8-20 by the 04-plan benchmark (#30)
 MULTIPLIER_RANGE: tuple[float, float] = (1.0, 2.5)
 CAPACITY_RANGE: tuple[float, float] = (0.5, 2.0)        # x the default capacity
 CAPTURE_RANGE: tuple[float, float] = (0.5, 1.5)         # x the default capture share
@@ -23,7 +23,7 @@ COMPETITOR_DENSITY_RANGE: tuple[float, float] = (0.0, 2.0)   # x the default com
 COMPETITOR_DENSITY_STEP: float = 0.25   # density moves in quarters
 
 PICK_AND_PACK: int = 3                  # minutes, fixed
-MAX_PROMISE: int = 20                   # longest promise lever, minutes
+MAX_PROMISE: int = 20                   # longest promise the travel-time table keeps pairs for, minutes (the lever now stops at 16)
 SLOW_TRAFFIC_FACTOR: float = 1.25       # slow-traffic coverage, x the scenario's congestion multiplier
 
 # Plan: default scenario, capacity, synthetic network, solver
@@ -77,7 +77,7 @@ def table() -> pd.DataFrame:
             ("Pairs kept in the table", f"Free-flow ≤ {MAX_PAIR_MIN} min (longest promise {MAX_PROMISE} − {PICK_AND_PACK} at multiplier 1.0)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Second road for snapping", f"Each point snaps to its nearest road and a second road, and a pair keeps the fastest of the four times. The second road is the nearest hit within {SECOND_ROAD_MAX_M} m that lies more than {SECOND_ROAD_GAP_M} m from the first across the road (a parallel carriageway, not the next segment of the same one); none, then the nearest road repeats", "No external source; 01-reach found about one short pair in seven running out and back at an endpoint. Decision log, 2026-10-29 (fastest-of-four snapping, measured)", "-", "Assumption"),
             ("Default scenario", f"Promise {PROMISE} min, congestion multiplier {MULTIPLIER}, pick-and-pack {PICK_AND_PACK} min: a hex is reachable if free-flow min × {MULTIPLIER} + {PICK_AND_PACK} ≤ {PROMISE}, that is free-flow ≤ {(PROMISE - PICK_AND_PACK) / MULTIPLIER:.1f} min", "Spot check (docs/spot-check.csv): implied median multiplier 1.79 over 20 routes, Google Maps two-wheeler, Fri 30 Oct 2026 19:00-19:07, one evening's live estimates; decision log, 2026-11-01 (Plan scope). Was 1.4, an unmeasured guess: 02-plan and 03-area ran at 1.4", "2026-11-01", "Assumption"),
-            ("Lever ranges", f"N {N_RANGE[0]}-{N_RANGE[1]}; promise {PROMISE_RANGE[0]}-{PROMISE_RANGE[1]} min; congestion multiplier {MULTIPLIER_RANGE[0]}-{MULTIPLIER_RANGE[1]}; capacity {CAPACITY_RANGE[0]}×-{CAPACITY_RANGE[1]}× the default; capture share {CAPTURE_RANGE[0]}×-{CAPTURE_RANGE[1]}× the default; competitor density {COMPETITOR_DENSITY_RANGE[0]:g}×-{COMPETITOR_DENSITY_RANGE[1]:g}× the default, in steps of {COMPETITOR_DENSITY_STEP:g}, default 1×. All inclusive", "Decision log, 2026-11-01 (Plan scope)", "2026-11-01", "Assumption"),
+            ("Lever ranges", f"N {N_RANGE[0]}-{N_RANGE[1]}; promise {PROMISE_RANGE[0]}-{PROMISE_RANGE[1]} min; congestion multiplier {MULTIPLIER_RANGE[0]}-{MULTIPLIER_RANGE[1]}; capacity {CAPACITY_RANGE[0]}×-{CAPACITY_RANGE[1]}× the default; capture share {CAPTURE_RANGE[0]}×-{CAPTURE_RANGE[1]}× the default; competitor density {COMPETITOR_DENSITY_RANGE[0]:g}×-{COMPETITOR_DENSITY_RANGE[1]:g}× the default, in steps of {COMPETITOR_DENSITY_STEP:g}, default 1×. All inclusive", "Decision log, 2026-11-01 (Plan scope); promise narrowed from 8-20 to 8-16, decision log 2026-11-03 (benchmark, #30)", "2026-11-03", "Assumption"),
             ("Slow-traffic factor", f"{SLOW_TRAFFIC_FACTOR}× the scenario's congestion multiplier: slow-traffic coverage is the demand the plan's stores (existing and new) still cover then, with each hex's competitor split held at the scenario's", "Decision log, 2026-11-01 (Plan scope); no external source", "2026-11-01", "Assumption"),
             ("New stores, N", f"{N_SLICE} on the slice; {N_AREA} on the full area (the default scenario for the 10 s bar)", "Decision log, 2026-10-29 (Explore)", "2026-10-29", "Assumption"),
             ("Orders per store per day", f"{BLINKIT_ORDERS_Q2/1e6:.1f} M orders ÷ {Q2_DAYS} days ÷ {BLINKIT_STORES:,} stores = {ORDERS_PER_STORE_DAY:,.0f}", "00-demand: Eternal Ltd shareholders' letter, 21 Oct 2026, p. 13 (orders and stores)", "2026-10-29", "Verified"),

@@ -80,13 +80,15 @@ def test_default_multiplier_is_the_spot_check_figure() -> None:
 
 def test_lever_ranges() -> None:
     assert assumptions.N_RANGE == (1, 20)
-    assert assumptions.PROMISE_RANGE == (8, 20)
+    assert assumptions.PROMISE_RANGE == (8, 16)   # narrowed from 8-20 by the 04-plan benchmark (#30)
     assert assumptions.MULTIPLIER_RANGE == (1.0, 2.5)
     assert assumptions.CAPACITY_RANGE == (0.5, 2.0)
     assert assumptions.CAPTURE_RANGE == (0.5, 1.5)
     assert assumptions.COMPETITOR_DENSITY_RANGE == (0.0, 2.0)
     assert assumptions.COMPETITOR_DENSITY_STEP == 0.25
-    assert assumptions.table().set_index("Input").loc["Lever ranges", "Status"] == "Assumption"
+    row = assumptions.table().set_index("Input").loc["Lever ranges"]
+    assert row.Status == "Assumption" and "promise 8-16 min" in row.Value
+    assert "2026-11-03" in row.Source and row.Date == "2026-11-03"   # the narrowing is traced to its decision-log entry
 
 
 def test_network_size_is_area_demand_over_orders_per_store_day() -> None:

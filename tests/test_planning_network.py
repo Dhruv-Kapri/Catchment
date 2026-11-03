@@ -38,7 +38,7 @@ def test_a_site_reaching_nothing_at_the_default_never_holds_a_store_whatever_the
     inputs = make_inputs(hexes, pairs, SITES[:8], stores=3)
     for seed in SEEDS:
         default_net = plan(inputs, Scenario(n_new=1, seed=seed)).network
-        assert plan(inputs, Scenario(n_new=1, seed=seed, promise=20, multiplier=1.0)).network == default_net
+        assert plan(inputs, Scenario(n_new=1, seed=seed, promise=16, multiplier=1.0)).network == default_net
         held = {s for sites in default_net.values() for s in sites}
         assert held and held <= {f"S{i}" for i in range(6)}
 

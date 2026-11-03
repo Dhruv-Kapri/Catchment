@@ -72,7 +72,7 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
 - Synthetic network generator: 57 existing stores (computed from the calibration), the operator and one competitor,
   split by two verified reported store counts (the operator takes the market leader's, the competitor the next
   largest brand's), with source and date recorded. Brands stay generic in the UI.
-- Levers and ranges: N 1-20 (default 10); promise 8-20 min (10); congestion multiplier 1.0-2.5 (default **1.8**, the
+- Levers and ranges: N 1-20 (default 10); promise 8-20 min (10; narrowed to 8-16 by the benchmark); congestion multiplier 1.0-2.5 (default **1.8**, the
   spot check); capacity 0.5×-2× the default 2,364; capture share 0.5×-1.5× the default; competitor density 0×-2× the
   competitor's count, step 0.25 (1×).
 - Plan metrics, all inside the 10 s: demand and households covered, new vs cannibalised demand per new store, lost
@@ -89,6 +89,12 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   blocker.
 - **If it overruns, cut in this order:** the #23 extras; the density lever (fixed at 1×, to Later); network seeds
   5 → 2.
+- **Done 2026-11-03:** `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
+  two-brand network with the density lever, default multiplier 1.8. `04-plan` benchmarks 31 scenarios × 3 methods on the full
+  area: every plan within 10 s with its gap stated (slowest 9.23 s), CP-SAT from greedy never below greedy and optimal in 27
+  of 31, gain over greedy up to 5.3% where capacity binds. CP-SAT from greedy is served. The promise range is narrowed to
+  8-16 ([cuts](cuts.md)); combinations that widen the free-flow reach (promise × multiplier 1.0) can still miss and go to
+  #33 (see [decisions](decisions.md)).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
