@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stages 0, 0.5 and 1 are done (stage 1 on 2026-10-31). Stage 2 (plan) is benchmarked (`04-plan`, CP-SAT from greedy served)
-but stays open until #34 gives the 10 s bar headroom for a CP-SAT overshoot; next is stage 3 (compare and ship: the
+Stages 0, 0.5, 1 and 2 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: the `04-plan` benchmark, CP-SAT from greedy
+served); next is stage 3 (compare and ship: the
 FastAPI service and the web map). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
 `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the

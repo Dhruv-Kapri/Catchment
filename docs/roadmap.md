@@ -89,13 +89,15 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   blocker.
 - **If it overruns, cut in this order:** the #23 extras; the density lever (fixed at 1×, to Later); network seeds
   5 → 2.
-- **Benchmarked 2026-11-03, not yet done** (open until #34 gives the 10 s bar headroom for a CP-SAT overshoot; see the corner below): `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
+- **Done 2026-11-03:** `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
   two-brand network with the density lever, default multiplier 1.8. `04-plan` benchmarks 31 scenarios × 3 methods on the full
-  area: every plan within 10 s with its gap stated (slowest 9.21 s), CP-SAT from greedy never below greedy and optimal in 28 of
-  31, gain over greedy up to 5.3% where capacity binds. Six combinations off the grid, the box's worst corner included, also
-  return within 10 s with a gap (#33's model size cap; a capacity bound when CP-SAT has none). All 64 corners of the box state
-  a gap; 63 returned within 10 s, one overshot once (11.3 s, CP-SAT past its time limit; 9.2-9.3 s on re-runs). CP-SAT from greedy is served. The
-  promise range is narrowed to 8-16 ([cuts](cuts.md)); see [decisions](decisions.md).
+  area: every plan within 10 s with its gap stated (slowest 8.46 s), CP-SAT from greedy never below greedy and optimal in 25 of
+  31, gain over greedy up to 4.7% where capacity binds or the market is largest. Six combinations off the grid, the box's worst
+  corner included, also return within 10 s (at most 8.63 s) with a gap (#33's model size cap; a capacity bound when CP-SAT has
+  none). All 64 corners of the box return within 10 s (slowest 8.60 s) with a gap stated. #34 lowered `PLAN_BUDGET` from 9 to 8 s
+  so the bar keeps 2 s for the metrics and CP-SAT's overshoot (the earlier run had one 11.3 s corner); the re-run was under heavy
+  load from other sessions (median 18 on the grid, up to 64 on the corners), not on an idle machine. CP-SAT from greedy is served.
+  The promise range is narrowed to 8-16 ([cuts](cuts.md)); see [decisions](decisions.md).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
