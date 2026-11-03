@@ -3,10 +3,10 @@
 *Where should a quick-commerce operator open its next N dark stores, and what does each one win, or
 take from the stores it already has?*
 
-> **Status: stage 1 done** (demand and reach on the full area, built by `catchment-build`; results and the
-> spot check in `notebooks/03-area.ipynb`). **Stage 2 in progress:** the planner (`src/catchment/planning.py`)
-> runs greedy and two CP-SAT variants on a 57-store two-brand network, with slow-traffic coverage and a
-> competitor-density lever; the every-scenario 10 s benchmark is next. The
+> **Status: stage 2 done** (2026-11-03). `planning.plan()` (`src/catchment/planning.py`) returns a plan for any
+> scenario in the lever ranges within 10 s, its gap stated: greedy and two CP-SAT variants on a 57-store two-brand
+> network, with slow-traffic coverage and a competitor-density lever. The benchmark is `notebooks/04-plan.ipynb`;
+> CP-SAT from greedy is served. Next: stage 3, the FastAPI service and the web map. The
 > [roadmap](docs/roadmap.md) says what gets built and in what order.
 
 ## Getting started
