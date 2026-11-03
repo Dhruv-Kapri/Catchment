@@ -7,7 +7,7 @@ promises more than exists. "Later" means it is on the [roadmap](roadmap.md) afte
 
 | Cut | Why | Status |
 | --- | --- | --- |
-| Promise lever 17-20 min (range 8-20 → 8-16) | at 19-20 CP-SAT finds no plan in the 10 s budget, so no gap can be stated; 17-18 not repeatable (a 10.46 s run, a meaningless bound); see 04-plan and the decision log | Later, with #33's build cap |
+| Promise lever 17-20 min (range 8-20 → 8-16) | at 19-20 CP-SAT finds no plan in the 10 s budget, so no gap can be stated; 17-18 not repeatable (a 10.46 s run, a meaningless bound); see 04-plan and the decision log | Later: re-measure 17-20 now that #33's size cap and the capacity bound (#30) address both failures |
 
 ## 2026-10-29, stage 0.5 decisions
 

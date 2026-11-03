@@ -91,10 +91,10 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   5 → 2.
 - **Done 2026-11-03:** `planning.plan()` (greedy, CP-SAT on its own, CP-SAT from greedy) with every metric, the 57-store
   two-brand network with the density lever, default multiplier 1.8. `04-plan` benchmarks 31 scenarios × 3 methods on the full
-  area: every plan within 10 s with its gap stated (slowest 9.23 s), CP-SAT from greedy never below greedy and optimal in 27
-  of 31, gain over greedy up to 5.3% where capacity binds. CP-SAT from greedy is served. The promise range is narrowed to
-  8-16 ([cuts](cuts.md)); in-range combinations off the grid (promise × multiplier 1.0, N 20 × capacity 0.5× at a wide reach)
-  return no gap and some run over 10 s; they go to #33 (see [decisions](decisions.md)).
+  area: every plan within 10 s with its gap stated (slowest 9.21 s), CP-SAT from greedy never below greedy and optimal in 28 of
+  31, gain over greedy up to 5.3% where capacity binds. Six combinations off the grid, the box's worst corner included, also
+  return within 10 s with a gap (#33's model size cap; a capacity bound when CP-SAT has none). CP-SAT from greedy is served. The
+  promise range is narrowed to 8-16 ([cuts](cuts.md)); see [decisions](decisions.md).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
