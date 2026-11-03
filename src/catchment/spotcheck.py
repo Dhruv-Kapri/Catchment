@@ -6,9 +6,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from catchment.explore import (
-    MULTIPLIER,  # 1.4, what the spot-check write-up used; not assumptions.MULTIPLIER (1.8)
-)
+# 1.4, what the spot-check write-up used; not assumptions.MULTIPLIER (1.8). Equal to the frozen explore.MULTIPLIER
+# (a test pins that); not imported from there because explore pulls in ortools.
+SPOTCHECK_MULTIPLIER: float = 1.4
 
 SEED: int = 16
 COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
@@ -30,7 +30,7 @@ def draw_routes(table: pd.DataFrame, candidates: pd.DataFrame, hexes: pd.DataFra
     r = r.astype({"minutes": float}).sort_values("minutes", kind="stable").reset_index(drop=True)   # float32 from OSRM would not survive the CSV
     r["route"] = np.arange(1, len(r) + 1)
     r["free_flow_min"] = r.minutes.round(2)
-    r["model_min"] = (r.minutes * MULTIPLIER).round(2)
+    r["model_min"] = (r.minutes * SPOTCHECK_MULTIPLIER).round(2)
     c, h = candidates.loc[r.candidate], hexes.loc[r.hex]
     r["source"] = [f"{a:.6f},{b:.6f}" for a, b in zip(c.snap_lat, c.snap_lon)]
     r["destination"] = [f"{a:.6f},{b:.6f}" for a, b in zip(h.lat, h.lon)]
@@ -52,7 +52,7 @@ def write_sheet(routes: pd.DataFrame, path: Path | str) -> bool:
     return False
 
 
-def compare(sheet: pd.DataFrame, multiplier: float = MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
+def compare(sheet: pd.DataFrame, multiplier: float = SPOTCHECK_MULTIPLIER) -> tuple[pd.DataFrame, dict[str, Any]]:
     """The model's error against the app per route (worst first), and the multiplier the app times imply.
 
     Raises ValueError if no row has an app time, or a row with one has no bad_snap_before flag. The bad-snap medians are None when that group is empty."""

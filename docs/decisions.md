@@ -34,6 +34,29 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 - **Ruled out:** serving CP-SAT on its own (worse in 2 scenarios, can return UNKNOWN); keeping promise 18 (not repeatable within
   10 s with a meaningful gap); a joint promise × multiplier limit on the scenario (a new lever rule; left to #33's fix).
 
+## 2026-11-02: plan() edge contract: slow traffic clamped, an oversized model not built, HEURISTIC for greedy's plan, no infinite gap (#33)
+
+- **Slow-traffic coverage is `min(slow-traffic walk, demand covered)` for every method.** A time-limited (FEASIBLE) CP-SAT plan
+  can cover less than the nearest-first walk of its stores does (seen: covered 17,880, slow-traffic 17,899), which read as
+  coverage rising when traffic slows. Greedy and OPTIMAL plans already satisfied it, so the clamp changes only plans that broke it.
+  Ruled out: evaluating both figures with one assignment policy, and leaving the exception documented.
+- **A CP-SAT model with more than `MODEL_PAIR_CAP` = 200,000 capacity-bound pairs is not built.** The build is a Python loop
+  outside the solver's time limit. Measured on the full area: 21-23 microseconds a pair (14,256 pairs 0.4 s; 247,000 5.5 s;
+  264,753 5.7 s; 624,601 14.5 s), so the cap is about 4.5 s of the 9 s budget; the default scenario has 20 pairs. The pairs are
+  counted vectorised after greedy, before the loop. Over the cap, `cpsat-from-greedy` returns greedy's plan (status
+  `HEURISTIC`, bound and gap None) and `cpsat` returns the UNKNOWN plan of the entry below. Ruled out: narrowing the lever ranges
+  to dodge the corner (the ranges stay as decided).
+- **`status` `HEURISTIC` means greedy's plan, whichever method returned it.** `cpsat-from-greedy` keeps greedy's plan when the
+  solver finds nothing, finds less, or the model is over the cap; the method stays `cpsat-from-greedy` and the bound is the
+  solver's if it found a solution. `FEASIBLE` now means only CP-SAT's own plan, stopped early, so the service can tell the two apart.
+- **`gap` is None, not infinite, for a zero objective under a positive bound** (JSON has no infinity).
+- **`Scenario` coerces numeric levers in one place.** Float levers must be real numbers (no bool, `np.bool_` or string) and are
+  stored as plain floats with -0.0 as 0.0; whole levers keep the whole-number rule.
+- **CP-SAT keeps 8 workers.** Under a wall-clock limit a FEASIBLE plan can differ run to run; OPTIMAL plans are the same.
+  The benchmark (#30) notes this in its table. Ruled out: 1 worker, which would be reproducible but solve far less in the budget.
+- **`spotcheck` keeps its own copy of the frozen 1.4 multiplier** (pinned equal to `explore.MULTIPLIER` by a test), so importing
+  it no longer loads `explore` and ortools.
+
 ## 2026-11-02: CP-SAT on its own with no plan in the budget returns an UNKNOWN plan (#27, #33)
 
 - **`plan(..., "cpsat")` returns a plan with status `UNKNOWN` when CP-SAT finds no solution in the budget.** The plan has no
@@ -42,8 +65,7 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   from the status instead of catching an exception. CP-SAT from greedy is unchanged: with no solution it keeps greedy's plan.
 - **Ruled out:** falling back to greedy's plan for CP-SAT on its own, because the benchmark could then not tell "CP-SAT alone
   found nothing" from "CP-SAT matched greedy".
-- **Left open (#33):** a FEASIBLE CP-SAT plan can show slow-traffic coverage above demand covered. #30 measures whether this
-  happens on the real tables before the computation changes.
+- **Left open (#33):** a FEASIBLE CP-SAT plan can show slow-traffic coverage above demand covered. Settled in the entry above.
 
 ## 2026-11-01: Competitor density moves demand covered one way only while capacity is slack (#29)
 
