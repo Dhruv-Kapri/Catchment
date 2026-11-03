@@ -13,22 +13,25 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   after 5 min under 4 (3.8), rose to 16 by the end (CP-SAT's 8 workers about 8, other work the rest); the budget, not the
   load, ends the time-limited solves, which return at 9.1-9.2 s. Slow-traffic coverage never exceeded demand covered in any of
   the 93 plans, FEASIBLE ones included, so #33 item 1 stays as documented (no change to the computation).
-- **CP-SAT from greedy is the served variant.** CP-SAT on its own covered less in 3 scenarios (promise 16, multiplier 1.0,
-  capacity 0.5×) and was not faster (median 0.36 s vs 0.39 s), so the stage 2 rule keeps CP-SAT from greedy. It also never
+- **CP-SAT from greedy is the served variant.** CP-SAT on its own covered less in 2 scenarios (multiplier 1.0 by 31 orders a
+  day, capacity 0.5× by 336) and more in one (N 20 at capacity 0.5×, by 55). Its median time was 0.36 s vs 0.39 s (a repeat run: 0.29 s
+  vs 0.27 s, the other way), but the stage 2 rule serves it only if it is never worse on demand covered, so CP-SAT from greedy
+  stays. The repeat run (load 2.4-9.7) passed the same checks. It also never
   returns UNKNOWN: with no solution in the budget it keeps greedy's plan.
 - **The promise range narrows from 8-20 to 8-16** (`assumptions.PROMISE_RANGE`; cuts.md). At 19 and 20, CP-SAT found no
   solution in the budget in every run, so the plan carried no gap. At 18 the result changed run to run: one run took 10.46 s,
   and 3 of 6 reported a 2,957% gap from a bound of 1.65 M orders a day (the area's demand is 89.7 k). 16 gave a usable gap in
   every run (≤ 0.34%, 8.8-9.3 s, also at load 14). The travel-time table still keeps pairs to 17 free-flow min; nothing is rebuilt.
-- **The 10 s bar holds on the grid, not on every combination.** Combinations that widen the free-flow reach, (promise − 3) /
-  multiplier, miss: promise 18 × multiplier 1.0 took 17.3 s (14.5 s of model build, which the budget doesn't cap) and promise
-  15 × multiplier 1.0 took 11.5 s, both with no gap; N 20 × capacity 0.5× × multiplier 1.0 returned in time with no gap. Inside
-  the narrowed range, promise 16 × multiplier 1.0 (13 free-flow min) is near the 11.5 s case. These go to #33 (a build cap,
-  and a plan whose solver found nothing) rather than a further narrowing, which would cost the multiplier range its quiet hours.
+- **The 10 s bar holds on the grid, not on every combination in the ranges.** 04-plan runs five in-range combinations off the
+  grid: all five returned greedy's plan with no gap (CP-SAT found no solution), and the two at multiplier 1.0 ran over 10 s,
+  mostly on the model build, which the budget doesn't cap (promise 16 × multiplier 1.0: 12.2 s, 10.3 s of build; promise 15 ×
+  multiplier 1.0: 10.2 s). The others: N 20 × capacity 0.5× at multiplier 1.0 or promise 16, and promise 16 × capture 1.5× at
+  density 0 (9.1-9.5 s). These go to #33 (a build cap, and a plan whose solver found nothing) rather than a further narrowing,
+  which would cost the multiplier range its quiet hours or the promise range most of its length.
 - **The brief's and CLAUDE.md's ≤ 10 s wording** now says what is measured: any scenario in the lever ranges, every metric
   included, its gap stated, measured on 04-plan's grid on an idle machine. It was "a new plan returns in ≤ 10 s" (brief) and
   "for the default scenario" (CLAUDE.md).
-- **Ruled out:** serving CP-SAT on its own (worse in 3 scenarios, can return UNKNOWN); keeping promise 18 (not repeatable within
+- **Ruled out:** serving CP-SAT on its own (worse in 2 scenarios, can return UNKNOWN); keeping promise 18 (not repeatable within
   10 s with a meaningful gap); a joint promise × multiplier limit on the scenario (a new lever rule; left to #33's fix).
 
 ## 2026-11-02: CP-SAT on its own with no plan in the budget returns an UNKNOWN plan (#27, #33)

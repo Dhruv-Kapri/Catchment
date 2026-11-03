@@ -93,8 +93,8 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   two-brand network with the density lever, default multiplier 1.8. `04-plan` benchmarks 31 scenarios × 3 methods on the full
   area: every plan within 10 s with its gap stated (slowest 9.23 s), CP-SAT from greedy never below greedy and optimal in 27
   of 31, gain over greedy up to 5.3% where capacity binds. CP-SAT from greedy is served. The promise range is narrowed to
-  8-16 ([cuts](cuts.md)); combinations that widen the free-flow reach (promise × multiplier 1.0) can still miss and go to
-  #33 (see [decisions](decisions.md)).
+  8-16 ([cuts](cuts.md)); in-range combinations off the grid (promise × multiplier 1.0, N 20 × capacity 0.5× at a wide reach)
+  return no gap and some run over 10 s; they go to #33 (see [decisions](decisions.md)).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
