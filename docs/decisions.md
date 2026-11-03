@@ -37,6 +37,10 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   of them stated no gap. Now all six return within 10 s (at most 9.70 s) with a gap: the wide-reach models are over the size cap,
   so greedy's plan returns at once with gaps of 0.6-1.3%; the binding-capacity ones keep greedy's plan or a FEASIBLE one with gaps
   of 16-19%.
+- **Every corner of the narrowed box** (64 scenarios, each lever at its low or high end, CP-SAT from greedy, load 7-10) states a gap:
+  42 OPTIMAL, 16 HEURISTIC (gaps up to 21.9%), 6 FEASIBLE (6.8-17.4%). 63 of 64 returned within 10 s. One, N 1 × promise 8 ×
+  multiplier 1.0 × capacity 0.5× × capture 1.5× × density 2, took 11.28 s once: CP-SAT ran about 2.3 s past its time limit (build
+  0.65 s, metrics 0.03 s); three re-runs took 9.20-9.30 s. `PLAN_BUDGET` leaves 1 s for the metrics, not for a solver overshoot.
 - **The brief's and CLAUDE.md's ≤ 10 s wording** now says what is measured: any scenario in the lever ranges, every metric
   included, its gap stated, measured on 04-plan's grid on an idle machine. It was "a new plan returns in ≤ 10 s" (brief) and
   "for the default scenario" (CLAUDE.md).
