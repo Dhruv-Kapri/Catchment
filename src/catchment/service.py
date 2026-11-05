@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from catchment.planning import Inputs, Scenario, load_inputs, plan
-from catchment.serialize import plan_json
+from catchment.serialize import assumptions_json, plan_json
 
 WEB: Path = Path(__file__).resolve().parents[2] / "web"
 
@@ -16,6 +16,7 @@ WEB: Path = Path(__file__).resolve().parents[2] / "web"
 def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     """The service over inputs the caller loaded once."""
     app = FastAPI()
+    assumed: dict[str, Any] = assumptions_json(inputs)
 
     @app.post("/plan")
     def post_plan(levers: dict[str, Any]) -> dict[str, Any]:
@@ -27,6 +28,11 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         return plan_json(plan(inputs, scenario, method="cpsat-from-greedy"))
+
+    @app.get("/assumptions")
+    def get_assumptions() -> dict[str, Any]:
+        """The assumptions table, the spot-check error of the travel times and the synthetic network's seed; read-only."""
+        return assumed
 
     app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app

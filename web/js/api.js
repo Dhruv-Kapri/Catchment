@@ -11,3 +11,17 @@ export async function planScenario(levers) {
   if (!response.ok) throw new Error(body.detail ?? `plan failed (${response.status})`);
   return body;
 }
+
+export async function fetchAssumptions() {
+  const response = await fetch("/assumptions");
+  if (!response.ok) throw new Error(`assumptions failed (${response.status})`);
+  return response.json();
+}
+
+export const CREDITS = [
+  { text: "© OpenStreetMap contributors (ODbL)", url: "https://www.openstreetmap.org/copyright" },
+  { text: "WorldPop (CC BY 4.0)", url: "https://www.worldpop.org" },
+  { text: "NASA Black Marble", url: "https://blackmarble.gsfc.nasa.gov" },
+  { text: "Overture", url: "https://overturemaps.org" },
+  { text: "OpenFreeMap", url: "https://openfreemap.org" },
+];

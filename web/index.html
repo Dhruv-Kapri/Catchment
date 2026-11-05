@@ -9,7 +9,7 @@
   <script type="importmap">{ "imports": { "h3-js": "https://esm.sh/h3-js@4" } }</script>
   <style>
     html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; }
-    #map { position: absolute; inset: 0; }
+    #map { position: absolute; inset: 0 0 24px 0; }
     #panel { position: absolute; top: 10px; left: 10px; width: 240px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 1; }
     #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
     #panel input { width: 70px; }
@@ -18,6 +18,16 @@
     #metrics dt { color: #555; }
     #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 18px; }
     #error { color: #b00020; margin-top: 6px; }
+    #panel [data-testid=spot-check-note] { margin: 2px 0 6px; font-size: 11px; color: #555; }
+    #assumptions-button { position: absolute; top: 10px; right: 50px; z-index: 1; padding: 6px 10px; }
+    #assumptions-drawer { position: absolute; top: 46px; right: 10px; bottom: 40px; width: 640px; max-width: calc(100% - 20px); overflow: auto; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 2; font-size: 12px; }
+    #assumptions-drawer h2 { margin: 0 0 6px; font-size: 16px; }
+    #assumptions-drawer table { border-collapse: collapse; width: 100%; }
+    #assumptions-drawer td:nth-child(3) { overflow-wrap: anywhere; }
+    #assumptions-drawer th, #assumptions-drawer td { border-bottom: 1px solid #ddd; padding: 3px 4px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
+    #assumptions-drawer td:nth-child(1) { min-width: 110px; }
+    #assumptions-drawer td:nth-child(4), #assumptions-drawer td:nth-child(5) { white-space: nowrap; }
+    #credits { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; line-height: 24px; padding: 0 10px; font-size: 11px; background: #fff; border-top: 1px solid #ddd; }
     .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
     .store-new { background: #1b9e77; }
     .store-operator { background: #7570b3; }
@@ -35,6 +45,9 @@
     </dl>
     <div id="error" data-testid="error"></div>
   </div>
+  <button id="assumptions-button" type="button" data-testid="assumptions-button">Assumptions</button>
+  <aside id="assumptions-drawer" data-testid="assumptions-drawer" hidden></aside>
+  <footer id="credits" data-testid="credits"></footer>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -40,3 +40,28 @@ def test_pressing_plan_draws_the_stores_and_shows_the_metrics(base_url: str) -> 
         for metric in ("metric-demand", "metric-households"):
             expect(page.get_by_test_id(metric)).to_have_text(re.compile(r"^[\d,]+$"))
         browser.close()
+
+
+def test_the_assumptions_the_spot_check_and_the_credits_are_visible(base_url: str) -> None:
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        note = page.get_by_test_id("spot-check-note")
+        expect(note).to_contain_text("Spot check")
+        expect(note).to_contain_text("1.79")
+        follows_multiplier = page.evaluate(
+            "() => document.querySelector('[data-testid=lever-multiplier]').closest('label').nextElementSibling"
+            " === document.querySelector('[data-testid=spot-check-note]')")
+        assert follows_multiplier
+        page.get_by_test_id("assumptions-button").click()
+        drawer = page.get_by_test_id("assumptions-drawer")
+        expect(drawer.get_by_role("row").filter(has_text="Household size")).to_be_visible()
+        expect(page.get_by_test_id("network-seed")).to_contain_text("2026")
+        expect(page.get_by_test_id("network-seed")).to_contain_text("synthetic")
+        for credit in ("OpenStreetMap", "WorldPop", "Black Marble", "Overture", "OpenFreeMap"):
+            expect(page.get_by_test_id("credits")).to_contain_text(credit)
+        attribution = page.locator(".maplibregl-ctrl-attrib")
+        expect(attribution).to_contain_text("OpenStreetMap")
+        expect(attribution).to_contain_text("WorldPop")
+        browser.close()

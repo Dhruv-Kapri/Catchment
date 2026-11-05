@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from catchment import assumptions
 from catchment.planning import Inputs, Scenario, plan
 from catchment.serialize import plan_json
 from catchment.service import create_app
@@ -50,3 +51,17 @@ def test_a_bad_scenario_is_a_422_that_states_why(client: TestClient, levers: dic
     response = client.post("/plan", json=levers)
     assert response.status_code == 422
     assert message in str(response.json()["detail"])
+
+
+def test_assumptions_serves_the_table_the_spot_check_error_and_the_network_seed(client: TestClient, inputs: Inputs) -> None:
+    response = client.get("/assumptions")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["table"] == assumptions.table().to_dict("records")
+    spot = body["spot_check"]
+    assert spot["routes"] == 20 and spot["multiplier"] == assumptions.MULTIPLIER
+    assert spot["implied_median"] == pytest.approx(1.79, abs=0.01) and spot["ratio_median"] == pytest.approx(1.0, abs=0.01)
+    assert spot["ratio_q25"] < spot["ratio_median"] < spot["ratio_q75"]
+    network = body["network"]
+    assert network["seed"] == 2026 and network["synthetic"] is True
+    assert sum(network["stores"].values()) == assumptions.network_size(inputs.demand.sum())
