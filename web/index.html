@@ -14,9 +14,12 @@
     #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
     #panel input { width: 70px; }
     #panel button { width: 100%; margin-top: 8px; padding: 6px; }
+    #metrics-heading { margin: 10px 0 0; font-size: 14px; }
+    #plan-note { color: #555; }
+    #new-stores { padding-left: 20px; }
     #metrics { margin: 10px 0 0; }
     #metrics dt { color: #555; }
-    #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 18px; }
+    #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 16px; }
     #error { color: #b00020; margin-top: 6px; }
     .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
     .store-new { background: #1b9e77; }
@@ -29,10 +32,19 @@
   <div id="panel">
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
+    <h2 id="metrics-heading" data-testid="metrics-heading">Operator's plan, orders a day</h2>
     <dl id="metrics">
-      <dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd>
+      <dt>Demand covered</dt><dd data-testid="metric-demand">-</dd>
       <dt>Households covered</dt><dd data-testid="metric-households">-</dd>
+      <dt>Lost to capacity</dt><dd data-testid="metric-lost">-</dd>
+      <dt>Unreached</dt><dd data-testid="metric-unreached">-</dd>
+      <dt>Slow-traffic coverage</dt><dd data-testid="metric-slow">-</dd>
+      <dt>Gap to the solver's bound</dt><dd data-testid="metric-gap">-</dd>
+      <dt>Greedy's demand covered</dt><dd data-testid="metric-greedy">-</dd>
+      <dt>Gain over greedy</dt><dd data-testid="metric-gain">-</dd>
     </dl>
+    <p id="plan-note" data-testid="plan-note"></p>
+    <ol id="new-stores" data-testid="new-stores"></ol>
     <div id="error" data-testid="error"></div>
   </div>
   <script type="module" src="js/main.js"></script>
