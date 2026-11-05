@@ -1,9 +1,9 @@
 import re
-from typing import Any
 import socket
 import threading
 import time
 from collections.abc import Iterator
+from typing import Any
 
 import h3
 import pytest
