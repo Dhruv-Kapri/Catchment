@@ -1,5 +1,6 @@
 // The operator's metrics: coverage, the gap to the solver's bound, the result against greedy, and what each new store serves.
-const format = (value) => Math.round(value).toLocaleString("en-IN");
+const format = (value) => (Math.round(value) || 0).toLocaleString("en-IN");   // || 0: a hair under zero rounds to -0
+const percent = (gap) => (gap > 0 && gap < 0.0005 ? "<0.1%" : `${(gap * 100).toFixed(1)}%`);   // a small gap must not read as proven
 const field = (testid) => document.querySelector(`[data-testid="${testid}"]`);
 
 function planNote(plan) {
@@ -16,13 +17,13 @@ export function showMetrics(plan) {
   field("metric-lost").textContent = format(plan.lost_to_capacity);
   field("metric-unreached").textContent = format(plan.unreached);
   field("metric-slow").textContent = format(plan.slow_traffic_coverage);
-  field("metric-gap").textContent = plan.gap === null ? plan.gap_reason : `${(plan.gap * 100).toFixed(1)}%`;
+  field("metric-gap").textContent = plan.gap === null ? plan.gap_reason : percent(plan.gap);
   field("metric-greedy").textContent = format(plan.greedy_demand_covered);
   field("metric-gain").textContent = unknown ? "no plan" : format(plan.demand_covered - plan.greedy_demand_covered);
   field("plan-note").textContent = planNote(plan);
-  field("new-stores").replaceChildren(...plan.new_stores.map((store, i) => {
+  field("new-stores").replaceChildren(...plan.new_stores.map((store) => {
     const item = document.createElement("li");
-    item.textContent = `${i + 1}. fresh ${format(store.fresh)}, cannibalised ${format(store.cannibalised)}`;
+    item.textContent = `fresh ${format(store.fresh)}, cannibalised ${format(store.cannibalised)}`;
     return item;
   }));
 }
