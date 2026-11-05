@@ -29,3 +29,8 @@ export function resetOthers(form, name, levers) {
     if (other !== name) form.elements[other].value = value;
   }
 }
+
+// The inverse of readLevers: put each named lever's value into the form (it fires no input event).
+export function writeLevers(form, values) {
+  for (const [name, value] of Object.entries(values)) form.elements[name].value = value;
+}

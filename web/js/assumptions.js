@@ -34,14 +34,18 @@ export function renderCredits(footer) {
   });
 }
 
-export async function renderAssumptions(drawer, form) {
+// Fetches the assumptions once and fills the drawer; returns the spot-check note's text for addSpotCheckNote, once per lever form.
+export async function renderAssumptions(drawer) {
   const { table, spot_check: spot, network } = await fetchAssumptions();
-  const multiplier = form.elements.multiplier.closest("label");
-  multiplier.after(element("p", spotCheckText(spot), "spot-check-note"));
   const { Operator, Competitor } = network.stores;
   drawer.replaceChildren(
     element("h2", "Assumptions"),
     element("p", `The existing network is synthetic, not real stores: placed by seed ${network.seed} (fixed, not a lever). At the default competitor density it has ${Operator} Operator and ${Competitor} Competitor stores.`, "network-seed"),
     renderTable(table),
   );
+  return spotCheckText(spot);
+}
+
+export function addSpotCheckNote(form, text) {
+  form.elements.multiplier.closest("label").after(element("p", text, "spot-check-note"));
 }

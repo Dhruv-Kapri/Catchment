@@ -1,7 +1,6 @@
 // The operator's metrics: coverage, the gap to the solver's bound, the result against greedy, and what each new store serves.
 const format = (value) => (Math.round(value) || 0).toLocaleString("en-IN");   // || 0: a hair under zero rounds to -0
 const percent = (gap) => (gap > 0 && gap < 0.0005 ? "<0.1%" : `${(gap * 100).toFixed(1)}%`);   // a small gap must not read as proven
-const field = (testid) => document.querySelector(`[data-testid="${testid}"]`);
 
 function planNote(plan) {
   if (plan.method === "greedy") return "This is the greedy plan.";
@@ -10,7 +9,9 @@ function planNote(plan) {
   return "";
 }
 
-export function showMetrics(plan) {
+// root: one scenario's panel, so the two scenarios' metrics never mix.
+export function showMetrics(root, plan) {
+  const field = (testid) => root.querySelector(`[data-testid="${testid}"]`);
   const unknown = plan.status === "UNKNOWN";
   field("metric-demand").textContent = format(plan.demand_covered);
   field("metric-households").textContent = format(plan.households_covered);

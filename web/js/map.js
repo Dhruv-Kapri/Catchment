@@ -42,3 +42,19 @@ export function markSelected(view, cell) {
 export function showNetwork(view, network) {
   showStores(view, { network, sites: [] });
 }
+
+// Pan, zoom, rotate and tilt on either map moves the other. One shared flag stops the two echoing each other.
+export function linkMaps(a, b) {
+  let syncing = false;
+  const follow = (from, to) => from.map.on("move", () => {
+    if (syncing) return;
+    syncing = true;
+    try {
+      to.map.jumpTo({ center: from.map.getCenter(), zoom: from.map.getZoom(), bearing: from.map.getBearing(), pitch: from.map.getPitch() });
+    } finally {
+      syncing = false;
+    }
+  });
+  follow(a, b);
+  follow(b, a);
+}
