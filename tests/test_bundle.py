@@ -38,7 +38,7 @@ def read_text(path: Path) -> str:
     return path.read_text()
 
 
-def read_json(path: Path) -> Any:
+def read_json(path: Path) -> Any:  # noqa: ANN401 - a dict or a list, as the file holds
     return json.loads(read_text(path))
 
 

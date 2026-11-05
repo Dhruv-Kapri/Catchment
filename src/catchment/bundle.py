@@ -44,7 +44,7 @@ def plan_file(scenario: Scenario) -> str:
     return "plans/default.json"
 
 
-def write_json(path: Path, body: Any) -> None:
+def write_json(path: Path, body: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(body))
 
