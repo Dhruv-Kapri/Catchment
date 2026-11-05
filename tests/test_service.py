@@ -126,3 +126,13 @@ def test_a_cached_scenario_returns_while_another_plan_runs(inputs: Inputs, monke
             assert slow.result().status_code == 200
     assert cached.status_code == 200 and state["calls"] == 2
     assert waited < 0.5, f"the cached repeat waited {waited:.2f} s behind the plan in progress"
+
+
+def test_the_plan_body_carries_every_metric_and_says_why_it_has_no_gap(client: TestClient) -> None:
+    body = client.post("/plan", json={}).json()
+    for key in ("demand_covered", "households_covered", "lost_to_capacity", "unreached", "slow_traffic_coverage", "greedy_demand_covered"):
+        assert isinstance(body[key], (int, float)), key
+    assert len(body["new_stores"]) == 10
+    for store in body["new_stores"]:
+        assert isinstance(store["fresh"], (int, float)) and isinstance(store["cannibalised"], (int, float))
+    assert body["status"] == "OPTIMAL" and body["gap"] == 0.0 and body["gap_reason"] is None   # the cases without a gap, each with its reason: test_serialize.py
