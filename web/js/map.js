@@ -10,19 +10,22 @@ export function createMap(container) {
   return { map, markers: [] };
 }
 
-function addStore(view, cell, kind, label) {
+function addStore(view, cell, kind, label, onSelect) {
   const [lat, lng] = cellToLatLng(cell);
   const element = document.createElement("div");
   element.className = `store store-${kind}`;
   element.title = label;
+  element.dataset.cell = cell;
+  if (onSelect) element.addEventListener("click", () => onSelect(cell));
   view.markers.push(new maplibregl.Marker({ element }).setLngLat([lng, lat]).addTo(view.map));
 }
 
 // Brands are shown only as Operator / Competitor.
-export function showStores(view, plan) {
+// onSelect(cell) is called when an operator store (existing or new) is clicked; competitors have no catchment.
+export function showStores(view, plan, onSelect) {
   view.markers.forEach((marker) => marker.remove());
   view.markers = [];
-  for (const cell of plan.network.Operator ?? []) addStore(view, cell, "operator", "Operator");
+  for (const cell of plan.network.Operator ?? []) addStore(view, cell, "operator", "Operator", onSelect);
   for (const cell of plan.network.Competitor ?? []) addStore(view, cell, "competitor", "Competitor");
-  for (const cell of plan.sites) addStore(view, cell, "new", "New store");
+  for (const cell of plan.sites) addStore(view, cell, "new", "New store", onSelect);
 }
