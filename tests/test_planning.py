@@ -370,11 +370,12 @@ def test_cpsat_finds_the_optimum_where_greedy_does_not(method: Method) -> None:
     assert sorted(p.sites) == ["P", "Q"] and p.method == method
     assert p.demand_covered == pytest.approx(1210) and p.objective == pytest.approx(1210)
     assert p.status == "OPTIMAL" and p.gap == 0 and p.bound == pytest.approx(p.objective)
+    assert p.bound_source == "solver"   # the fallback here is 1,310, above the solver's proven 1,210
 
 
 def test_greedy_reports_a_heuristic_status_and_no_bound() -> None:
     p = plan(make_inputs({"A": 500.0}, {("S0", "A"): 1.0}, ["S0", "S1"]), Scenario(n_new=1))
-    assert p.status == "HEURISTIC" and p.bound is None and p.gap is None
+    assert p.status == "HEURISTIC" and p.bound is None and p.bound_source is None and p.gap is None
     assert p.objective == p.demand_covered == pytest.approx(500)
 
 
@@ -544,6 +545,7 @@ def test_a_model_over_the_size_cap_is_not_built(monkeypatch: pytest.MonkeyPatch)
     hinted = plan(inputs, scenario, "cpsat-from-greedy")
     assert hinted.method == "cpsat-from-greedy" and hinted.status == "HEURISTIC" and hinted.sites == greedy.sites
     assert hinted.objective == pytest.approx(greedy.objective) and hinted.bound is not None and hinted.gap is not None   # the fallback bound
+    assert hinted.bound_source == "capacity"
     assert hinted.demand_covered == pytest.approx(greedy.demand_covered)
     alone = plan(inputs, scenario, "cpsat")
     assert alone.status == "UNKNOWN" and alone.sites == [] and alone.objective is None and alone.bound is None and alone.gap is None
@@ -605,7 +607,7 @@ def test_cpsat_from_greedy_without_a_solution_states_a_bound_and_the_gap(monkeyp
     no_solution(monkeypatch)
     p = plan(inputs, scenario, "cpsat-from-greedy")
     assert p.status == "HEURISTIC" and p.sites == greedy.sites
-    assert p.bound == pytest.approx(bound) and p.objective == pytest.approx(greedy.objective)
+    assert p.bound == pytest.approx(bound) and p.bound_source == "capacity" and p.objective == pytest.approx(greedy.objective)
     assert p.gap == pytest.approx((bound - greedy.objective) / greedy.objective)
 
 
@@ -636,7 +638,7 @@ def test_the_stated_bound_is_never_under_the_plans_own_objective() -> None:
     p = planning.Problem.build(make_inputs({"T": 10.0, "A": 500.0}, {("S0", "T"): 1.0, ("S1", "A"): 5.0}, ["S0", "S1"]), Scenario(n_new=1, promise=15))
     objective = planning.capacity_bound(p) + 0.004
     solved = planning.Solved(picked=[1], owner=p.base, status="HEURISTIC", objective=objective, solver_bound=objective - 0.01, search_start=0.0)
-    assert planning.stated_bound(p, "cpsat-from-greedy", solved) == objective
+    assert planning.stated_bound(p, "cpsat-from-greedy", solved)[0] == objective
 
 
 def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -648,6 +650,7 @@ def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.Mo
     inputs, scenario = random_inputs(0), Scenario(n_new=5, promise=12, capacity=0.5, seed=0)
     p = plan(inputs, scenario, "cpsat")
     assert p.status == "FEASIBLE" and p.bound is not None and p.bound < inputs.demand.sum() * 2   # shares are at most the demand
+    assert p.bound_source == "capacity"
     assert p.gap is not None and p.gap == pytest.approx((p.bound - p.objective) / p.objective)
 
 

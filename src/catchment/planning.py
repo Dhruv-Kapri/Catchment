@@ -17,6 +17,7 @@ from catchment.fetch import DATA
 Method = Literal["greedy", "cpsat", "cpsat-from-greedy"]
 METHODS: tuple[Method, ...] = get_args(Method)
 Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC", "UNKNOWN"]   # CP-SAT's own plan, proven or stopped early; greedy's plan (also when CP-SAT from greedy keeps it); CP-SAT on its own found none
+BoundSource = Literal["solver", "capacity"]   # CP-SAT's own bound; `capacity_bound`, the cheap fallback
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
 GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
@@ -104,7 +105,7 @@ class Plan:
     assignment also gives a hex to an open store that cannot reach capacity even where the solver left it uncovered.
     A hinted plan that would fall below greedy keeps greedy's picks (status HEURISTIC, as it is greedy's plan), so it is never below greedy. A model over
     `assumptions.MODEL_PAIR_CAP` is not built, as the build is outside the solver's time limit: from greedy the plan is greedy's (HEURISTIC), on its own it
-    is UNKNOWN. Whenever a CP-SAT method has an objective it states a bound: the solver's, or `capacity_bound` where that is lower or the solver has none."""
+    is UNKNOWN. Whenever a CP-SAT method has an objective it states a bound: the solver's, or `capacity_bound` where that is lower or the solver has none; `bound_source` says which."""
     scenario: Scenario
     method: Method
     sites: list[str]                 # the new sites, in pick order
@@ -121,6 +122,7 @@ class Plan:
     status: Status                   # CP-SAT's own plan: "OPTIMAL", or "FEASIBLE" (stopped early); "HEURISTIC": greedy's plan, by method or kept by cpsat-from-greedy; "UNKNOWN": CP-SAT on its own found no plan, or the model was over the size cap, so no new sites and the metrics are the existing network's
     objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
     bound: float | None              # upper bound on the objective: the lower of CP-SAT's and `capacity_bound`'s, never under the objective (so on a kept greedy plan or an unbuilt model, the fallback alone); None for greedy and when UNKNOWN
+    bound_source: BoundSource | None   # where `bound` came from: "solver", CP-SAT's own; "capacity", `capacity_bound`, which is cheap and can be loose, so its gap says little about the plan; None when bound is None
     gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None without a bound, and for a zero objective under a positive bound
     build_seconds: float             # everything before the search: network, shares, reach, greedy hint, model
     solve_seconds: float             # the greedy loop, or CP-SAT's Solve
@@ -424,15 +426,18 @@ def capacity_bound(p: Problem) -> float:
     return float(min(p.share[reached].sum(), served_if_open[p.existing].sum() + best_new.sum()))
 
 
-def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
-    """The bound a plan states: None for greedy and when there is no objective. CP-SAT's plans always state one: the lower of the solver's bound and
-    `capacity_bound` (the fallback alone where the solver has none), and never under the objective: it is on the solver's integer scale, the fallback
-    in float shares, so rounding must not put the bound under the plan's own claim."""
+def stated_bound(p: Problem, method: Method, solved: Solved) -> tuple[float | None, BoundSource | None]:
+    """The bound a plan states, and where it came from: (None, None) for greedy and when there is no objective. CP-SAT's plans always state one: the lower of
+    the solver's bound and `capacity_bound` (the fallback alone where the solver has none; "solver" on a tie), and never under the objective: it is on the
+    solver's integer scale, the fallback in float shares, so rounding must not put the bound under the plan's own claim. That clamp leaves the source as it was."""
     if method == "greedy" or solved.objective is None:
-        return None
+        return None, None
     fallback = capacity_bound(p)
-    bound = fallback if solved.solver_bound is None else min(solved.solver_bound, fallback)
-    return max(bound, solved.objective)
+    if solved.solver_bound is None or fallback < solved.solver_bound:
+        bound, source = fallback, "capacity"
+    else:
+        bound, source = solved.solver_bound, "solver"
+    return max(bound, solved.objective), source
 
 
 def relative_gap(objective: float, bound: float, status: Status) -> float | None:
@@ -459,14 +464,14 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
-    bound = stated_bound(p, method, solved)
+    bound, bound_source = stated_bound(p, method, solved)
     gap = None if bound is None or solved.objective is None else relative_gap(solved.objective, bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     greedy_owner = solved.greedy_owner if solved.greedy_owner is not None else greedy(p)[1]   # CP-SAT on its own: greedy runs here, after the search, so the solver's budget and search are unchanged
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
                 covered, households, lost, unreached, slow, new_stores, service_areas(p, p.existing + solved.picked, solved.owner),
-                catchments(p, p.existing + solved.picked), float(p.share[greedy_owner >= 0].sum()), solved.status, solved.objective, bound, gap,
+                catchments(p, p.existing + solved.picked), float(p.share[greedy_owner >= 0].sum()), solved.status, solved.objective, bound, bound_source, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
