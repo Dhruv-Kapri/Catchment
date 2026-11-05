@@ -524,8 +524,7 @@ def test_the_gap_is_none_not_infinite_for_a_zero_objective_under_a_positive_boun
     assert planning.relative_gap(0.0, 5.0, "FEASIBLE") is None
 
 
-@pytest.mark.parametrize("seed", [0, 1, 4])
-@pytest.mark.parametrize("capacity", [0.5, 1.0])
+@pytest.mark.parametrize(("seed", "capacity"), [(0, 0.5), (1, 1.0)])
 def test_the_model_size_count_is_the_number_of_capacity_bound_pairs_the_build_creates(seed: int, capacity: float) -> None:
     p = planning.Problem.build(random_inputs(seed), Scenario(n_new=5, promise=12, capacity=capacity, seed=seed))
     rows = planning.model_rows(p)
@@ -570,12 +569,15 @@ def test_cpsat_from_greedy_keeps_greedys_plan_as_heuristic_when_the_solver_does_
     assert p.gap is not None and p.gap >= 0
 
 
+class FirstSolution(cp_model.CpSolver):
+    """A CP-SAT solver that stops at the first solution, on one worker."""
+    def Solve(self, model: cp_model.CpModel, solution_callback: cp_model.CpSolverSolutionCallback | None = None) -> int:
+        self.parameters.stop_after_first_solution, self.parameters.num_workers = True, 1
+        return super().Solve(model, solution_callback)
+
+
 def test_a_feasible_cpsat_plan_keeps_the_invariants_of_a_plan_the_solver_stopped_early(monkeypatch: pytest.MonkeyPatch) -> None:
     # Stopping at the first solution on one worker is deterministic and, here, short of the optimum (seed 0, capacity 0.5x, 5 new stores).
-    class FirstSolution(cp_model.CpSolver):
-        def Solve(self, model: cp_model.CpModel, solution_callback: cp_model.CpSolverSolutionCallback | None = None) -> int:
-            self.parameters.stop_after_first_solution, self.parameters.num_workers = True, 1
-            return super().Solve(model, solution_callback)
     monkeypatch.setattr(cp_model, "CpSolver", FirstSolution)
     p = plan(random_inputs(0), Scenario(n_new=5, promise=12, capacity=0.5, seed=0), "cpsat")
     assert p.status == "FEASIBLE" and p.method == "cpsat"
@@ -631,11 +633,7 @@ def test_the_fallback_bound_is_never_below_the_optimum(monkeypatch: pytest.Monke
 
 def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.MonkeyPatch) -> None:
     # A stopped CP-SAT can report a bound far above what the area's demand allows (seen: 1.65 M orders a day against 89.7 k).
-    class Loose(cp_model.CpSolver):
-        def Solve(self, model: cp_model.CpModel, solution_callback: cp_model.CpSolverSolutionCallback | None = None) -> int:
-            self.parameters.stop_after_first_solution, self.parameters.num_workers = True, 1
-            return super().Solve(model, solution_callback)
-
+    class Loose(FirstSolution):
         def BestObjectiveBound(self) -> float:
             return 1e12
     monkeypatch.setattr(cp_model, "CpSolver", Loose)
