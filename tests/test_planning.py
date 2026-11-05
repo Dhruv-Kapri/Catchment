@@ -660,3 +660,14 @@ def test_service_areas_are_disjoint_and_cover_exactly_the_hexes_counted_in_deman
     assert len(union) == len(set(union)) == 3 and "far" not in union
     assert sum(hexes[h] for h in union) == pytest.approx(p.demand_covered)
     assert len(p.service_areas["S1"]) == 2
+
+
+@pytest.mark.parametrize("method", METHODS)
+def test_a_catchment_is_exactly_the_hexes_within_the_promise_and_holds_its_service_area(method: Method) -> None:
+    # Multiplier 1.0, promise 15: S1 reaches J just inside (pick-and-pack included) and O just outside. S0 is nearer to A, so S1's catchment holds A but its service area does not.
+    inside, outside = 15 - PICK_AND_PACK - 0.1, 15 - PICK_AND_PACK + 0.1
+    hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0, "J": 10.0, "O": 10.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("S0", "A"): 1.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0, ("S1", "J"): inside, ("S1", "O"): outside}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0, capacity=0.5), method)
+    assert p.catchments == {"S0": ["T", "A"], "S1": ["A", "B", "C", "J"]}
+    assert p.service_areas == {"S0": ["T", "A"], "S1": ["B", "C", "J"]}

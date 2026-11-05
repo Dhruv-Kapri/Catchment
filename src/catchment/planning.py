@@ -450,7 +450,8 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, hexes_by_store(p, p.existing + solved.picked, solved.owner), {}, 0.0, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, hexes_by_store(p, p.existing + solved.picked, solved.owner),
+                catchments(p, p.existing + solved.picked), 0.0, solved.status, solved.objective, solved.bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
@@ -460,6 +461,14 @@ def hexes_by_store(p: Problem, stores: list[int], store_of: npt.NDArray[np.intp]
     order = np.argsort(store_of[hexes], kind="stable")
     owner, hexes = store_of[hexes][order], hexes[order]
     return {str(p.inputs.site_ids[s]): p.inputs.hex_ids[hexes[np.searchsorted(owner, s):np.searchsorted(owner, s, "right")]].tolist() for s in stores}
+
+
+def catchments(p: Problem, stores: list[int]) -> dict[str, list[str]]:
+    """Each store's reachable hex ids (the pairs already in `p.reach`: within the promise at the multiplier, pick-and-pack included), in hex position order."""
+    keep = np.flatnonzero(np.isin(p.reach.site, stores))
+    order = keep[np.lexsort((p.reach.hex[keep], p.reach.site[keep]))]
+    site, hexes = p.reach.site[order], p.reach.hex[order]
+    return {str(p.inputs.site_ids[s]): p.inputs.hex_ids[hexes[np.searchsorted(site, s):np.searchsorted(site, s, "right")]].tolist() for s in stores}
 
 
 def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, float, list[NewStore]]:
