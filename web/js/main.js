@@ -93,10 +93,10 @@ document.getElementById("copy-a-to-b").addEventListener("click", () => b.setLeve
 let levers = null;   // ranges, steps and defaults from the service
 try {
   levers = await getLevers();
-  for (const { form } of scenarios) {
-    renderLevers(form, levers);
-    if (STATIC) {   // the bundle has plans with one lever moved at most
-      for (const type of ["input", "change"]) form.addEventListener(type, (e) => resetOthers(form, e.target.name, levers));
+  for (const s of scenarios) {
+    renderLevers(s.form, levers);
+    if (STATIC) {   // the bundle has plans with one lever moved at most; a reset capture lever recolours the demand layer too
+      for (const type of ["input", "change"]) s.form.addEventListener(type, (e) => { resetOthers(s.form, e.target.name, levers); s.syncCapture(); });
     }
   }
 } catch (e) {

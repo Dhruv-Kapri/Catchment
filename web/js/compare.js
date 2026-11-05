@@ -3,7 +3,7 @@ const MINUS = "−";
 const count = (plan) => plan.sites.length;
 
 // key, label, how to format it, and how to read it from a plan when it isn't the plan's field of that name. Only gap can be null.
-const integer = (value) => Math.round(value).toLocaleString("en-IN");
+const integer = (value) => (Math.round(value) || 0).toLocaleString("en-IN");   // || 0: a hair under zero rounds to -0
 const percent = (value) => `${(value * 100).toFixed(1)}%`;
 const points = (value) => `${(value * 100).toFixed(1)} pp`;   // a difference of two percentages
 

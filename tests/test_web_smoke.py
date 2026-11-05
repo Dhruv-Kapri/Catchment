@@ -313,6 +313,20 @@ DIFF_KEYS: list[str] = [
 ]
 
 
+def test_the_difference_table_shows_no_minus_zero(base_url: str, greedy_plan: Plan) -> None:
+    """A plan a float hair under greedy has gained nothing: "0", not "-0" (as the panel, #46)."""
+    a: dict[str, Any] = plan_json(greedy_plan)
+    b: dict[str, Any] = plan_json(dataclasses.replace(greedy_plan, demand_covered=greedy_plan.greedy_demand_covered - 0.3))
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        rows: list[dict[str, str]] = page.evaluate("async ([a, b]) => (await import('/js/compare.js')).diffRows(a, b)", [a, b])
+        gain: dict[str, str] = next(r for r in rows if r["key"] == "gain_over_greedy")
+        assert (gain["a"], gain["b"], gain["delta"]) == ("0", "0", "0")
+        browser.close()
+
+
 def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()

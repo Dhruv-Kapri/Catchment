@@ -1,5 +1,6 @@
 import functools
 import http.server
+import re
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -51,4 +52,22 @@ def test_the_static_page_plans_from_the_bundle_and_resets_the_other_levers(stati
         b.get_by_test_id("lever-n_new").fill("5")
         a.get_by_test_id("lever-promise").fill("11")
         expect(b.get_by_test_id("lever-n_new")).to_have_value("5")   # each scenario resets its own other levers, not the other scenario's
+        browser.close()
+
+
+def test_a_lever_reset_to_its_default_recolours_the_demand_layer(static_url: str) -> None:
+    """Moving another lever puts capture back to its default; the market demand shown must follow it (#44 in the static demo)."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(static_url)
+        a = page.get_by_test_id("scenario-a")
+        total = a.get_by_test_id("market-demand-total")
+        expect(total).to_have_text(re.compile(r"^[\d,]+$"), timeout=15_000)
+        at_default: str = total.inner_text()
+        a.get_by_test_id("lever-capture").fill("1.5")
+        expect(total).not_to_have_text(at_default)
+        a.get_by_test_id("lever-n_new").fill("5")
+        expect(a.get_by_test_id("lever-capture")).to_have_value("1")
+        expect(total).to_have_text(at_default)
         browser.close()
