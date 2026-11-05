@@ -1,5 +1,6 @@
 from typing import Any
 
+import h3
 import pytest
 from fastapi.testclient import TestClient
 
@@ -32,6 +33,15 @@ def test_posting_no_levers_plans_the_default_scenario(client: TestClient, inputs
     assert {"scenario", "sites", "network", "demand_covered", "households_covered", "status", "method"} <= body.keys()
     assert body["method"] == "cpsat-from-greedy" and body["scenario"]["n_new"] == len(body["sites"]) == 10
     assert untimed(body) == untimed(plan_json(plan(inputs, Scenario(), "cpsat-from-greedy")))
+
+
+def test_the_plan_carries_each_operator_stores_service_area_and_catchment(client: TestClient) -> None:
+    body = client.post("/plan", json={}).json()
+    operator_stores: list[str] = body["network"]["Operator"] + body["sites"]
+    assert list(body["service_areas"]) == list(body["catchments"]) == operator_stores
+    for store in operator_stores:
+        assert all(h3.is_valid_cell(cell) for cell in body["service_areas"][store] + body["catchments"][store])
+        assert set(body["service_areas"][store]) <= set(body["catchments"][store])
 
 
 def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> None:
