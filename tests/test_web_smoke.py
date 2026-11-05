@@ -59,18 +59,16 @@ def test_the_lever_inputs_come_from_the_levers_endpoint(base_url: str) -> None:
 
 
 def test_the_elapsed_seconds_show_while_a_plan_runs(base_url: str) -> None:
-    def slow(route: Route) -> None:
-        time.sleep(1.5)
-        route.continue_()
-
+    held: list[Route] = []   # the /plan request, held so the plan is still running when the page is checked
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.route("**/plan", slow)
+        page.route("**/plan", lambda route: held.append(route))
         page.goto(base_url)
         page.get_by_test_id("plan-button").click()
         expect(page.get_by_test_id("plan-button")).to_be_disabled()
-        expect(page.get_by_test_id("elapsed")).to_have_text(re.compile(r"^Planning… \d+\.\d s$"))
+        expect(page.get_by_test_id("elapsed")).to_have_text(re.compile(r"^Planning… (0\.[1-9]|[1-9]\d*\.\d) s$"))   # the count has moved on from 0.0
+        held[0].continue_()
         expect(page.get_by_test_id("plan-button")).to_be_enabled(timeout=15_000)
         expect(page.get_by_test_id("elapsed")).to_have_text(re.compile(r"^Planned in \d+\.\d s$"))
         browser.close()
@@ -91,4 +89,22 @@ def test_changing_a_lever_greys_the_metrics_until_the_next_plan(base_url: str) -
         expect(metrics).to_have_class(re.compile("stale"))
         page.get_by_test_id("plan-button").click()
         expect(metrics).not_to_have_class(re.compile("stale"), timeout=15_000)
+        browser.close()
+
+
+def test_a_lever_changed_while_planning_leaves_the_new_metrics_stale(base_url: str) -> None:
+    held: list[Route] = []   # the /plan request, held until the lever has changed
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.route("**/plan", lambda route: held.append(route))
+        page.goto(base_url)
+        page.get_by_test_id("plan-button").click()
+        while not held:
+            page.wait_for_timeout(50)
+        page.get_by_test_id("lever-promise").fill("12")   # the plan in flight is for promise 10
+        held[0].continue_()
+        expect(page.get_by_test_id("plan-button")).to_be_enabled(timeout=15_000)
+        expect(page.get_by_test_id("metric-demand")).to_have_text(re.compile(r"^[\d,]+$"))
+        expect(page.locator("#metrics")).to_have_class(re.compile("stale"))
         browser.close()

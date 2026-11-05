@@ -1,4 +1,3 @@
-import dataclasses
 import threading
 import time
 from collections.abc import Iterator
@@ -9,7 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from catchment.planning import LEVER_RANGES, LEVER_STEPS, Inputs, Method, Plan, Scenario, plan
+from catchment.planning import LEVER_RANGES, Inputs, Method, Plan, Scenario, plan
 from catchment.serialize import plan_json
 from catchment.service import create_app
 from service_inputs import service_inputs
@@ -61,11 +60,17 @@ def test_a_bad_scenario_is_a_422_that_names_the_lever_and_its_range(client: Test
 
 
 def test_the_levers_endpoint_publishes_the_ranges_steps_and_defaults(client: TestClient) -> None:
-    defaults = {f.name: f.default for f in dataclasses.fields(Scenario)}
-    expected = {lever: {"min": low, "max": high, "step": LEVER_STEPS[lever], "default": defaults[lever]} for lever, (low, high) in LEVER_RANGES.items()}
     response = client.get("/levers")
     assert response.status_code == 200
-    assert response.json() == expected and list(response.json()) == list(LEVER_RANGES)
+    assert response.json() == {
+        "n_new": {"min": 1, "max": 20, "step": 1, "default": 10},
+        "promise": {"min": 8, "max": 16, "step": 1, "default": 10},
+        "multiplier": {"min": 1.0, "max": 2.5, "step": 0.1, "default": 1.8},
+        "capacity": {"min": 0.5, "max": 2.0, "step": 0.25, "default": 1.0},
+        "capture": {"min": 0.5, "max": 1.5, "step": 0.25, "default": 1.0},
+        "competitor_density": {"min": 0.0, "max": 2.0, "step": 0.25, "default": 1.0},
+    }
+    assert list(response.json()) == list(LEVER_RANGES)
 
 
 @contextmanager
@@ -105,3 +110,19 @@ def test_the_service_plans_one_scenario_at_a_time(inputs: Inputs, monkeypatch: p
             responses = list(pool.map(lambda n: fresh.post("/plan", json={"n_new": n}), [2, 3]))
     assert [r.status_code for r in responses] == [200, 200]
     assert state["calls"] == 2 and state["max_running"] == 1
+
+
+def test_a_cached_scenario_returns_while_another_plan_runs(inputs: Inputs, monkeypatch: pytest.MonkeyPatch) -> None:
+    with counting_plan(monkeypatch, delay=1.0) as state:
+        fresh = TestClient(create_app(inputs))
+        assert fresh.post("/plan", json={}).status_code == 200
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            slow = pool.submit(fresh.post, "/plan", json={"n_new": 2})
+            while state["running"] == 0:
+                time.sleep(0.01)
+            started = time.perf_counter()
+            cached = fresh.post("/plan", json={})
+            waited = time.perf_counter() - started
+            assert slow.result().status_code == 200
+    assert cached.status_code == 200 and state["calls"] == 2
+    assert waited < 0.5, f"the cached repeat waited {waited:.2f} s behind the plan in progress"

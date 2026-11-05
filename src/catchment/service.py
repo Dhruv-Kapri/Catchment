@@ -20,7 +20,8 @@ WEB: Path = Path(__file__).resolve().parents[2] / "web"
 def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     """The service over inputs the caller loaded once."""
     app = FastAPI()
-    lock = threading.Lock()                                   # one plan at a time; sync endpoints run in a threadpool
+    planning = threading.Lock()                               # one plan at a time; sync endpoints run in a threadpool
+    cache_lock = threading.Lock()                             # held only to read or write the cache, so a cached plan never waits for a solve
     cache: OrderedDict[Scenario, dict[str, Any]] = OrderedDict()   # the most recent CACHE_SIZE plans, by scenario
     defaults: dict[str, Any] = {f.name: f.default for f in dataclasses.fields(Scenario)}
 
@@ -39,14 +40,22 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
             scenario = Scenario(**levers)
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-        with lock:   # a repeat waits for the plan in progress, then finds it cached
-            if scenario in cache:
-                cache.move_to_end(scenario)
-                return cache[scenario]
+        def cached() -> dict[str, Any] | None:
+            with cache_lock:
+                if scenario in cache:
+                    cache.move_to_end(scenario)
+                return cache.get(scenario)
+
+        if (body := cached()) is not None:
+            return body
+        with planning:
+            if (body := cached()) is not None:   # the same scenario was planned while this request waited its turn
+                return body
             body = plan_json(plan(inputs, scenario, method="cpsat-from-greedy"))
-            cache[scenario] = body
-            if len(cache) > CACHE_SIZE:
-                cache.popitem(last=False)
+            with cache_lock:
+                cache[scenario] = body
+                if len(cache) > CACHE_SIZE:
+                    cache.popitem(last=False)
             return body
 
     app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
