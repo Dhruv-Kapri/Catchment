@@ -11,7 +11,7 @@ import pandas as pd
 SPOTCHECK_MULTIPLIER: float = 1.4
 
 SEED: int = 16
-SPOT_CHECK: Path = Path(__file__).resolve().parents[2] / "docs" / "spot-check.csv"   # the filled-in sheet (ADR 0002)
+SPOT_CHECK_SHEET: Path = Path(__file__).resolve().parents[2] / "docs" / "spot-check.csv"   # the filled-in sheet (ADR 0002)
 COLUMNS: list[str] = ["route", "candidate", "hex", "source", "destination", "free_flow_min", "model_min",
                       "bad_snap_before", "app_min", "app", "looked_up"]
 

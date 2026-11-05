@@ -10,10 +10,9 @@ const error = document.getElementById("error");
 renderLevers(form);
 const view = createMap("map");
 renderCredits(document.getElementById("credits"));
-renderAssumptions(document.getElementById("assumptions-drawer"), form).catch((e) => { error.textContent = e.message; });
-document.getElementById("assumptions-button").addEventListener("click", () => {
-  document.getElementById("assumptions-drawer").hidden = !document.getElementById("assumptions-drawer").hidden;
-});
+const drawer = document.getElementById("assumptions-drawer");
+renderAssumptions(drawer, form).catch((e) => { error.textContent = e.message; });
+document.getElementById("assumptions-button").addEventListener("click", () => { drawer.hidden = !drawer.hidden; });
 
 document.getElementById("plan").addEventListener("click", async () => {
   error.textContent = "";

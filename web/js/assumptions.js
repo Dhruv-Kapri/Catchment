@@ -12,9 +12,10 @@ function element(tag, text, testid) {
 
 function spotCheckText(s) {
   const f = (x) => x.toFixed(2);
-  return `Spot check: ${s.routes} routes, ${s.app}, ${s.looked_up_from}-${s.looked_up_to.slice(-5)}. ` +
-    `At ×${s.multiplier} the app took a median ${f(s.ratio_median)}× the modelled time (25th-75th percentile ${f(s.ratio_q25)}-${f(s.ratio_q75)}); ` +
-    `implied multiplier ${f(s.implied_median)} (${f(s.implied_q25)}-${f(s.implied_q75)}).`;
+  const to = s.looked_up_to.split(" ").pop();   // the time only: every route was looked up the same evening
+  return `Spot check: ${s.routes} routes in ${s.app}, one evening's live estimates (${s.looked_up_from}-${to}). ` +
+    `The app times imply a congestion multiplier of ${f(s.implied_median)} (25th-75th percentile ${f(s.implied_q25)}-${f(s.implied_q75)}); ` +
+    `at the default ×${s.multiplier} the app took a median ${f(s.ratio_median)}× the modelled time (${f(s.ratio_q25)}-${f(s.ratio_q75)}).`;
 }
 
 function renderTable(rows) {
@@ -40,7 +41,7 @@ export async function renderAssumptions(drawer, form) {
   const { Operator, Competitor } = network.stores;
   drawer.replaceChildren(
     element("h2", "Assumptions"),
-    element("p", `The existing network is synthetic: ${Operator} Operator and ${Competitor} Competitor stores placed by seed ${network.seed}, not real stores.`, "network-seed"),
+    element("p", `The existing network is synthetic, not real stores: placed by seed ${network.seed} (fixed, not a lever). At the default competitor density it has ${Operator} Operator and ${Competitor} Competitor stores.`, "network-seed"),
     renderTable(table),
   );
 }

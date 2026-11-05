@@ -6,7 +6,7 @@ import pandas as pd
 
 from catchment import assumptions
 from catchment.planning import Inputs, Plan
-from catchment.spotcheck import SPOT_CHECK, compare
+from catchment.spotcheck import SPOT_CHECK_SHEET, compare
 
 
 def plan_json(plan: Plan) -> dict[str, Any]:
@@ -16,7 +16,7 @@ def plan_json(plan: Plan) -> dict[str, Any]:
 
 def assumptions_json(inputs: Inputs) -> dict[str, Any]:
     """The read-only assumptions payload: the table, the spot-check error of the travel times, and the synthetic network's seed and store counts."""
-    sheet = pd.read_csv(SPOT_CHECK)
+    sheet = pd.read_csv(SPOT_CHECK_SHEET)
     _, summary = compare(sheet, assumptions.MULTIPLIER)
     spot_check: dict[str, Any] = {"routes": int(summary["n"]), "multiplier": assumptions.MULTIPLIER,
                                   **{k: float(summary[k]) for k in ("ratio_median", "ratio_q25", "ratio_q75", "implied_median", "implied_q25", "implied_q75")},
