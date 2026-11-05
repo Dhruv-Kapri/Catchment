@@ -65,6 +65,7 @@ def test_pressing_plan_draws_the_stores_and_shows_the_metrics(base_url: str) -> 
         for f in fills:
             colours.setdefault(f["properties"]["store"], set()).add(f["properties"]["colour"])
         assert all(len(c) == 1 for c in colours.values())
+        assert len({c for cs in colours.values() for c in cs}) == len(colours)   # no two stores share a colour
         # selecting a new store outlines its catchment
         assert source_features(page, "catchment-outline") == []
         site: str = body["sites"][0]
