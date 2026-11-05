@@ -29,7 +29,7 @@ def test_posting_no_levers_plans_the_default_scenario(client: TestClient, inputs
     response = client.post("/plan", json={})
     assert response.status_code == 200
     body = response.json()
-    assert {"scenario", "sites", "network", "demand_covered", "households_covered", "status", "method"} <= body.keys()
+    assert {"scenario", "sites", "network", "demand_covered", "households_covered", "status", "method", "bound_source"} <= body.keys()
     assert body["method"] == "cpsat-from-greedy" and body["scenario"]["n_new"] == len(body["sites"]) == 10
     assert untimed(body) == untimed(plan_json(plan(inputs, Scenario(), "cpsat-from-greedy")))
 

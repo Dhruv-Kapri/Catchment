@@ -3,6 +3,17 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-05: A plan states where its bound came from (#52)
+
+- **A plan carries `bound_source`: "solver" (CP-SAT's own bound) or "capacity" (`capacity_bound`), None when there is no bound.** The source
+  is whichever gave the lower of the two (the solver on a tie); the clamp to the objective does not change it.
+  - Why: the 04-plan re-run (4bd0611) found the widest gap at 62.5% (N 1, promise 8, multiplier 1.0, capacity 2x, capture 1.5x, density 0), and 9 of
+    the 64 corners above 10%, 8 of them at capacity 0.5x. Those gaps come from the cheap capacity bound, not the solver. The web map shows each
+    plan's gap (spec #41, story 23), so a planner would read a capacity-bound gap as a solver gap.
+  - Rules out: nothing yet. Tightening the bound (shared hexes, an LP relaxation) is not done: each candidate must re-measure the 64 corners
+    against the 10 s bar. The label costs no solve time.
+  - Leaves open: the web map's gap display (#46) should say when the gap is from the capacity bound.
+
 ## 2026-11-05: Compare and ship (stage 3) scope (spec #41; tickets #35, #42-#51)
 
 Set in the stage 3 grill.
