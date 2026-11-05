@@ -548,7 +548,7 @@ def test_a_model_over_the_size_cap_is_not_built(monkeypatch: pytest.MonkeyPatch)
     assert hinted.bound_source == "capacity"
     assert hinted.demand_covered == pytest.approx(greedy.demand_covered)
     alone = plan(inputs, scenario, "cpsat")
-    assert alone.status == "UNKNOWN" and alone.sites == [] and alone.objective is None and alone.bound is None and alone.gap is None
+    assert alone.status == "UNKNOWN" and alone.sites == [] and alone.objective is None and alone.bound is None and alone.bound_source is None and alone.gap is None
 
 
 def test_a_model_at_the_size_cap_is_built(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -638,7 +638,16 @@ def test_the_stated_bound_is_never_under_the_plans_own_objective() -> None:
     p = planning.Problem.build(make_inputs({"T": 10.0, "A": 500.0}, {("S0", "T"): 1.0, ("S1", "A"): 5.0}, ["S0", "S1"]), Scenario(n_new=1, promise=15))
     objective = planning.capacity_bound(p) + 0.004
     solved = planning.Solved(picked=[1], owner=p.base, status="HEURISTIC", objective=objective, solver_bound=objective - 0.01, search_start=0.0)
-    assert planning.stated_bound(p, "cpsat-from-greedy", solved)[0] == objective
+    assert planning.stated_bound(p, "cpsat-from-greedy", solved) == (objective, "solver")   # the clamp leaves the source as it was
+
+
+@pytest.mark.parametrize(("above_fallback", "source"), [(None, "capacity"), (-1.0, "solver"), (0.0, "solver"), (1.0, "capacity")])
+def test_the_stated_bound_names_the_lower_source_and_the_solver_on_a_tie(above_fallback: float | None, source: planning.BoundSource) -> None:
+    p = planning.Problem.build(make_inputs({"T": 10.0, "A": 500.0}, {("S0", "T"): 1.0, ("S1", "A"): 5.0}, ["S0", "S1"]), Scenario(n_new=1, promise=15))
+    fallback = planning.capacity_bound(p)
+    solver_bound = None if above_fallback is None else fallback + above_fallback
+    solved = planning.Solved(picked=[1], owner=p.base, status="HEURISTIC", objective=10.0, solver_bound=solver_bound, search_start=0.0)
+    assert planning.stated_bound(p, "cpsat-from-greedy", solved)[1] == source
 
 
 def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.MonkeyPatch) -> None:

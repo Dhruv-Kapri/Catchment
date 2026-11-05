@@ -433,6 +433,7 @@ def stated_bound(p: Problem, method: Method, solved: Solved) -> tuple[float | No
     if method == "greedy" or solved.objective is None:
         return None, None
     fallback = capacity_bound(p)
+    source: BoundSource
     if solved.solver_bound is None or fallback < solved.solver_bound:
         bound, source = fallback, "capacity"
     else:
