@@ -27,7 +27,7 @@ uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.g
 osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001; env overrides OSRM_DATA (default data/), OSRM_PORT (5001), OSRM_NAME (catchment-osrm)
 uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the containers catchment-osrm-test on port 5091 and catchment-osrm-test-ro on 5092)
 uv run pytest -m "not browser"           # skip the Playwright smoke test (headless Chromium, and network for the CDN libraries)
-uv run catchment-serve [--port 8000]     # the live service: loads the inputs once, POST /plan, and the web map at / (also --res, --x-pct, --host)
+uv run catchment-serve [--port 8000]     # the live service: loads the inputs once, POST /plan, GET /levers (ranges, steps, defaults), and the web map at / (also --res, --x-pct, --host)
 ```
 
 ## What gets built

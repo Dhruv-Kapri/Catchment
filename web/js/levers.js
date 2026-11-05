@@ -1,17 +1,17 @@
-// The lever panel. Ranges and defaults are constants for now.
-export const LEVERS = {
-  n_new: { label: "New stores", min: 1, max: 20, step: 1, value: 10 },
-  promise: { label: "Promise (min)", min: 8, max: 16, step: 1, value: 10 },
-  multiplier: { label: "Congestion multiplier", min: 1, max: 2.5, step: 0.1, value: 1.8 },
-  capacity: { label: "Capacity (x)", min: 0.5, max: 2, step: 0.25, value: 1 },
-  capture: { label: "Capture share (x)", min: 0.5, max: 1.5, step: 0.25, value: 1 },
-  competitor_density: { label: "Competitor density (x)", min: 0, max: 2, step: 0.25, value: 1 },
+// The lever panel. Ranges, steps and defaults come from the service (api.getLevers); only the labels live here.
+const LABELS = {
+  n_new: "New stores",
+  promise: "Promise (min)",
+  multiplier: "Congestion multiplier",
+  capacity: "Capacity (x)",
+  capture: "Capture share (x)",
+  competitor_density: "Competitor density (x)",
 };
 
-export function renderLevers(form) {
-  for (const [name, { label, min, max, step, value }] of Object.entries(LEVERS)) {
+export function renderLevers(form, levers) {
+  for (const [name, { min, max, step, default: value }] of Object.entries(levers)) {
     const row = document.createElement("label");
-    row.textContent = label;
+    row.textContent = LABELS[name] ?? name;
     const input = Object.assign(document.createElement("input"), { type: "number", name, min, max, step, value });
     input.dataset.testid = `lever-${name}`;
     row.append(input);
@@ -20,5 +20,5 @@ export function renderLevers(form) {
 }
 
 export function readLevers(form) {
-  return Object.fromEntries(Object.keys(LEVERS).map((name) => [name, Number(form.elements[name].value)]));
+  return Object.fromEntries([...form.elements].filter((el) => el.name).map((el) => [el.name, Number(el.value)]));
 }

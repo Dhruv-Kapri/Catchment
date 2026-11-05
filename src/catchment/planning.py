@@ -52,13 +52,17 @@ def load_inputs(res: int = 9, x_pct: float = 30, data_dir: Path = DATA) -> Input
 LEVER_RANGES: dict[str, tuple[float, float]] = {
     "n_new": assumptions.N_RANGE, "promise": assumptions.PROMISE_RANGE, "multiplier": assumptions.MULTIPLIER_RANGE,
     "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
+LEVER_STEPS: dict[str, float] = {
+    "n_new": assumptions.N_STEP, "promise": assumptions.PROMISE_STEP, "multiplier": assumptions.MULTIPLIER_STEP,
+    "capacity": assumptions.CAPACITY_STEP, "capture": assumptions.CAPTURE_STEP, "competitor_density": assumptions.COMPETITOR_DENSITY_STEP}
 WHOLE_LEVERS: frozenset[str] = frozenset({"n_new", "promise"})   # levers that take whole numbers
 
 
 def lever_value(lever: str, value: object, whole: bool) -> int | float:
     """A lever's value as a plain int (whole levers) or float, refusing bools and non-numbers; -0.0 becomes 0.0, so it prints as 0.0."""
     if not isinstance(value, numbers.Integral if whole else numbers.Real) or isinstance(value, bool | np.bool_):
-        raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'}")
+        low, high = LEVER_RANGES[lever]
+        raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'} (lever range {low:g}-{high:g})")
     return int(value) if whole else float(value) + 0.0   # type: ignore[call-overload]
 
 
@@ -80,8 +84,9 @@ class Scenario:
             value = getattr(self, lever)
             if not low <= value <= high:
                 raise ValueError(f"{lever} {value:g} is outside the lever range {low:g}-{high:g}")
-        if self.competitor_density % assumptions.COMPETITOR_DENSITY_STEP:
-            raise ValueError(f"competitor_density {self.competitor_density!r} is not in steps of {assumptions.COMPETITOR_DENSITY_STEP:g}")
+            step = LEVER_STEPS[lever]
+            if value != round(round(value / step) * step, 10):   # float-safe: 1.4 is a tenth step, 1.45 is not
+                raise ValueError(f"{lever} {value!r} is not in steps of {step:g} (lever range {low:g}-{high:g})")
 
 
 @dataclass(frozen=True)

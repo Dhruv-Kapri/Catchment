@@ -81,7 +81,7 @@ def test_default_multiplier_is_the_spot_check_figure() -> None:
 def test_lever_ranges_row_traces_the_narrowed_promise_range() -> None:
     row = assumptions.table().set_index("Input").loc["Lever ranges"]
     assert row.Status == "Assumption" and "promise 8-16 min" in row.Value   # narrowed from 8-20 by 04-plan (#30)
-    assert "2026-11-03" in row.Source and row.Date == "2026-11-03"   # the narrowing is traced to its decision-log entry
+    assert "2026-11-03" in row.Source and "2026-11-05" in row.Source and row.Date == "2026-11-05"   # the narrowing and the steps trace to their decision-log entries
 
 
 def test_network_size_is_area_demand_over_orders_per_store_day() -> None:

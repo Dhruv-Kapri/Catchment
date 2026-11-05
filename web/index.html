@@ -17,6 +17,8 @@
     #metrics { margin: 10px 0 0; }
     #metrics dt { color: #555; }
     #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 18px; }
+    #metrics.stale { opacity: .4; color: #999; }
+    #elapsed { color: #555; margin-top: 6px; }
     #error { color: #b00020; margin-top: 6px; }
     .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
     .store-new { background: #1b9e77; }
@@ -29,6 +31,7 @@
   <div id="panel">
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
+    <div id="elapsed" data-testid="elapsed"></div>
     <dl id="metrics">
       <dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd>
       <dt>Households covered</dt><dd data-testid="metric-households">-</dd>

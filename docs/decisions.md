@@ -36,6 +36,11 @@ Set in the stage 3 grill.
     - At capacity 0.5× and N 20, the plan covered 45,693 orders a day with a 1.0% gap at 8 workers. At 1-4 workers it
       covered 43,406-45,148 with gaps of 23-28%; greedy covered 43,266.
   - Peak memory was 349 MB, and `load_inputs` took 0.85 s.
+- **Every lever has a step; `GET /levers` publishes them (2026-11-05).**
+  - `Scenario` refuses an off-step value, as it already refused an off-step density (e.g. multiplier 1.45, which `plan()`
+    accepted before). Steps: N 1, promise 1, multiplier 0.1, capacity, capture and density 0.25.
+  - `GET /levers` returns each lever's range, step and default, so the JS no longer hard-codes them. A range, step or type
+    error is a 422 naming the lever and its range.
 - **Web map: plain JavaScript and ES modules, no build step.**
   - MapLibre with the OpenFreeMap basemap, served by FastAPI locally and from gh-pages publicly.
   - Two maps with linked pan and zoom: A starts at the default, B starts as a copy of A. A metrics table shows B − A.
