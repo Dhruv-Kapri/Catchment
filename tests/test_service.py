@@ -34,6 +34,12 @@ def test_posting_no_levers_plans_the_default_scenario(client: TestClient, inputs
     assert untimed(body) == untimed(plan_json(plan(inputs, Scenario(), "cpsat-from-greedy")))
 
 
+def test_demand_lists_every_hex_once_with_its_demand_and_households(client: TestClient, inputs: Inputs) -> None:
+    response = client.get("/demand")
+    assert response.status_code == 200
+    assert response.json() == [{"hex": h, "demand": d, "households": hh} for h, d, hh in zip(inputs.hex_ids, inputs.demand, inputs.households)]
+
+
 def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
