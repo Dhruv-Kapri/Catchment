@@ -35,6 +35,7 @@ def test_the_static_page_plans_from_the_bundle_and_resets_the_other_levers(stati
         page = browser.new_page()
         page.goto(static_url)
         expect(page.get_by_test_id("static-notice")).to_be_visible()
+        expect(page.locator(".maplibregl-ctrl-attrib-inner")).to_contain_text("© OpenStreetMap contributors", timeout=15_000)   # ADR 0003: the published plans are ODbL
         page.get_by_test_id("plan-button").click()
         expect(page.locator(".store-new")).to_have_count(10, timeout=15_000)
         page.get_by_test_id("lever-n_new").fill("5")
