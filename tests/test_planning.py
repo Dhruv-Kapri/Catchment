@@ -631,6 +631,14 @@ def test_the_fallback_bound_is_never_below_the_optimum(monkeypatch: pytest.Monke
     assert best.objective - 1e-6 <= p.bound and p.objective <= p.bound   # valid, and never reported below what the plan itself claims
 
 
+def test_the_stated_bound_is_never_under_the_plans_own_objective() -> None:
+    # The objective is on the solver's integer scale, the fallback in float shares: a rounding hair must not put the bound under the claim.
+    p = planning.Problem.build(make_inputs({"T": 10.0, "A": 500.0}, {("S0", "T"): 1.0, ("S1", "A"): 5.0}, ["S0", "S1"]), Scenario(n_new=1, promise=15))
+    objective = planning.capacity_bound(p) + 0.004
+    solved = planning.Solved([1], p.base, "HEURISTIC", objective, objective - 0.01, 0.0)
+    assert planning.stated_bound(p, "cpsat-from-greedy", solved) == objective
+
+
 def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.MonkeyPatch) -> None:
     # A stopped CP-SAT can report a bound far above what the area's demand allows (seen: 1.65 M orders a day against 89.7 k).
     class Loose(FirstSolution):
