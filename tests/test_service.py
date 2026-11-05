@@ -59,7 +59,4 @@ def test_the_plan_body_carries_every_metric_and_says_why_it_has_no_gap(client: T
     assert len(body["new_stores"]) == 10
     for store in body["new_stores"]:
         assert isinstance(store["fresh"], (int, float)) and isinstance(store["cannibalised"], (int, float))
-    if body["gap"] is None:
-        assert body["gap_reason"]
-    else:
-        assert isinstance(body["gap"], (int, float)) and body["gap_reason"] is None
+    assert body["status"] == "OPTIMAL" and body["gap"] == 0.0 and body["gap_reason"] is None   # the cases without a gap, each with its reason: test_serialize.py

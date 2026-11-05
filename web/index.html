@@ -10,7 +10,7 @@
   <style>
     html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; }
     #map { position: absolute; inset: 0; }
-    #panel { position: absolute; top: 10px; left: 10px; width: 240px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 1; }
+    #panel { position: absolute; top: 10px; left: 10px; width: 240px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 1; max-height: calc(100% - 44px); overflow-y: auto; }
     #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
     #panel input { width: 70px; }
     #panel button { width: 100%; margin-top: 8px; padding: 6px; }

@@ -55,7 +55,7 @@ def test_pressing_plan_shows_every_operator_metric(base_url: str) -> None:
         expect(page.get_by_test_id("metrics-heading")).to_contain_text("Operator")
         for metric in ("metric-demand", "metric-households", "metric-lost", "metric-unreached", "metric-slow", "metric-greedy", "metric-gain"):
             expect(page.get_by_test_id(metric)).to_have_text(re.compile(r"^[\d,]+$"), timeout=15_000)
-        expect(page.get_by_test_id("metric-gap")).to_have_text(re.compile(r"^\d+(\.\d)?%$|^\D"))
+        expect(page.get_by_test_id("metric-gap")).to_have_text("0.0%")
         expect(page.get_by_test_id("new-stores").locator("li")).to_have_count(10)
         expect(page.get_by_test_id("new-stores").locator("li").first).to_have_text(re.compile(r"^1\. fresh [\d,]+, cannibalised [\d,]+$"))
         browser.close()
