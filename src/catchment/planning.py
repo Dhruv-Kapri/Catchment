@@ -115,6 +115,9 @@ class Plan:
     unreached: float                 # reached by no open operator store
     slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; never above demand_covered: the nearest-first walk covers no more than greedy's or an OPTIMAL plan's assignment, and a FEASIBLE CP-SAT plan's is clamped to it (#33)
     new_stores: list[NewStore]       # in pick order
+    service_areas: dict[str, list[str]]   # every operator store (existing, then new in pick order) -> the hex ids the plan assigns it; [] if none
+    catchments: dict[str, list[str]]      # same keys -> the hex ids it reaches within the promise at the scenario's multiplier, pick-and-pack included
+    greedy_demand_covered: float     # the greedy plan's demand_covered for the same scenario; the plan's own for method greedy, so the gain over greedy is demand_covered minus this
     status: Status                   # CP-SAT's own plan: "OPTIMAL", or "FEASIBLE" (stopped early); "HEURISTIC": greedy's plan, by method or kept by cpsat-from-greedy; "UNKNOWN": CP-SAT on its own found no plan, or the model was over the size cap, so no new sites and the metrics are the existing network's
     objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
     bound: float | None              # upper bound on the objective: the lower of CP-SAT's and `capacity_bound`'s, never under the objective (so on a kept greedy plan or an unbuilt model, the fallback alone); None for greedy and when UNKNOWN
@@ -447,8 +450,16 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, hexes_by_store(p, p.existing + solved.picked, solved.owner), {}, 0.0, solved.status, solved.objective, solved.bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
+
+
+def hexes_by_store(p: Problem, stores: list[int], store_of: npt.NDArray[np.intp]) -> dict[str, list[str]]:
+    """Each store's hex ids, in hex position order, where `store_of` gives the store (a site position) per hex, -1 for none."""
+    hexes = np.flatnonzero(store_of >= 0)   # ascending, so each store's hexes stay in hex position order
+    order = np.argsort(store_of[hexes], kind="stable")
+    owner, hexes = store_of[hexes][order], hexes[order]
+    return {str(p.inputs.site_ids[s]): p.inputs.hex_ids[hexes[np.searchsorted(owner, s):np.searchsorted(owner, s, "right")]].tolist() for s in stores}
 
 
 def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, float, list[NewStore]]:

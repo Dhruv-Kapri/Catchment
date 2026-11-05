@@ -643,3 +643,20 @@ def test_the_fallback_bound_tightens_a_loose_solver_bound(monkeypatch: pytest.Mo
     p = plan(inputs, scenario, "cpsat")
     assert p.status == "FEASIBLE" and p.bound is not None and p.bound < inputs.demand.sum() * 2   # shares are at most the demand
     assert p.gap is not None and p.gap == pytest.approx((p.bound - p.objective) / p.objective)
+
+
+# Service areas, catchments and greedy's demand covered (#43)
+
+
+@pytest.mark.parametrize("method", METHODS)
+def test_service_areas_are_disjoint_and_cover_exactly_the_hexes_counted_in_demand_covered(method: Method) -> None:
+    # S0 holds the only store and serves T. S1 reaches A, B, C (500 each) but at 0.5x capacity serves two: one hex is lost to capacity. "far" is unreached.
+    hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0}
+    p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5), method)
+    assert list(p.service_areas) == ["S0", "S1"]
+    assert p.service_areas["S0"] == ["T"]
+    union = list(chain.from_iterable(p.service_areas.values()))
+    assert len(union) == len(set(union)) == 3 and "far" not in union
+    assert sum(hexes[h] for h in union) == pytest.approx(p.demand_covered)
+    assert len(p.service_areas["S1"]) == 2
