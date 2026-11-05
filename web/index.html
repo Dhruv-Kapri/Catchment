@@ -17,6 +17,7 @@
     #metrics { margin: 10px 0 0; }
     #metrics dt { color: #555; }
     #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 18px; }
+    #static-notice { margin: 0 0 8px; font-size: 12px; color: #555; }
     #error { color: #b00020; margin-top: 6px; }
     .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
     .store-new { background: #1b9e77; }
@@ -27,6 +28,7 @@
 <body>
   <div id="map" data-testid="map"></div>
   <div id="panel">
+    <p id="static-notice" data-testid="static-notice" hidden>Public demo: plans are solved ahead of time for the default scenario and for each lever moved on its own. Moving one lever resets the others to the default.</p>
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
     <dl id="metrics">

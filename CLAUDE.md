@@ -28,6 +28,8 @@ osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm
 uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the containers catchment-osrm-test on port 5091 and catchment-osrm-test-ro on 5092)
 uv run pytest -m "not browser"           # skip the Playwright smoke test (headless Chromium, and network for the CDN libraries)
 uv run catchment-serve [--port 8000]     # the live service: loads the inputs once, POST /plan, and the web map at / (also --res, --x-pct, --host)
+uv run catchment-bundle [--out outputs/site] [--res 9] [--x-pct 30]   # the static demo site (ADR 0003): solves the 61-plan sweep at 8 workers, writes the plans, read-only data, ODbL notice and metadata, and copies web/ (run on an idle machine; the load is recorded)
+scripts/deploy-pages.sh                  # builds the site with catchment-bundle, then force-pushes it as an orphan gh-pages branch to origin
 ```
 
 ## What gets built

@@ -22,3 +22,10 @@ export function renderLevers(form) {
 export function readLevers(form) {
   return Object.fromEntries(Object.keys(LEVERS).map((name) => [name, Number(form.elements[name].value)]));
 }
+
+// Every lever but `name` back to its default (the static demo only has plans with one lever moved).
+export function resetOthers(form, name) {
+  for (const [other, { value }] of Object.entries(LEVERS)) {
+    if (other !== name) form.elements[other].value = value;
+  }
+}
