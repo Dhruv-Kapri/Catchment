@@ -1,5 +1,4 @@
 """Plan new stores for a scenario: the synthetic network, a greedy plan and its metrics. `plan()` is the one entry point."""
-import dataclasses
 import numbers
 import time
 from dataclasses import dataclass
@@ -364,7 +363,7 @@ class Solved:
     owner: npt.NDArray[np.intp]
     status: Status
     objective: float | None          # orders a day; None when CP-SAT found no plan
-    bound: float | None
+    solver_bound: float | None       # the solver's own bound, None when it has none
     search_start: float              # perf_counter when the search began
 
 
@@ -416,6 +415,17 @@ def capacity_bound(p: Problem) -> float:
     return float(min(p.share[reached].sum(), serves[p.existing].sum() + best_new.sum()))
 
 
+def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
+    """The bound a plan states: None for greedy and when there is no objective. CP-SAT's plans always state one: the lower of the solver's bound and
+    `capacity_bound` (the fallback alone where the solver has none), and never under the objective: it is on the solver's integer scale, the fallback
+    in float shares, so rounding must not put the bound under the plan's own claim."""
+    if method == "greedy" or solved.objective is None:
+        return None
+    fallback = capacity_bound(p)
+    bound = fallback if solved.solver_bound is None else min(solved.solver_bound, fallback)
+    return max(bound, solved.objective)
+
+
 def relative_gap(objective: float, bound: float, status: str) -> float | None:
     """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; None for a zero objective under a positive bound
     (no finite ratio, and JSON has no infinity). Never negative: a greedy plan kept in place of the solver's can sit a rounding hair above the integer-scale bound."""
@@ -439,15 +449,12 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
-    if method != "greedy" and solved.objective is not None:   # CP-SAT's plans always state a bound: the solver's where it has one, the fallback where it is none or looser
-        fallback = capacity_bound(p)
-        bound = fallback if solved.bound is None else min(solved.bound, fallback)
-        solved = dataclasses.replace(solved, bound=max(bound, solved.objective))   # the objective is on the solver's integer scale, the fallback in float shares: rounding must not put the bound under the plan's own claim
-    gap = None if solved.bound is None or solved.objective is None else relative_gap(solved.objective, solved.bound, solved.status)
+    bound = stated_bound(p, method, solved)
+    gap = None if bound is None or solved.objective is None else relative_gap(solved.objective, bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
