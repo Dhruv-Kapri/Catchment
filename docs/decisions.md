@@ -3,6 +3,51 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-05: Compare and ship (stage 3) scope (spec #41; tickets #35, #42-#51)
+
+Set in the stage 3 grill.
+
+- **The live service runs locally; the public URL is a static site** ([ADR 0003](adr/0003-static-demo-on-gh-pages.md)).
+  - FastAPI `POST /plan` takes any scenario in the lever ranges; the read-only endpoints serve the assumptions, the lever
+    ranges and demand. It starts from one command and runs one plan at a time, with a small cache by scenario. Nothing is precomputed at start-up.
+  - The public site is the same web map on GitHub Pages, reading about 61 plans solved on the dev machine at 8 workers:
+    the default plus every UI step of each lever with the others at the default (N 1-20; promise 8-16 by 1; multiplier
+    1.0-2.5 by 0.1; capacity, capture and density by 0.25). On the static site, moving one lever resets the others.
+  - The ~90 s recording is made locally, against the live service.
+  - Rules out: a live public host. Free compute is too thin: Hugging Face Docker Spaces need a paid plan (verified
+    2026-11-05), and Render's free tier has 0.1 CPU. Paid compute was declined for a demo.
+- **The 10 s bar stays measured on the dev machine.** With fewer workers, plans still return within the budget, but
+  quality drops.
+  - Measured 2026-11-05, cpsat-from-greedy, one run each, load about 5-6 from other sessions:
+    - Every run, at 1, 2, 4 or 8 workers, returned within 8.1 s.
+    - The default scenario proved optimal in 0.26 s at 8 workers. At 1-4 workers it stopped at the limit: the same
+      plan, with a 48% stated gap.
+    - At capacity 0.5× and N 20, the plan covered 45,693 orders a day with a 1.0% gap at 8 workers. At 1-4 workers it
+      covered 43,406-45,148 with gaps of 23-28%; greedy covered 43,266.
+  - Peak memory was 349 MB, and `load_inputs` took 0.85 s.
+- **Web map: plain JavaScript and ES modules, no build step.**
+  - MapLibre with the OpenFreeMap basemap, served by FastAPI locally and from gh-pages publicly.
+  - Two maps with linked pan and zoom: A starts at the default, B starts as a copy of A. A metrics table shows B − A.
+  - A Plan button runs a plan; it does not re-run on every lever change.
+- **What the map shows:**
+  - The demand layer is market demand at the scenario's capture share, before the split between brands; the metrics
+    are the operator's and are labelled so.
+  - Existing stores of both brands, brands generic.
+  - Each operator store's **service area** (new term in CONTEXT.md) as fill, and the selected store's catchment as an outline.
+  - Each plan's gap and its demand covered against greedy's. Where the model is over the size cap (wide reach, e.g.
+    promise 16), the plan is greedy's and the UI says why the gain is 0.
+  - An assumptions drawer generated from `assumptions.table()`, with the spot-check error next to the congestion
+    lever, and the network seed stated (2026, not a control).
+- **`plan()` also returns the hex-to-store assignment, each store's catchment and greedy's demand covered.** Issue #35's
+  cleanup runs in parallel.
+- **Tests:**
+  - API contract tests: request validation and the response shape.
+  - One test that the static bundle uses the API's serializer.
+  - One Playwright smoke test in the browser.
+  - No JS unit tests.
+- **If it overruns, cut in this order:** the catchment outline on a selected store; the sweep coarsened to 04-plan's
+  31 scenarios; two maps replaced by one map with an A/B toggle.
+
 ## 2026-11-03: PLAN_BUDGET 9 → 8 s: the 10 s bar keeps 2 s for the metrics and for CP-SAT running past its time limit (#34)
 
 - **Decided:** `assumptions.PLAN_BUDGET` is 8 s (was 9 s). It covers network, shares, reach, greedy, model and solve; the metrics run

@@ -101,12 +101,27 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
 
-- FastAPI service: `POST /plan` takes a scenario and returns the plan and its metrics; travel times and
-  demand loaded at start-up.
-- Web map (MapLibre): demand layer, catchments, chosen stores, a lever panel, two scenarios side by side.
-- Deployed to one small VM or Fly.io; a ~90 s screen recording of the main flow.
-- **Done when:** the public URL works end to end on a fresh browser, and the README shows a screenshot
-  and the link.
+Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (see [decisions](decisions.md), [ADR 0003](adr/0003-static-demo-on-gh-pages.md)).
+
+- `plan()` also returns the hex-to-store assignment, each store's catchment and greedy's demand covered; #35 runs in parallel.
+- FastAPI service, run locally from one command: `POST /plan` takes a scenario and returns the plan and its metrics,
+  plus read-only endpoints for the assumptions, the lever ranges and demand. Travel times and demand are loaded at start-up.
+  One plan at a time, with a small cache by scenario.
+- Web map (MapLibre, plain JavaScript with no build step, OpenFreeMap basemap):
+  - a demand layer (market demand);
+  - existing and new stores;
+  - service areas, and the selected store's catchment as an outline;
+  - a lever panel with a Plan button;
+  - two linked maps, A and B, with a B − A metrics table;
+  - each plan's gap and its result against greedy;
+  - an assumptions drawer with the spot-check error.
+- Static demo on GitHub Pages (`gh-pages` branch, ODbL): the same map reading about 61 plans solved on the dev machine
+  (the default, and each lever's UI steps with the others at the default).
+- A ~90 s screen recording of the main flow, made locally against the live service.
+- **Done when:** the service runs locally from one command and returns any scenario within 10 s; the static site on
+  GitHub Pages works end to end on a fresh browser; the README shows a screenshot, the link and the recording.
+- **If it overruns, cut in this order:** the catchment outline; the sweep coarsened to 04-plan's 31 scenarios; two maps
+  replaced by one map with an A/B toggle.
 
 ## Later (after 25 Nov)
 
@@ -117,5 +132,7 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
 - **Three competitor brands** in the synthetic network, each sized by a verified store count (the first cut has one).
 - **Capture share by urban or rural hex**, for the NCR scale-up where rural areas come in (the first cut uses one
   value for every hex; the affluence multiplier carries the difference).
+- **A live public host** running `POST /plan` (needs paid compute, about 8 cores, to keep plan quality; see
+  [ADR 0003](adr/0003-static-demo-on-gh-pages.md)), and **pairs of levers** in the static demo.
 - **A real user:** a small NCR operator (pharmacy or grocery chain, D2C brand) using it on their own
   question.
