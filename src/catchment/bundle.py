@@ -21,6 +21,9 @@ SWEEP_STEPS: dict[str, float] = {"n_new": 1, "promise": 1, "multiplier": 0.1, "c
 # TODO(integrator): #47 adds planning.LEVER_STEPS; replace SWEEP_STEPS with it.
 
 
+READ_ONLY: tuple[str, ...] = ("demand", "network", "levers", "assumptions")   # the read-only data the page reads (#44, #47, #48 add the endpoints)
+
+
 def sweep() -> list[Scenario]:
     """The default scenario, then each lever at every step of its range with the others at the default."""
     default = Scenario()
@@ -49,7 +52,7 @@ def write_json(path: Path, body: object) -> None:
 
 
 ODBL_URL: str = "https://opendatacommons.org/licenses/odbl/1-0/"
-ODBL_NOTICE: str = f"""The plans in this bundle (plans/, data/, index.json) are a Derivative Database of OpenStreetMap data, made available
+ODBL_NOTICE: str = f"""The JSON in this bundle (plans/, data/, index.json, metadata.json) is a Derivative Database of OpenStreetMap data, made available
 under the Open Database License (ODbL) 1.0: {ODBL_URL}
 
 Contains information from OpenStreetMap: (c) OpenStreetMap contributors. https://www.openstreetmap.org/copyright
@@ -129,7 +132,12 @@ def main() -> None:
     parser.add_argument("--x-pct", type=float, default=30)
     args = parser.parse_args()
     if args.out.exists():
+        if any(args.out.iterdir()) and not (args.out / "bundle" / "index.json").exists():
+            raise SystemExit(f"{args.out} is not empty and holds no bundle; refusing to delete it")
         shutil.rmtree(args.out)
     app = create_app(load_inputs(args.res, args.x_pct))
     solve = build_bundle(app, args.out, json.loads((DATA / "manifest.json").read_text()))
+    missing: list[str] = [name for name in READ_ONLY if not (args.out / "bundle" / "data" / f"{name}.json").exists()]
+    if missing:
+        print(f"warning: no GET endpoint for {', '.join(missing)}, so the bundle lacks that read-only data")
     print(f"{solve['scenarios']} scenarios in {solve['seconds']:.0f} s; load average before {solve['load_before']}, after {solve['load_after']}; site in {args.out}")

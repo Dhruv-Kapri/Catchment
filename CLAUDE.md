@@ -8,7 +8,7 @@ Stages 0, 0.5, 1 and 2 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: t
 served); next is stage 3 (compare and ship: the
 FastAPI service and the web map). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
-`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`, `serialize.py`, `service.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
+`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`, `serialize.py`, `service.py`, `bundle.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
 notebooks' placeholder plan model. The repo also holds the
 product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the decision log
 (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief

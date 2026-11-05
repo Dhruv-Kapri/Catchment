@@ -95,5 +95,4 @@ def test_the_bundle_carries_the_odbl_notice_and_the_provenance(site: Path) -> No
     assert meta["openstreetmap"]["extract_date"] == "2026-10-27T21:23:59Z"
     assert meta["overture"]["release"] == "2026-10-21.0"
     assert meta["worldpop"]["product"] == PROVENANCE["worldpop"]["source"]
-    image: str = next(line for line in read_text(Path("osrm/osrm.sh")).splitlines() if line.startswith("IMAGE=")).split('"')[1]
-    assert meta["osrm"]["image"] == image and image.startswith("ghcr.io/project-osrm/osrm-backend:")
+    assert meta["osrm"]["image"] == "ghcr.io/project-osrm/osrm-backend:v26.10.0-debian"   # the pin in osrm/osrm.sh
