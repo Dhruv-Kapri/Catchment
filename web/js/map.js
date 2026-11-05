@@ -26,3 +26,8 @@ export function showStores(view, plan) {
   for (const cell of plan.network.Competitor ?? []) addStore(view, cell, "competitor", "Competitor");
   for (const cell of plan.sites) addStore(view, cell, "new", "New store");
 }
+
+// The existing network alone, before any plan.
+export function showNetwork(view, network) {
+  showStores(view, { network, sites: [] });
+}

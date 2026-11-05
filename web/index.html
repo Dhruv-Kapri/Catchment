@@ -29,6 +29,11 @@
   <div id="panel">
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
+    <p id="demand-legend" style="margin: 10px 0 0">Market demand (orders a day, both brands, before the brand split):
+      <strong data-testid="market-demand-total">-</strong>
+      <span style="display: block; height: 8px; margin-top: 4px; background: linear-gradient(to right, #ffffcc, #fd8d3c, #800026)"></span>
+      <small style="display: flex; justify-content: space-between; color: #555"><span>none</span><span>busiest hex</span></small>
+    </p>
     <dl id="metrics">
       <dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd>
       <dt>Households covered</dt><dd data-testid="metric-households">-</dd>
