@@ -255,15 +255,15 @@ def int_shares(p: Problem) -> npt.NDArray[np.int64]:
 
 
 @dataclass(frozen=True)
-class Rows:
+class ModelRows:
     """The open sites' pairs grouped by hex (nearest first within a hex) and what the model's loop reads from them, computed vectorised so the
     model's size is known before any Python loop runs."""
-    ps: npt.NDArray[np.intp]               # per pair: site
-    ph: npt.NDArray[np.intp]               # per pair: hex
-    con: npt.NDArray[np.bool_]             # per pair: its site is constrained
+    pair_site: npt.NDArray[np.intp]        # per pair: site
+    pair_hex: npt.NDArray[np.intp]         # per pair: hex
+    pair_constrained: npt.NDArray[np.bool_]   # per pair: its site is constrained
     constrained: npt.NDArray[np.bool_]     # per site: can its catchment exceed capacity
     has_free_op: npt.NDArray[np.bool_]     # per hex: an existing store that cannot hit capacity covers it
-    start: npt.NDArray[np.intp]            # hex h's pairs are ps[start[h]:start[h + 1]]
+    hex_start: npt.NDArray[np.intp]        # hex h's pairs are pair_site[hex_start[h]:hex_start[h + 1]]
     share_int: npt.NDArray[np.int64]
     cap_int: int
     is_new: npt.NDArray[np.bool_]
@@ -271,26 +271,27 @@ class Rows:
     @property
     def n_pairs(self) -> int:
         """The capacity-bound (x) pairs the model gets: constrained pairs in hexes with no free existing store, the loop's bulk."""
-        return int((self.con & ~self.has_free_op[self.ph]).sum())
+        return int((self.pair_constrained & ~self.has_free_op[self.pair_hex]).sum())
 
 
-def model_rows(p: Problem) -> Rows:
+def model_rows(p: Problem) -> ModelRows:
+    """The open sites' pairs grouped by hex, with the per-site and per-hex flags the model reads, so its size is known before the build loop."""
     n_sites, n_hex, reach = len(p.inputs.site_ids), len(p.share), p.reach
     share_int, cap_int = int_shares(p), round(p.capacity * assumptions.SCALE)
     is_new, is_op = p.candidate, np.zeros(n_sites, bool)
     is_op[p.existing] = True
     pos = reach.by_hex[(is_new | is_op)[reach.site][reach.by_hex]]   # open sites' pairs, grouped by hex, nearest first within a hex
-    ps, ph = reach.site[pos], reach.hex[pos]
-    constrained = np.bincount(ps, weights=share_int[ph], minlength=n_sites) > cap_int   # W_s > capacity
-    con = constrained[ps]
-    has_free_op = np.bincount(ph, weights=(~con & is_op[ps]).astype(float), minlength=n_hex) > 0
-    return Rows(ps, ph, con, constrained, has_free_op, np.searchsorted(ph, np.arange(n_hex + 1)), share_int, cap_int, is_new)
+    pair_site, pair_hex = reach.site[pos], reach.hex[pos]
+    constrained = np.bincount(pair_site, weights=share_int[pair_hex], minlength=n_sites) > cap_int   # W_s > capacity
+    pair_constrained = constrained[pair_site]
+    has_free_op = np.bincount(pair_hex, weights=(~pair_constrained & is_op[pair_site]).astype(float), minlength=n_hex) > 0
+    return ModelRows(pair_site, pair_hex, pair_constrained, constrained, has_free_op, np.searchsorted(pair_hex, np.arange(n_hex + 1)), share_int, cap_int, is_new)
 
 
-def build_model(p: Problem, rows: Rows) -> Model:
+def build_model(p: Problem, rows: ModelRows) -> Model:
     """The tighter model of 03-area: x_{s,h} only at sites whose catchment can exceed capacity, a new site's capacity row tied to
     the site being chosen, and the existing operator stores in the same at-most-one row per hex."""
-    ps, ph, con, has_free_op, start, share_int, cap_int, is_new = rows.ps, rows.ph, rows.con, rows.has_free_op, rows.start, rows.share_int, rows.cap_int, rows.is_new
+    has_free_op, hex_start, share_int, cap_int, is_new = rows.has_free_op, rows.hex_start, rows.share_int, rows.cap_int, rows.is_new
     model = cp_model.CpModel()
     y = {int(s): model.NewBoolVar(f"y{s}") for s in np.flatnonzero(is_new)}
     model.Add(sum(y.values()) == p.scenario.n_new)
@@ -299,19 +300,20 @@ def build_model(p: Problem, rows: Rows) -> Model:
     x: list[tuple[int, int, cp_model.IntVar]] = []
     covered: list[tuple[int, cp_model.IntVar]] = []
     row_of: dict[int, list[tuple[cp_model.IntVar, int]]] = {}
-    ps_l, con_l, share_l = ps.tolist(), con.tolist(), share_int.tolist()
-    const = int(share_int[np.unique(ph[has_free_op[ph]])].sum())
-    for h in np.flatnonzero(np.diff(start) > 0).tolist():
+    site_l, constrained_l, share_l = rows.pair_site.tolist(), rows.pair_constrained.tolist(), share_int.tolist()
+    const = int(share_int[np.unique(rows.pair_hex[has_free_op[rows.pair_hex]])].sum())
+    for h in np.flatnonzero(np.diff(hex_start) > 0).tolist():
         if has_free_op[h]:
             continue
         w, row = share_l[h], []
-        free = [s for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]) if not c]
+        lo, hi = hex_start[h], hex_start[h + 1]
+        free = [s for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]) if not c]
         if free:
             cover = model.NewBoolVar("")
             model.AddBoolOr([y[s] for s in free]).OnlyEnforceIf(cover)
             covered.append((h, cover))
             row.append(cover)
-        for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]):
+        for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]):
             if c:
                 xv = model.NewBoolVar("")
                 if is_new[s]:
@@ -411,9 +413,9 @@ def capacity_bound(p: Problem) -> float:
     is_open[p.existing] = True
     reached = np.zeros(len(p.share), bool)
     reached[reach.hex[is_open[reach.site]]] = True
-    serves = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
-    best_new = np.sort(serves[p.candidate])[::-1][:p.scenario.n_new]
-    return float(min(p.share[reached].sum(), serves[p.existing].sum() + best_new.sum()))
+    most_served = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
+    best_new = np.sort(most_served[p.candidate])[::-1][:p.scenario.n_new]
+    return float(min(p.share[reached].sum(), most_served[p.existing].sum() + best_new.sum()))
 
 
 def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
