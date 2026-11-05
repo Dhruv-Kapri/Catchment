@@ -5,6 +5,7 @@ from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from catchment.planning import Inputs, Scenario, load_inputs, plan
 from catchment.serialize import plan_json
@@ -21,6 +22,7 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
         """Plan the scenario the six levers describe; an omitted lever takes its default. The seed is not a lever."""
         return plan_json(plan(inputs, Scenario(**levers), method="cpsat-from-greedy"))
 
+    app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app
 
 

@@ -32,3 +32,9 @@ def test_posting_no_levers_plans_the_default_scenario(client: TestClient, inputs
     assert {"scenario", "sites", "network", "demand_covered", "households_covered", "status", "method"} <= body.keys()
     assert body["method"] == "cpsat-from-greedy" and body["scenario"]["n_new"] == len(body["sites"]) == 10
     assert untimed(body) == untimed(plan_json(plan(inputs, Scenario(), "cpsat-from-greedy")))
+
+
+def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> None:
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'data-testid="plan-button"' in response.text
