@@ -150,6 +150,38 @@ def test_the_elapsed_seconds_show_while_a_plan_runs(base_url: str) -> None:
         browser.close()
 
 
+def test_a_late_network_response_leaves_a_drawn_plans_stores_on_the_map(base_url: str) -> None:
+    held: list[Route] = []   # the /network request, held until the plan's stores are drawn
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.route("**/network", lambda route: held.append(route))
+        page.route("https://tiles.openfreemap.org/**", lambda route: None)   # the style never loads, so the plan stays between its stores and its layers
+        page.goto(base_url)
+        a = page.get_by_test_id("scenario-a")
+        a.get_by_test_id("plan-button").click()
+        expect(a.locator(".store-new")).to_have_count(10, timeout=15_000)
+        expect(a.get_by_test_id("market-demand-total")).to_have_text("-")   # the network has not arrived
+        held[0].continue_()
+        expect(a.get_by_test_id("market-demand-total")).not_to_have_text("-")   # it has now, and the page has run its loader
+        expect(a.locator(".store-new")).to_have_count(10)
+        browser.close()
+
+
+def test_a_failed_levers_request_shows_its_own_error_and_disables_plan(base_url: str) -> None:
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.route("**/levers", lambda route: route.fulfill(status=500))
+        page.goto(base_url)
+        a = page.get_by_test_id("scenario-a")
+        expect(a.get_by_test_id("plan-button")).to_be_disabled()
+        expect(a.locator(".error")).to_contain_text("levers")
+        page.wait_for_timeout(1_000)   # the assumptions have loaded by now; they must not overwrite the message
+        expect(a.locator(".error")).to_contain_text("levers")
+        browser.close()
+
+
 def test_changing_a_lever_greys_the_metrics_until_the_next_plan(base_url: str) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()

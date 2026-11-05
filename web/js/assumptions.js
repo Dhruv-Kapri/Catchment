@@ -47,5 +47,5 @@ export async function renderAssumptions(drawer) {
 }
 
 export function addSpotCheckNote(form, text) {
-  form.elements.multiplier.closest("label").after(element("p", text, "spot-check-note"));
+  form.elements.multiplier?.closest("label").after(element("p", text, "spot-check-note"));
 }

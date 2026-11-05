@@ -24,7 +24,7 @@ function mountScenario(testid, title, side) {
   const elapsed = panel.querySelector(".elapsed");
   const metrics = panel.querySelector(".metrics");
   const view = createMap(section.querySelector(".map"));
-  const scenario = { view, form, error, button, planOnScreen: false, syncCapture: () => {} };   // planOnScreen: a plan's metrics are showing, so there is something to grey
+  const scenario = { view, form, error, button, planOnScreen: false, storesDrawn: false, syncCapture: () => {} };   // planOnScreen: a plan's metrics are showing, so there is something to grey; storesDrawn: a plan's markers are on the map, so the bare network must not replace them
   let changedSincePlan = false;   // a lever moved after the Plan button sent the levers
 
   const markChanged = () => {
@@ -50,6 +50,7 @@ function mountScenario(testid, title, side) {
     const timer = setInterval(() => (elapsed.textContent = `Planning… ${seconds()} s`), 100);
     try {
       const plan = await planScenario(readLevers(form));
+      scenario.storesDrawn = true;
       showStores(view, plan, (store) => showCatchment(view, plan, store).catch((e) => { error.textContent = e.message; }));
       await showCatchment(view, plan, null);
       await showServiceAreas(view, plan);
@@ -108,6 +109,6 @@ renderAssumptions(drawer).then((text) => scenarios.forEach((s) => addSpotCheckNo
 Promise.all([fetchDemand(), fetchNetwork()]).then(([demand, network]) => {
   for (const s of scenarios) {
     s.showDemand(demand, levers);
-    if (!s.planOnScreen) showNetwork(s.view, network);   // a plan drawn first already shows the network
+    if (!s.storesDrawn) showNetwork(s.view, network);   // a plan drawn first already shows the network
   }
 }).catch(showError);
