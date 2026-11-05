@@ -11,3 +11,9 @@ export async function planScenario(levers) {
   if (!response.ok) throw new Error(body.detail ?? `plan failed (${response.status})`);
   return body;
 }
+
+export async function getLevers() {
+  const response = await fetch("/levers");
+  if (!response.ok) throw new Error(`levers failed (${response.status})`);
+  return response.json();
+}

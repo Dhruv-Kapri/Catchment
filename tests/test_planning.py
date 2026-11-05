@@ -62,6 +62,13 @@ def test_an_out_of_range_lever_is_refused_naming_the_lever_and_its_range(lever: 
             Scenario(**{lever: bad})
 
 
+@pytest.mark.parametrize("lever,bad", [("n_new", 2.5), ("promise", "9"), ("multiplier", "1.8")])
+def test_a_wrong_type_is_refused_naming_the_lever_and_its_range(lever: str, bad: object) -> None:
+    span = next(s for name, _, _, s in LEVERS if name == lever)
+    with pytest.raises(TypeError, match=rf"{lever} .* must be a (whole )?number \(lever range {span}\)"):
+        Scenario(**{lever: bad})
+
+
 @pytest.mark.parametrize("lever,low,high,span", LEVERS)
 def test_the_ends_of_a_lever_range_are_allowed(lever: str, low: float, high: float, span: str) -> None:
     lo, hi = (float(x) for x in span.split("-"))
