@@ -34,9 +34,10 @@ def test_pressing_plan_draws_the_stores_and_shows_the_metrics(base_url: str) -> 
         browser = p.chromium.launch()
         page = browser.new_page()
         page.goto(base_url)
-        page.get_by_test_id("plan-button").click()
-        expect(page.locator(".store-new")).to_have_count(10, timeout=15_000)
-        assert page.locator(".store-operator").count() > 0 and page.locator(".store-competitor").count() > 0
+        a = page.get_by_test_id("scenario-a")
+        a.get_by_test_id("plan-button").click()
+        expect(a.locator(".store-new")).to_have_count(10, timeout=15_000)
+        assert a.locator(".store-operator").count() > 0 and a.locator(".store-competitor").count() > 0
         for metric in ("metric-demand", "metric-households"):
-            expect(page.get_by_test_id(metric)).to_have_text(re.compile(r"^[\d,]+$"))
+            expect(a.get_by_test_id(metric)).to_have_text(re.compile(r"^[\d,]+$"))
         browser.close()
