@@ -51,6 +51,7 @@ def load_inputs(res: int = 9, x_pct: float = 30, data_dir: Path = DATA) -> Input
 LEVER_RANGES: dict[str, tuple[float, float]] = {
     "n_new": assumptions.N_RANGE, "promise": assumptions.PROMISE_RANGE, "multiplier": assumptions.MULTIPLIER_RANGE,
     "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
+WHOLE_LEVERS: frozenset[str] = frozenset({"n_new", "promise"})   # levers that take whole numbers
 
 
 def lever_value(lever: str, value: object, whole: bool) -> int | float:
@@ -73,7 +74,7 @@ class Scenario:
 
     def __post_init__(self) -> None:
         for lever in LEVER_RANGES:
-            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
+            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in WHOLE_LEVERS))
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
