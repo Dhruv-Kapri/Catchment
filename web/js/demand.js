@@ -22,14 +22,16 @@ export function showDemand(view, records, capture, totalElement) {
     geometry: { type: "Polygon", coordinates: [cellToBoundary(hex, true)] },
   }));
   const stored = records.reduce((sum, r) => sum + r.demand, 0);
+  let current = capture;   // the lever may move before the style loads; draw with its latest value
   const setCapture = (value) => {
+    current = value;
     totalElement.textContent = format(stored * value);
     if (view.map.getLayer(SOURCE)) view.map.setPaintProperty(SOURCE, "fill-color", fillColour(value, top));
   };
   const draw = () => {
     view.map.addSource(SOURCE, { type: "geojson", data: { type: "FeatureCollection", features } });
     view.map.addLayer({ id: SOURCE, type: "fill", source: SOURCE,
-      paint: { "fill-color": fillColour(capture, top), "fill-opacity": 0.6 } });
+      paint: { "fill-color": fillColour(current, top), "fill-opacity": 0.6 } });
   };
   if (view.map.isStyleLoaded()) draw(); else view.map.once("load", draw);
   setCapture(capture);
