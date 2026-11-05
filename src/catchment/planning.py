@@ -369,11 +369,12 @@ class Solved:
     objective: float | None          # orders a day; None when CP-SAT found no plan
     bound: float | None
     search_start: float              # perf_counter when the search began
+    greedy_owner: npt.NDArray[np.intp] | None = None   # the greedy plan's owner per hex when the method computed one (greedy, CP-SAT from greedy)
 
 
 def kept_greedy(start: tuple[list[int], npt.NDArray[np.intp]], share_int: npt.NDArray[np.int64], bound: float | None, search_start: float) -> Solved:
     """Greedy's plan kept by CP-SAT from greedy: status HEURISTIC, objective greedy's orders on the solver's integer scale."""
-    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start)
+    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start, start[1])
 
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
@@ -402,7 +403,7 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
             return kept_greedy(start, m.share_int, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
-    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
+    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start, None if start is None else start[1])
 
 
 def capacity_bound(p: Problem) -> float:
@@ -438,7 +439,7 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     if method == "greedy":
         search_start = time.perf_counter()
         picked, owner = greedy(p)
-        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start)
+        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start, owner)
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
@@ -448,10 +449,11 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
         solved = dataclasses.replace(solved, bound=max(bound, solved.objective))   # the objective is on the solver's integer scale, the fallback in float shares: rounding must not put the bound under the plan's own claim
     gap = None if solved.bound is None or solved.objective is None else relative_gap(solved.objective, solved.bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
+    greedy_owner = solved.greedy_owner if solved.greedy_owner is not None else greedy(p)[1]   # CP-SAT on its own: greedy runs here, after the search, so the solver's budget and search are unchanged
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
                 covered, households, lost, unreached, slow, new_stores, hexes_by_store(p, p.existing + solved.picked, solved.owner),
-                catchments(p, p.existing + solved.picked), 0.0, solved.status, solved.objective, solved.bound, gap,
+                catchments(p, p.existing + solved.picked), float(p.share[greedy_owner >= 0].sum()), solved.status, solved.objective, solved.bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 

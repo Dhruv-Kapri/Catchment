@@ -671,3 +671,23 @@ def test_a_catchment_is_exactly_the_hexes_within_the_promise_and_holds_its_servi
     p = plan(make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, multiplier=1.0, capacity=0.5), method)
     assert p.catchments == {"S0": ["T", "A"], "S1": ["A", "B", "C", "J"]}
     assert p.service_areas == {"S0": ["T", "A"], "S1": ["B", "C", "J"]}
+
+
+@pytest.mark.parametrize("method", METHODS)
+def test_greedys_demand_covered_is_greedys_own_whatever_the_method(method: Method) -> None:
+    # The fixture where CP-SAT beats greedy: greedy covers 1,010, P + Q cover 1,210.
+    hexes = {"T": 10.0, "a": 300.0, "b": 300.0, "c": 300.0, "d": 300.0, "g": 100.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("G", "b"): 5.0, ("G", "c"): 5.0, ("G", "g"): 5.0,
+                    ("P", "a"): 5.0, ("P", "b"): 5.0, ("Q", "c"): 5.0, ("Q", "d"): 5.0}
+    inputs, scenario = make_inputs(hexes, pairs, ["S0", "G", "P", "Q"]), Scenario(n_new=2, promise=15)
+    p = plan(inputs, scenario, method)
+    assert p.greedy_demand_covered == plan(inputs, scenario, "greedy").demand_covered == pytest.approx(1010)
+    assert p.demand_covered == pytest.approx(1010 if method == "greedy" else 1210)
+
+
+def test_the_gain_over_greedy_is_zero_on_a_plan_that_is_greedys_own_over_the_size_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs, scenario = random_inputs(0), Scenario(n_new=4, promise=12, capacity=0.5, seed=0)
+    monkeypatch.setattr(planning.assumptions, "MODEL_PAIR_CAP", 0)
+    p = plan(inputs, scenario, "cpsat-from-greedy")
+    assert p.status == "HEURISTIC"
+    assert p.demand_covered - p.greedy_demand_covered == 0
