@@ -142,3 +142,27 @@ def test_a_lever_changed_while_planning_leaves_the_new_metrics_stale(base_url: s
         expect(page.get_by_test_id("metric-demand")).to_have_text(re.compile(r"^[\d,]+$"))
         expect(page.locator("#metrics")).to_have_class(re.compile("stale"))
         browser.close()
+
+
+def digits(text: str) -> int:
+    return int(re.sub(r"\D", "", text))
+
+
+def test_on_load_the_existing_network_and_market_demand_show_and_follow_the_capture_lever(base_url: str) -> None:
+    total: float = float(service_inputs().demand.sum())
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        expect(page.locator(".store-operator")).to_have_count(8, timeout=15_000)
+        expect(page.locator(".store-competitor")).to_have_count(4)
+        shown = page.get_by_test_id("market-demand-total")
+        expect(shown).to_have_text(re.compile(r"^[\d,]+$"))
+        assert digits(shown.inner_text()) == round(total)
+        page.get_by_test_id("lever-capture").fill("1.5")
+        page.get_by_test_id("lever-capture").dispatch_event("input")
+        expect(shown).not_to_have_text(f"{round(total):,}")
+        assert digits(shown.inner_text()) == round(total * 1.5)
+        body: str = page.locator("body").inner_text().lower()
+        assert not [brand for brand in ("blinkit", "zepto", "instamart", "swiggy", "eternal") if brand in body]
+        browser.close()

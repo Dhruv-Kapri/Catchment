@@ -12,8 +12,15 @@ export async function planScenario(levers) {
   return body;
 }
 
-export async function getLevers() {
-  const response = await fetch("/levers");
-  if (!response.ok) throw new Error(`levers failed (${response.status})`);
+async function getJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`${path} failed (${response.status})`);
   return response.json();
 }
+
+// Every hex with its demand (orders a day at the default capture share) and households.
+export const fetchDemand = () => getJson("/demand");
+// The existing stores of the two brands, brand -> H3 ids of their sites.
+export const fetchNetwork = () => getJson("/network");
+// The levers' ranges, steps and defaults.
+export const getLevers = () => getJson("/levers");

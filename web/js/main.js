@@ -1,7 +1,8 @@
 // Wiring: the levers come from the service; the Plan button asks it, then the map and the metrics show the plan.
-import { getLevers, planScenario } from "./api.js";
+import { fetchDemand, fetchNetwork, getLevers, planScenario } from "./api.js";
 import { readLevers, renderLevers } from "./levers.js";
-import { createMap, showStores } from "./map.js";
+import { showDemand } from "./demand.js";
+import { createMap, showNetwork, showStores } from "./map.js";
 import { showMetrics } from "./metrics.js";
 
 const form = document.getElementById("levers");
@@ -19,12 +20,23 @@ form.addEventListener("input", () => {
   if (planOnScreen) metrics.classList.add("stale");
 });
 
+let levers = null;   // ranges, steps and defaults from the service
 try {
-  renderLevers(form, await getLevers());
+  levers = await getLevers();
+  renderLevers(form, levers);
 } catch (e) {
   error.textContent = e.message;
   button.disabled = true;   // without the levers, a plan would silently be the default scenario
 }
+
+// After the levers: the market demand layer and the existing network; the capture lever recolours the layer at once.
+const capture = () => Number(form.elements.capture?.value ?? 1);   // 1: the default share, when the levers failed to load
+Promise.all([fetchDemand(), fetchNetwork()]).then(([demand, network]) => {
+  const setCapture = showDemand(view, demand, capture(), document.querySelector('[data-testid="market-demand-total"]'),
+    levers?.capture.max ?? 1);
+  form.elements.capture?.addEventListener("input", () => setCapture(capture()));
+  showNetwork(view, network);
+}).catch((e) => { error.textContent = e.message; });
 
 button.addEventListener("click", async () => {
   error.textContent = "";
