@@ -99,6 +99,9 @@ def greedy_plan() -> Plan:
     (lambda g: {"method": "cpsat-from-greedy", "status": "OPTIMAL", "gap": 0.0, "demand_covered": g.greedy_demand_covered - 0.3},
      {"plan-note": "", "metric-gain": "0"}),   # a float hair under greedy is no loss, and not "-0"
     (lambda g: {"method": "cpsat-from-greedy", "status": "FEASIBLE", "gap": 0.0004}, {"metric-gap": "<0.1%"}),   # a small gap does not read as proven
+    (lambda g: {"method": "cpsat-from-greedy", "status": "HEURISTIC", "bound": 1.0, "bound_source": "capacity", "gap": 0.125},
+     {"metric-gap": "12.5% (from the capacity bound, which can be loose)"}),   # #52: a capacity-bound gap does not read as the solver's
+    (lambda g: {"method": "cpsat-from-greedy", "status": "FEASIBLE", "bound": 1.0, "bound_source": "solver", "gap": 0.125}, {"metric-gap": "12.5%"}),
 ])
 def test_the_panel_explains_greedys_plan_and_labels_an_unknown_one(base_url: str, greedy_plan: Plan, changes: Callable[[Plan], dict[str, Any]],
                                                                    shown: dict[str, str | re.Pattern[str]]) -> None:

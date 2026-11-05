@@ -1,4 +1,4 @@
-// The operator's metrics: coverage, the gap to the solver's bound, the result against greedy, and what each new store serves.
+// The operator's metrics: coverage, the gap to the stated bound (the solver's or the capacity bound), the result against greedy, and what each new store serves.
 const format = (value) => (Math.round(value) || 0).toLocaleString("en-IN");   // || 0: a hair under zero rounds to -0
 const percent = (gap) => (gap > 0 && gap < 0.0005 ? "<0.1%" : `${(gap * 100).toFixed(1)}%`);   // a small gap must not read as proven
 
@@ -18,7 +18,8 @@ export function showMetrics(root, plan) {
   field("metric-lost").textContent = format(plan.lost_to_capacity);
   field("metric-unreached").textContent = format(plan.unreached);
   field("metric-slow").textContent = format(plan.slow_traffic_coverage);
-  field("metric-gap").textContent = plan.gap === null ? plan.gap_reason : percent(plan.gap);
+  const source = plan.bound_source === "capacity" ? " (from the capacity bound, which can be loose)" : "";   // #52: not the solver's own bound
+  field("metric-gap").textContent = plan.gap === null ? plan.gap_reason : percent(plan.gap) + source;
   field("metric-greedy").textContent = format(plan.greedy_demand_covered);
   field("metric-gain").textContent = unknown ? "no plan" : format(plan.demand_covered - plan.greedy_demand_covered);
   field("plan-note").textContent = planNote(plan);

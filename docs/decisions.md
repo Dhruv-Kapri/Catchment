@@ -22,7 +22,8 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
     plan's gap (spec #41, story 23), so a planner would read a capacity-bound gap as a solver gap.
   - Rules out: nothing yet. Tightening the bound (shared hexes, an LP relaxation) is not done: each candidate must re-measure the 64 corners
     against the 10 s bar. The label costs no solve time.
-  - Leaves open: the web map's gap display (#46) should say when the gap is from the capacity bound.
+  - The web map's gap reads "12.5% (from the capacity bound, which can be loose)" when `bound_source` is "capacity"; the panel's label is
+    "Gap to the bound". The B − A table's Gap row does not say the source yet (#53).
 
 ## 2026-11-05: Compare and ship (stage 3) scope (spec #41; tickets #35, #42-#51)
 
