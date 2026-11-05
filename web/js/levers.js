@@ -22,3 +22,7 @@ export function renderLevers(form) {
 export function readLevers(form) {
   return Object.fromEntries(Object.keys(LEVERS).map((name) => [name, Number(form.elements[name].value)]));
 }
+
+export function writeLevers(form, values) {
+  for (const name of Object.keys(LEVERS)) form.elements[name].value = values[name];
+}
