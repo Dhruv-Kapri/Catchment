@@ -22,6 +22,7 @@
     #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 16px; }
     #metrics.stale { opacity: .4; color: #999; }
     #elapsed { color: #555; margin-top: 6px; }
+    #static-notice { margin: 0 0 8px; font-size: 12px; color: #555; }
     #error { color: #b00020; margin-top: 6px; }
     #demand-legend { margin: 10px 0 0; }
     .ramp { display: block; height: 8px; margin-top: 4px; background: linear-gradient(to right, #ffffcc, #fd8d3c, #800026); }   /* demand.js RAMP */
@@ -49,6 +50,7 @@
 <body>
   <div id="map" data-testid="map"></div>
   <div id="panel">
+    <p id="static-notice" data-testid="static-notice" hidden>Public demo: plans are solved ahead of time for the default scenario and for each lever moved on its own. Moving one lever resets the others to the default.</p>
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
     <div id="elapsed" data-testid="elapsed"></div>

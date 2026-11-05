@@ -1,7 +1,7 @@
 // Wiring: the levers come from the service; the Plan button asks it, then the map and the metrics show the plan.
-import { fetchDemand, fetchNetwork, getLevers, planScenario } from "./api.js";
+import { fetchDemand, fetchNetwork, getLevers, planScenario, STATIC } from "./api.js";
 import { renderAssumptions, renderCredits } from "./assumptions.js";
-import { readLevers, renderLevers } from "./levers.js";
+import { readLevers, renderLevers, resetOthers } from "./levers.js";
 import { showDemand } from "./demand.js";
 import { createMap, showNetwork, showStores } from "./map.js";
 import { showMetrics } from "./metrics.js";
@@ -18,6 +18,7 @@ let changedSincePlan = false;   // a lever moved after the Plan button sent the 
 renderCredits(document.getElementById("credits"));
 const drawer = document.getElementById("assumptions-drawer");
 document.getElementById("assumptions-button").addEventListener("click", () => { drawer.hidden = !drawer.hidden; });
+document.getElementById("static-notice").hidden = !STATIC;
 
 form.addEventListener("submit", (event) => event.preventDefault());   // Enter plans nothing and reloads nothing
 form.addEventListener("input", () => {
@@ -29,6 +30,9 @@ let levers = null;   // ranges, steps and defaults from the service
 try {
   levers = await getLevers();
   renderLevers(form, levers);
+  if (STATIC) {   // the bundle has plans with one lever moved at most
+    for (const type of ["input", "change"]) form.addEventListener(type, (e) => resetOthers(form, e.target.name, levers));
+  }
 } catch (e) {
   error.textContent = e.message;
   button.disabled = true;   // without the levers, a plan would silently be the default scenario

@@ -5,6 +5,7 @@ import { BASEMAP_STYLE, CREDITS } from "./api.js";
 const CENTRE = [77.10, 28.48];   // lng, lat: Gurugram / South Delhi
 
 export function createMap(container) {
+  // The plans are routed on OpenStreetMap roads (ODbL, ADR 0003), so the corner credits OSM's contributors (in CREDITS) as well as the basemap.
   const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, center: CENTRE, zoom: 11,
     attributionControl: { customAttribution: CREDITS.map(({ text }) => text) } });
   map.addControl(new maplibregl.NavigationControl());
