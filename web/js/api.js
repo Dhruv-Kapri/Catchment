@@ -1,4 +1,6 @@
-// The data source: the only module that knows where the service lives.
+// The data source: the only module that knows URLs (the service, and the basemap style the map draws on).
+export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
 export async function planScenario(levers) {
   const response = await fetch("/plan", {
     method: "POST",

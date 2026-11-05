@@ -1,11 +1,11 @@
 // The map: the basemap and the stores drawn on it. Each createMap call is its own map, so a page can hold several.
-import { cellToLatLng } from "https://esm.sh/h3-js@4";
+import { cellToLatLng } from "h3-js";
+import { BASEMAP_STYLE } from "./api.js";
 
-const BASEMAP = "https://tiles.openfreemap.org/styles/liberty";
 const CENTRE = [77.10, 28.48];   // lng, lat: Gurugram / South Delhi
 
 export function createMap(container) {
-  const map = new maplibregl.Map({ container, style: BASEMAP, center: CENTRE, zoom: 11 });
+  const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, center: CENTRE, zoom: 11 });
   map.addControl(new maplibregl.NavigationControl());
   return { map, markers: [] };
 }
