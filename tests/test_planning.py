@@ -697,3 +697,19 @@ def test_the_gain_over_greedy_is_zero_on_a_plan_that_is_greedys_own_over_the_siz
     p = plan(inputs, scenario, "cpsat-from-greedy")
     assert p.status == "HEURISTIC"
     assert p.demand_covered - p.greedy_demand_covered == 0
+
+
+@pytest.mark.parametrize("method, status", [("cpsat", "UNKNOWN"), ("cpsat-from-greedy", "HEURISTIC")])
+def test_service_areas_hold_when_the_model_is_over_the_size_cap(monkeypatch: pytest.MonkeyPatch, method: Method, status: str) -> None:
+    # S0 holds the network's store (only it reaches demand at the default scenario) and serves T and A. Over the cap, CP-SAT on its own
+    # reports that network alone; from greedy, greedy's plan, where S1 (nearer to A) serves two of A, B, C at 0.5x capacity.
+    hexes = {"T": 10.0, "A": 500.0, "B": 500.0, "C": 500.0}
+    pairs: Pairs = {("S0", "T"): 1.0, ("S0", "A"): 6.0, ("S1", "A"): 5.0, ("S1", "B"): 5.0, ("S1", "C"): 5.0}
+    inputs, scenario = make_inputs(hexes, pairs, ["S0", "S1"]), Scenario(n_new=1, promise=15, capacity=0.5)
+    monkeypatch.setattr(planning.assumptions, "MODEL_PAIR_CAP", 0)
+    p = plan(inputs, scenario, method)
+    assert p.status == status
+    expected = {"S0": ["T", "A"]} if status == "UNKNOWN" else plan(inputs, scenario, "greedy").service_areas
+    assert p.service_areas == expected
+    assert sum(hexes[h] for h in chain.from_iterable(p.service_areas.values())) == pytest.approx(p.demand_covered)
+    assert all(set(area) <= set(p.catchments[store]) for store, area in p.service_areas.items())

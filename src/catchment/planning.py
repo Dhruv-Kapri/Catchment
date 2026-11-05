@@ -376,7 +376,8 @@ class Solved:
 
 def kept_greedy(start: tuple[list[int], npt.NDArray[np.intp]], share_int: npt.NDArray[np.int64], bound: float | None, search_start: float) -> Solved:
     """Greedy's plan kept by CP-SAT from greedy: status HEURISTIC, objective greedy's orders on the solver's integer scale."""
-    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start, start[1])
+    return Solved(picked=start[0], owner=start[1], status="HEURISTIC", objective=int(share_int[start[1] >= 0].sum()) / assumptions.SCALE,
+                  solver_bound=bound, search_start=search_start, greedy_owner=start[1])
 
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
@@ -405,7 +406,8 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
             return kept_greedy(start, m.share_int, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
-    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start, None if start is None else start[1])
+    return Solved(picked=picked, owner=assignment(p, m, picked, solver), status=proven, objective=solver.ObjectiveValue() / assumptions.SCALE,
+                  solver_bound=solver.BestObjectiveBound() / assumptions.SCALE, search_start=search_start, greedy_owner=None if start is None else start[1])
 
 
 def capacity_bound(p: Problem) -> float:
@@ -452,7 +454,8 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     if method == "greedy":
         search_start = time.perf_counter()
         picked, owner = greedy(p)
-        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start, owner)
+        solved = Solved(picked=picked, owner=owner, status="HEURISTIC", objective=float(p.share[owner >= 0].sum()), solver_bound=None,
+                        search_start=search_start, greedy_owner=owner)
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
