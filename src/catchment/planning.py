@@ -115,6 +115,9 @@ class Plan:
     unreached: float                 # reached by no open operator store
     slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; never above demand_covered: the nearest-first walk covers no more than greedy's or an OPTIMAL plan's assignment, and a FEASIBLE CP-SAT plan's is clamped to it (#33)
     new_stores: list[NewStore]       # in pick order
+    service_areas: dict[str, list[str]]   # every operator store (existing, then new in pick order) -> the hex ids the plan assigns it; [] if none
+    catchments: dict[str, list[str]]      # same keys -> the hex ids it reaches within the promise at the scenario's multiplier, pick-and-pack included
+    greedy_demand_covered: float     # the greedy plan's demand_covered for the same scenario; the plan's own for method greedy, so the gain over greedy is demand_covered minus this
     status: Status                   # CP-SAT's own plan: "OPTIMAL", or "FEASIBLE" (stopped early); "HEURISTIC": greedy's plan, by method or kept by cpsat-from-greedy; "UNKNOWN": CP-SAT on its own found no plan, or the model was over the size cap, so no new sites and the metrics are the existing network's
     objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
     bound: float | None              # upper bound on the objective: the lower of CP-SAT's and `capacity_bound`'s, never under the objective (so on a kept greedy plan or an unbuilt model, the fallback alone); None for greedy and when UNKNOWN
@@ -368,11 +371,12 @@ class Solved:
     objective: float | None          # orders a day; None when CP-SAT found no plan
     solver_bound: float | None       # the solver's own bound, None when it has none
     search_start: float              # perf_counter when the search began
+    greedy_owner: npt.NDArray[np.intp] | None = None   # the greedy plan's owner per hex when the method computed one (greedy, CP-SAT from greedy)
 
 
 def kept_greedy(start: tuple[list[int], npt.NDArray[np.intp]], share_int: npt.NDArray[np.int64], bound: float | None, search_start: float) -> Solved:
     """Greedy's plan kept by CP-SAT from greedy: status HEURISTIC, objective greedy's orders on the solver's integer scale."""
-    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start)
+    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start, start[1])
 
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
@@ -401,7 +405,7 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
             return kept_greedy(start, m.share_int, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
-    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
+    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start, None if start is None else start[1])
 
 
 def capacity_bound(p: Problem) -> float:
@@ -448,17 +452,38 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     if method == "greedy":
         search_start = time.perf_counter()
         picked, owner = greedy(p)
-        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start)
+        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start, owner)
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
     bound = stated_bound(p, method, solved)
     gap = None if bound is None or solved.objective is None else relative_gap(solved.objective, bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
+    greedy_owner = solved.greedy_owner if solved.greedy_owner is not None else greedy(p)[1]   # CP-SAT on its own: greedy runs here, after the search, so the solver's budget and search are unchanged
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, bound, gap,
+                covered, households, lost, unreached, slow, new_stores, service_areas(p, p.existing + solved.picked, solved.owner),
+                catchments(p, p.existing + solved.picked), float(p.share[greedy_owner >= 0].sum()), solved.status, solved.objective, bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
+
+
+def hex_ids_by_store(p: Problem, stores: list[int], site: npt.NDArray[np.intp], hexes: npt.NDArray[np.intp]) -> dict[str, list[str]]:
+    """Each store's hex ids, in hex position order, from (site, hex) position pairs."""
+    order = np.lexsort((hexes, site))
+    site, hexes = site[order], hexes[order]
+    return {str(p.inputs.site_ids[s]): p.inputs.hex_ids[hexes[np.searchsorted(site, s):np.searchsorted(site, s, "right")]].tolist() for s in stores}
+
+
+def service_areas(p: Problem, stores: list[int], owner: npt.NDArray[np.intp]) -> dict[str, list[str]]:
+    """Each store's service area: the hexes `owner` (the store's site position per hex, -1 for none) assigns it."""
+    assigned = np.flatnonzero(owner >= 0)
+    return hex_ids_by_store(p, stores, owner[assigned], assigned)
+
+
+def catchments(p: Problem, stores: list[int]) -> dict[str, list[str]]:
+    """Each store's catchment: the pairs already in `p.reach`, within the promise at the multiplier, pick-and-pack included."""
+    keep = np.isin(p.reach.site, stores)
+    return hex_ids_by_store(p, stores, p.reach.site[keep], p.reach.hex[keep])
 
 
 def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, float, list[NewStore]]:
