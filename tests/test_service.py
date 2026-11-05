@@ -40,6 +40,14 @@ def test_demand_lists_every_hex_once_with_its_demand_and_households(client: Test
     assert response.json() == [{"hex": h, "demand": d, "households": hh} for h, d, hh in zip(inputs.hex_ids, inputs.demand, inputs.households)]
 
 
+def test_network_lists_the_two_brands_existing_stores(client: TestClient, inputs: Inputs) -> None:
+    response = client.get("/network")
+    assert response.status_code == 200
+    body = response.json()
+    assert (len(body["Operator"]), len(body["Competitor"])) == (8, 4)
+    assert body == plan(inputs, Scenario()).network
+
+
 def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200

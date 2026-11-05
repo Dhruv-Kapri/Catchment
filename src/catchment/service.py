@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from catchment.planning import Inputs, Scenario, load_inputs, plan
-from catchment.serialize import demand_json, plan_json
+from catchment.serialize import demand_json, network_json, plan_json
 
 WEB: Path = Path(__file__).resolve().parents[2] / "web"
 
@@ -34,6 +34,13 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     def get_demand() -> list[dict[str, Any]]:
         """Every hex with its demand (orders a day at the default capture share) and households."""
         return demand
+
+    network: dict[str, list[str]] = network_json(inputs)
+
+    @app.get("/network")
+    def get_network() -> dict[str, list[str]]:
+        """The existing stores of the two brands, by site, at the default scenario."""
+        return network
 
     app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app
