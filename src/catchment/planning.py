@@ -413,9 +413,9 @@ def capacity_bound(p: Problem) -> float:
     is_open[p.existing] = True
     reached = np.zeros(len(p.share), bool)
     reached[reach.hex[is_open[reach.site]]] = True
-    most_served = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
-    best_new = np.sort(most_served[p.candidate])[::-1][:p.scenario.n_new]
-    return float(min(p.share[reached].sum(), most_served[p.existing].sum() + best_new.sum()))
+    served_if_open = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
+    best_new = np.sort(served_if_open[p.candidate])[::-1][:p.scenario.n_new]
+    return float(min(p.share[reached].sum(), served_if_open[p.existing].sum() + best_new.sum()))
 
 
 def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
