@@ -50,3 +50,16 @@ def test_a_bad_scenario_is_a_422_that_states_why(client: TestClient, levers: dic
     response = client.post("/plan", json=levers)
     assert response.status_code == 422
     assert message in str(response.json()["detail"])
+
+
+def test_the_plan_body_carries_every_metric_and_says_why_it_has_no_gap(client: TestClient) -> None:
+    body = client.post("/plan", json={}).json()
+    for key in ("demand_covered", "households_covered", "lost_to_capacity", "unreached", "slow_traffic_coverage", "greedy_demand_covered"):
+        assert isinstance(body[key], (int, float)), key
+    assert len(body["new_stores"]) == 10
+    for store in body["new_stores"]:
+        assert isinstance(store["fresh"], (int, float)) and isinstance(store["cannibalised"], (int, float))
+    if body["gap"] is None:
+        assert body["gap_reason"]
+    else:
+        assert isinstance(body["gap"], (int, float)) and body["gap_reason"] is None
