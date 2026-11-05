@@ -427,7 +427,7 @@ def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
     return max(bound, solved.objective)
 
 
-def relative_gap(objective: float, bound: float, status: str) -> float | None:
+def relative_gap(objective: float, bound: float, status: Status) -> float | None:
     """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; None for a zero objective under a positive bound
     (no finite ratio, and JSON has no infinity). Never negative: a greedy plan kept in place of the solver's can sit a rounding hair above the integer-scale bound."""
     if status == "OPTIMAL" or bound <= objective:
