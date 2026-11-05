@@ -4,13 +4,14 @@ import { readLevers, renderLevers } from "./levers.js";
 import { showDemand } from "./demand.js";
 import { createMap, showNetwork, showStores } from "./map.js";
 import { showMetrics } from "./metrics.js";
+import { showCatchment, showServiceAreas } from "./planLayers.js";
 
 const form = document.getElementById("levers");
 const error = document.getElementById("error");
 const button = document.getElementById("plan");
 const elapsed = document.querySelector('[data-testid="elapsed"]');
 const metrics = document.getElementById("metrics");
-const view = createMap("map");
+export const view = createMap("map");
 let planOnScreen = false;   // a plan's metrics are showing, so there is something to grey
 let changedSincePlan = false;   // a lever moved after the Plan button sent the levers
 
@@ -35,7 +36,7 @@ Promise.all([fetchDemand(), fetchNetwork()]).then(([demand, network]) => {
   const setCapture = showDemand(view, demand, capture(), document.querySelector('[data-testid="market-demand-total"]'),
     levers?.capture.max ?? 1);
   form.elements.capture?.addEventListener("input", () => setCapture(capture()));
-  showNetwork(view, network);
+  if (!planOnScreen) showNetwork(view, network);   // a plan drawn first already shows the network
 }).catch((e) => { error.textContent = e.message; });
 
 button.addEventListener("click", async () => {
@@ -48,7 +49,9 @@ button.addEventListener("click", async () => {
   const timer = setInterval(() => (elapsed.textContent = `Planning… ${seconds()} s`), 100);
   try {
     const plan = await planScenario(readLevers(form));
-    showStores(view, plan);
+    showStores(view, plan, (store) => showCatchment(view, plan, store).catch((e) => { error.textContent = e.message; }));
+    await showCatchment(view, plan, null);
+    await showServiceAreas(view, plan);
     showMetrics(plan);
     planOnScreen = true;
     metrics.classList.toggle("stale", changedSincePlan);

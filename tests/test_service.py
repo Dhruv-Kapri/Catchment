@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import Any
 
+import h3
 import pytest
 from fastapi.testclient import TestClient
 
@@ -51,6 +52,15 @@ def test_network_lists_the_two_brands_existing_stores(client: TestClient, inputs
     network: dict[str, list[str]] = plan(inputs, Scenario()).network
     assert (len(network["Operator"]), len(network["Competitor"])) == (8, 4)
     assert response.json() == network
+
+
+def test_the_plan_carries_each_operator_stores_service_area_and_catchment(client: TestClient) -> None:
+    body = client.post("/plan", json={}).json()
+    operator_stores: list[str] = body["network"]["Operator"] + body["sites"]
+    assert list(body["service_areas"]) == list(body["catchments"]) == operator_stores
+    for store in operator_stores:
+        assert all(h3.is_valid_cell(cell) for cell in body["service_areas"][store] + body["catchments"][store])
+        assert set(body["service_areas"][store]) <= set(body["catchments"][store])
 
 
 def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> None:
