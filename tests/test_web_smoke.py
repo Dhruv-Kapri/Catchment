@@ -1,13 +1,17 @@
+import dataclasses
 import re
 import socket
 import threading
 import time
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 import uvicorn
 from playwright.sync_api import expect, sync_playwright
 
+from catchment.planning import plan
+from catchment.serialize import plan_json
 from catchment.service import create_app
 from service_inputs import service_inputs
 
@@ -54,4 +58,21 @@ def test_pressing_plan_shows_every_operator_metric(base_url: str) -> None:
         expect(page.get_by_test_id("metric-gap")).to_have_text(re.compile(r"^\d+(\.\d)?%$|^\D"))
         expect(page.get_by_test_id("new-stores").locator("li")).to_have_count(10)
         expect(page.get_by_test_id("new-stores").locator("li").first).to_have_text(re.compile(r"^1\. fresh [\d,]+, cannibalised [\d,]+$"))
+        browser.close()
+
+
+@pytest.mark.parametrize("changes, note, gain", [
+    ({"method": "cpsat-from-greedy", "status": "HEURISTIC"}, "Greedy's plan kept", "0"),
+    ({"method": "cpsat", "status": "UNKNOWN", "objective": None, "bound": None, "gap": None, "demand_covered": 1.0}, "No plan", "no plan"),
+])
+def test_the_panel_explains_greedys_plan_and_labels_an_unknown_one(base_url: str, changes: dict[str, Any], note: str, gain: str) -> None:
+    greedy = plan(service_inputs())
+    crafted = plan_json(dataclasses.replace(greedy, **changes))
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        page.evaluate("async (body) => { (await import('/js/metrics.js')).showMetrics(body); }", crafted)
+        expect(page.get_by_test_id("plan-note")).to_contain_text(note)
+        expect(page.get_by_test_id("metric-gain")).to_have_text(gain)
         browser.close()
