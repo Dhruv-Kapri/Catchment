@@ -14,9 +14,8 @@ from fastapi.testclient import TestClient
 
 from catchment import assumptions
 from catchment.fetch import DATA
-from catchment.service import WEB
-
-from catchment.planning import LEVER_RANGES, WHOLE_LEVERS, Scenario
+from catchment.planning import LEVER_RANGES, WHOLE_LEVERS, Scenario, load_inputs
+from catchment.service import WEB, create_app
 
 SWEEP_STEPS: dict[str, float] = {"n_new": 1, "promise": 1, "multiplier": 0.1, "capacity": 0.25, "capture": 0.25, "competitor_density": 0.25}
 # TODO(integrator): #47 adds planning.LEVER_STEPS; replace SWEEP_STEPS with it.
