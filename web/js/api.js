@@ -24,3 +24,13 @@ export const fetchDemand = () => getJson("/demand");
 export const fetchNetwork = () => getJson("/network");
 // The levers' ranges, steps and defaults.
 export const getLevers = () => getJson("/levers");
+// The assumptions table, the spot-check error and the synthetic network's seed and store counts.
+export const fetchAssumptions = () => getJson("/assumptions");
+
+export const CREDITS = [
+  { text: "© OpenStreetMap contributors (ODbL)", url: "https://www.openstreetmap.org/copyright" },
+  { text: "WorldPop (CC BY 4.0)", url: "https://www.worldpop.org" },
+  { text: "NASA Black Marble", url: "https://blackmarble.gsfc.nasa.gov" },
+  { text: "Overture", url: "https://overturemaps.org" },
+  { text: "OpenFreeMap", url: "https://openfreemap.org" },
+];

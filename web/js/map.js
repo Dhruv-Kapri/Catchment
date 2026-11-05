@@ -1,11 +1,12 @@
 // The map: the basemap and the stores drawn on it. Each createMap call is its own map, so a page can hold several.
 import { cellToLatLng } from "h3-js";
-import { BASEMAP_STYLE } from "./api.js";
+import { BASEMAP_STYLE, CREDITS } from "./api.js";
 
 const CENTRE = [77.10, 28.48];   // lng, lat: Gurugram / South Delhi
 
 export function createMap(container) {
-  const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, center: CENTRE, zoom: 11 });
+  const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, center: CENTRE, zoom: 11,
+    attributionControl: { customAttribution: CREDITS.map(({ text }) => text) } });
   map.addControl(new maplibregl.NavigationControl());
   // ready resolves once the style has loaded, and stays resolved: isStyleLoaded() goes false again while tiles load, after "load" has fired.
   return { map, markers: [], ready: map.once("load") };

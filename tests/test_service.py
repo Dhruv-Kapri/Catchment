@@ -9,6 +9,7 @@ import h3
 import pytest
 from fastapi.testclient import TestClient
 
+from catchment import assumptions
 from catchment.planning import LEVER_RANGES, Inputs, Method, Plan, Scenario, plan
 from catchment.serialize import plan_json
 from catchment.service import create_app
@@ -160,3 +161,17 @@ def test_the_plan_body_carries_every_metric_and_says_why_it_has_no_gap(client: T
     for store in body["new_stores"]:
         assert isinstance(store["fresh"], (int, float)) and isinstance(store["cannibalised"], (int, float))
     assert body["status"] == "OPTIMAL" and body["gap"] == 0.0 and body["gap_reason"] is None   # the cases without a gap, each with its reason: test_serialize.py
+
+
+def test_assumptions_serves_the_table_the_spot_check_error_and_the_network_seed(client: TestClient, inputs: Inputs) -> None:
+    response = client.get("/assumptions")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["table"] == assumptions.table().to_dict("records")
+    spot = body["spot_check"]
+    assert spot["routes"] == 20 and spot["multiplier"] == assumptions.MULTIPLIER
+    assert spot["implied_median"] == pytest.approx(1.79, abs=0.01) and spot["ratio_median"] == pytest.approx(1.0, abs=0.01)
+    assert spot["ratio_q25"] < spot["ratio_median"] < spot["ratio_q75"]
+    network = body["network"]
+    assert network["seed"] == 2026 and network["synthetic"] is True
+    assert sum(network["stores"].values()) == assumptions.network_size(inputs.demand.sum())

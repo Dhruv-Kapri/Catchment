@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from catchment.planning import LEVER_RANGES, LEVER_STEPS, Inputs, Scenario, load_inputs, plan
-from catchment.serialize import demand_json, network_json, plan_json
+from catchment.serialize import assumptions_json, demand_json, network_json, plan_json
 
 CACHE_SIZE: int = 64   # plans remembered per service
 WEB: Path = Path(__file__).resolve().parents[2] / "web"
@@ -29,6 +29,8 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     def get_levers() -> dict[str, dict[str, float]]:
         """Each lever's range, step and default."""
         return {lever: {"min": low, "max": high, "step": LEVER_STEPS[lever], "default": defaults[lever]} for lever, (low, high) in LEVER_RANGES.items()}
+
+    assumed: dict[str, Any] = assumptions_json(inputs)
 
     @app.post("/plan")
     def post_plan(levers: dict[str, Any]) -> dict[str, Any]:
@@ -71,6 +73,11 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     def get_network() -> dict[str, list[str]]:
         """The existing stores of the two brands, by site, at the default scenario."""
         return network
+
+    @app.get("/assumptions")
+    def get_assumptions() -> dict[str, Any]:
+        """The assumptions table, the spot-check error of the travel times and the synthetic network's seed; read-only."""
+        return assumed
 
     app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app

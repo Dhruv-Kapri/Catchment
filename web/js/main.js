@@ -1,5 +1,6 @@
 // Wiring: the levers come from the service; the Plan button asks it, then the map and the metrics show the plan.
 import { fetchDemand, fetchNetwork, getLevers, planScenario } from "./api.js";
+import { renderAssumptions, renderCredits } from "./assumptions.js";
 import { readLevers, renderLevers } from "./levers.js";
 import { showDemand } from "./demand.js";
 import { createMap, showNetwork, showStores } from "./map.js";
@@ -14,6 +15,9 @@ const metrics = document.getElementById("metrics");
 export const view = createMap("map");
 let planOnScreen = false;   // a plan's metrics are showing, so there is something to grey
 let changedSincePlan = false;   // a lever moved after the Plan button sent the levers
+renderCredits(document.getElementById("credits"));
+const drawer = document.getElementById("assumptions-drawer");
+document.getElementById("assumptions-button").addEventListener("click", () => { drawer.hidden = !drawer.hidden; });
 
 form.addEventListener("submit", (event) => event.preventDefault());   // Enter plans nothing and reloads nothing
 form.addEventListener("input", () => {
@@ -29,6 +33,7 @@ try {
   error.textContent = e.message;
   button.disabled = true;   // without the levers, a plan would silently be the default scenario
 }
+renderAssumptions(drawer, form).catch((e) => { error.textContent = e.message; });   // after the levers: the spot-check note sits by the congestion lever
 
 // After the levers: the market demand layer and the existing network; the capture lever recolours the layer at once.
 const capture = () => Number(form.elements.capture?.value ?? 1);   // 1: the default share, when the levers failed to load
