@@ -25,7 +25,7 @@ def test_table_lists_every_input() -> None:
     assert list(t.columns) == ["Input", "Value", "Source", "Date", "Status"]
     assert list(t.Input) == [
         # 00-demand
-        "Household size", "Multiplier bounds", "Blinkit orders, Q2 FY27", "Blinkit stores",
+        "Household size", "Multiplier bounds", "Operator orders, Q2 FY27", "Operator stores",
         "Competitor stores (next-largest brand)",
         "NCR dark stores (all brands)", "NCR population",
         # 01-reach
@@ -46,7 +46,7 @@ def test_table_cells_are_non_empty() -> None:
 
 def test_status_and_values_match_the_notebook_tables() -> None:
     t = assumptions.table().set_index("Input")
-    verified = {"Household size", "Blinkit orders, Q2 FY27", "Blinkit stores", "NCR dark stores (all brands)",
+    verified = {"Household size", "Operator orders, Q2 FY27", "Operator stores", "NCR dark stores (all brands)",
                 "NCR population", "Orders per store per day", "Competitor stores (next-largest brand)"}
     assert set(t.index[t.Status == "Verified"]) == verified
     assert set(t.Status) == {"Verified", "Assumption"}
@@ -60,8 +60,8 @@ def test_status_and_values_match_the_notebook_tables() -> None:
     assert "both Verified" in t.loc["Operator/competitor split", "Source"]
     assert t.loc["Household size", "Value"] == "4.5 persons"
     assert t.loc["Multiplier bounds", "Value"] == "0.5 to 1.5"
-    assert t.loc["Blinkit orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
-    assert t.loc["Blinkit stores", "Value"] == "2,751 at quarter end"
+    assert t.loc["Operator orders, Q2 FY27", "Value"] == "398.9 M over 92 days"
+    assert t.loc["Operator stores", "Value"] == "2,751 at quarter end"
     assert t.loc["NCR dark stores (all brands)", "Value"] == "~400"
     assert t.loc["NCR population", "Value"] == "30.2 M"
     assert t.loc["Pick-and-pack allowance", "Value"] == "3 min, fixed"

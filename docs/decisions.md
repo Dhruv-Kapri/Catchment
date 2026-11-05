@@ -3,6 +3,16 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-05: The assumptions drawer names brands only in its sources (#44, #48)
+
+- **The assumptions table's inputs and values say Operator and Competitor; the Source column keeps the filing it cites, by name and URL.**
+  "Blinkit orders, Q2 FY27" and "Blinkit stores" became "Operator orders, Q2 FY27" and "Operator stores", and the split's value says
+  "operator 2,751". The drawer (#48) shows the table as served, so it was the one part of the UI naming a real brand (spec #41: Operator and
+  Competitor are the only brand names shown).
+  - Why: a citation is provenance, not a brand label; dropping it would break "record the source and date of every reported count".
+  - Rules out: renaming the sources. The constants in `assumptions.py` (`BLINKIT_ORDERS_Q2`, `BLINKIT_STORES`) and `explore.py`'s
+    notebook table keep their names: neither reaches the UI.
+
 ## 2026-11-05: A plan states where its bound came from (#52)
 
 - **A plan carries `bound_source`: "solver" (CP-SAT's own bound) or "capacity" (`capacity_bound`), None when there is no bound.** The source

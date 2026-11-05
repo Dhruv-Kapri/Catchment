@@ -175,3 +175,10 @@ def test_assumptions_serves_the_table_the_spot_check_error_and_the_network_seed(
     network = body["network"]
     assert network["seed"] == 2026 and network["synthetic"] is True
     assert sum(network["stores"].values()) == assumptions.network_size(inputs.demand.sum())
+
+
+def test_the_assumptions_name_no_real_brand_outside_their_sources(client: TestClient) -> None:
+    """Operator and Competitor are the only brand names the UI shows (spec #41); a source still cites the filing it comes from."""
+    for row in client.get("/assumptions").json()["table"]:
+        shown: str = f"{row['Input']} {row['Value']}".lower()
+        assert not [brand for brand in ("blinkit", "zepto", "instamart", "swiggy", "eternal") if brand in shown], row["Input"]
