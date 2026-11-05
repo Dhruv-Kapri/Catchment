@@ -8,7 +8,7 @@ Stages 0, 0.5, 1 and 2 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: t
 served); next is stage 3 (compare and ship: the
 FastAPI service and the web map). Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
-`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
+`fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`, `serialize.py`, `service.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
 notebooks' placeholder plan model. The repo also holds the
 product brief (`docs/brief.md`), the staged roadmap with "done when" criteria (`docs/roadmap.md`), the decision log
 (`docs/decisions.md`), the scope cuts (`docs/cuts.md`) and the data survey (`docs/data-sources.md`). Read the brief
@@ -26,6 +26,8 @@ uv run catchment-build [demand reach] [--res 9] [--x-pct 30] [--force]   # deman
 uv run python -m catchment.area            # rebuild area/gurugram-south-delhi.geojson from Overpass
 osrm/osrm.sh build|serve|stop            # two-wheeler OSRM graph into data/osrm/ (Docker, ghcr.io/project-osrm/osrm-backend:v26.10.0-debian; needs data/osm.osm.pbf); serve on localhost:5001; env overrides OSRM_DATA (default data/), OSRM_PORT (5001), OSRM_NAME (catchment-osrm)
 uv run pytest -m "not docker"            # skip the OSRM integration tests (they run when Docker is up, with the containers catchment-osrm-test on port 5091 and catchment-osrm-test-ro on 5092)
+uv run pytest -m "not browser"           # skip the Playwright smoke test (headless Chromium, and network for the CDN libraries)
+uv run catchment-serve [--port 8000]     # the live service: loads the inputs once, POST /plan, and the web map at / (also --res, --x-pct, --host)
 ```
 
 ## What gets built
