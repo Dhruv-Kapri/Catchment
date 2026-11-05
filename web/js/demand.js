@@ -3,8 +3,8 @@
 import { cellToBoundary } from "h3-js";
 import { LEVERS } from "./levers.js";
 
-const SOURCE = "market-demand";
-export const RAMP = ["#ffffcc", "#fd8d3c", "#800026"];   // low to high; the top is the busiest hex at the highest capture share
+const LAYER = "market-demand";   // the id of both the source and the layer
+const RAMP = ["#ffffcc", "#fd8d3c", "#800026"];   // low to high, as the legend in index.html; the top is the busiest hex at the highest capture share
 
 const format = (value) => Math.round(value).toLocaleString("en-IN");
 
@@ -26,11 +26,11 @@ export function showDemand(view, records, capture, totalElement) {
   const setCapture = (value) => {
     current = value;
     totalElement.textContent = format(stored * value);
-    if (view.map.getLayer(SOURCE)) view.map.setPaintProperty(SOURCE, "fill-color", fillColour(value, top));
+    if (view.map.getLayer(LAYER)) view.map.setPaintProperty(LAYER, "fill-color", fillColour(value, top));
   };
   const draw = () => {
-    view.map.addSource(SOURCE, { type: "geojson", data: { type: "FeatureCollection", features } });
-    view.map.addLayer({ id: SOURCE, type: "fill", source: SOURCE,
+    view.map.addSource(LAYER, { type: "geojson", data: { type: "FeatureCollection", features } });
+    view.map.addLayer({ id: LAYER, type: "fill", source: LAYER,
       paint: { "fill-color": fillColour(current, top), "fill-opacity": 0.6 } });
   };
   if (view.map.isStyleLoaded()) draw(); else view.map.once("load", draw);

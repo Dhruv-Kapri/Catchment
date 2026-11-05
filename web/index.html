@@ -18,10 +18,16 @@
     #metrics dt { color: #555; }
     #metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 18px; }
     #error { color: #b00020; margin-top: 6px; }
+    #demand-legend { margin: 10px 0 0; }
+    .ramp { display: block; height: 8px; margin-top: 4px; background: linear-gradient(to right, #ffffcc, #fd8d3c, #800026); }   /* demand.js RAMP */
+    .ramp-ends { display: flex; justify-content: space-between; color: #555; }
+    #store-key { list-style: none; margin: 8px 0 0; padding: 0; display: flex; gap: 10px; }
+    #store-key li { display: flex; align-items: center; gap: 4px; }
+    .swatch { width: 10px; height: 10px; border-radius: 50%; }
     .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
-    .store-new { background: #1b9e77; }
-    .store-operator { background: #7570b3; }
-    .store-competitor { background: #d95f02; }
+    .store-new, .store-new-colour { background: #1b9e77; }
+    .store-operator, .store-operator-colour { background: #7570b3; }
+    .store-competitor, .store-competitor-colour { background: #d95f02; }
   </style>
 </head>
 <body>
@@ -29,11 +35,16 @@
   <div id="panel">
     <form id="levers" data-testid="levers"></form>
     <button id="plan" type="button" data-testid="plan-button">Plan</button>
-    <p id="demand-legend" style="margin: 10px 0 0">Market demand (orders a day, both brands, before the brand split):
+    <p id="demand-legend">Market demand (orders a day, both brands, before the brand split):
       <strong data-testid="market-demand-total">-</strong>
-      <span style="display: block; height: 8px; margin-top: 4px; background: linear-gradient(to right, #ffffcc, #fd8d3c, #800026)"></span>
-      <small style="display: flex; justify-content: space-between; color: #555"><span>none</span><span>busiest hex</span></small>
+      <span class="ramp"></span>
+      <small class="ramp-ends"><span>none</span><span>busiest hex</span></small>
     </p>
+    <ul id="store-key">
+      <li><span class="swatch store-operator-colour"></span>Operator</li>
+      <li><span class="swatch store-competitor-colour"></span>Competitor</li>
+      <li><span class="swatch store-new-colour"></span>New store</li>
+    </ul>
     <dl id="metrics">
       <dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd>
       <dt>Households covered</dt><dd data-testid="metric-households">-</dd>

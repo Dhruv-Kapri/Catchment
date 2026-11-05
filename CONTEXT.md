@@ -28,7 +28,7 @@ _Avoid_: location, site (alone), store (before it is chosen)
 
 **Demand**:
 Expected orders per day from one hex: households × affluence multiplier × capture share. A model,
-never observed data.
+never observed data. The map labels it **market demand**: every brand's orders, before the overlap split.
 _Avoid_: orders (alone, implies real data), sales, forecast
 
 **Households**:
