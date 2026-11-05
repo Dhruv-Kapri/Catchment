@@ -23,7 +23,7 @@ COMPETITOR_DENSITY_RANGE: tuple[float, float] = (0.0, 2.0)   # x the default com
 COMPETITOR_DENSITY_STEP: float = 0.25   # density moves in quarters
 
 PICK_AND_PACK: int = 3                  # minutes, fixed
-MAX_PROMISE: int = 20                   # longest promise the travel-time table keeps pairs for, minutes (the lever now stops at 16)
+MAX_PROMISE: int = 20                   # longest promise the travel-time table keeps pairs for, minutes (the lever now stops at 16; kept above it on purpose for the re-widening in docs/cuts.md "Later", #35: resolve when 17-20 is re-measured)
 SLOW_TRAFFIC_FACTOR: float = 1.25       # slow-traffic coverage, x the scenario's congestion multiplier
 
 # Plan: default scenario, capacity, synthetic network, solver
