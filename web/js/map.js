@@ -26,3 +26,16 @@ export function showStores(view, plan) {
   for (const cell of plan.network.Competitor ?? []) addStore(view, cell, "competitor", "Competitor");
   for (const cell of plan.sites) addStore(view, cell, "new", "New store");
 }
+
+// Pan, zoom, rotate and tilt on either map moves the other. One shared flag stops the two echoing each other.
+export function linkMaps(a, b) {
+  let syncing = false;
+  const follow = (from, to) => from.map.on("move", () => {
+    if (syncing) return;
+    syncing = true;
+    to.map.jumpTo({ center: from.map.getCenter(), zoom: from.map.getZoom(), bearing: from.map.getBearing(), pitch: from.map.getPitch() });
+    syncing = false;
+  });
+  follow(a, b);
+  follow(b, a);
+}

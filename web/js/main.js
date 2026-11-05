@@ -2,7 +2,7 @@
 import { planScenario } from "./api.js";
 import { showDiff } from "./compare.js";
 import { readLevers, renderLevers, writeLevers } from "./levers.js";
-import { createMap, showStores } from "./map.js";
+import { createMap, linkMaps, showStores } from "./map.js";
 import { showMetrics } from "./metrics.js";
 
 const plans = { a: null, b: null };   // the last plan of each scenario
@@ -36,4 +36,5 @@ const a = mountScenario("scenario-a", "Scenario A", "a");
 const b = mountScenario("scenario-b", "Scenario B", "b");
 writeLevers(b.form, readLevers(a.form));
 document.getElementById("copy-a-to-b").addEventListener("click", () => writeLevers(b.form, readLevers(a.form)));
+linkMaps(a.view, b.view);
 window.catchment = { a: a.view, b: b.view };   // test hook: the linked-map test drives the maps directly

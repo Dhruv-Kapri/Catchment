@@ -6,7 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 import uvicorn
-from playwright.sync_api import expect, sync_playwright
+from playwright.sync_api import Page, expect, sync_playwright
 
 from catchment.service import create_app
 from service_inputs import service_inputs
@@ -69,3 +69,37 @@ def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str)
         expect(page.get_by_test_id("diff-row-new_stores")).to_contain_text("+1")
         expect(page.get_by_test_id("diff-row-demand_covered")).to_contain_text(re.compile(r"[+−]\d"))
         browser.close()
+
+
+def test_panning_or_zooming_either_map_moves_the_other(base_url: str) -> None:
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        page.wait_for_function("window.catchment && window.catchment.a.map.loaded() && window.catchment.b.map.loaded()", timeout=20_000)
+
+        def camera(side: str) -> list[float]:
+            return page.evaluate(f"(() => {{ const m = window.catchment.{side}.map; return [m.getCenter().lng, m.getCenter().lat, m.getZoom()]; }})()")
+
+        page.evaluate("window.catchment.a.map.jumpTo({ center: [77.2, 28.6], zoom: 13 })")
+        expect_close(page, "b", [77.2, 28.6, 13.0])
+        page.evaluate("window.catchment.b.map.jumpTo({ center: [77.0, 28.4], zoom: 12 })")
+        expect_close(page, "a", [77.0, 28.4, 12.0])
+        before = camera("a")
+        box = page.get_by_test_id("scenario-a").get_by_test_id("map").bounding_box()
+        assert box is not None
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.mouse.wheel(0, -300)
+        page.wait_for_function(f"Math.abs(window.catchment.a.map.getZoom() - {before[2]}) > 0.01", timeout=10_000)
+        page.wait_for_timeout(500)
+        assert camera("b") == pytest.approx(camera("a"), abs=1e-6)
+        assert camera("b")[2] != pytest.approx(before[2], abs=0.01)
+        browser.close()
+
+
+def expect_close(page: Page, side: str, want: list[float]) -> None:
+    page.wait_for_function(
+        f"(() => {{ const m = window.catchment.{side}.map, w = {want}; "
+        "return Math.abs(m.getCenter().lng - w[0]) < 1e-6 && Math.abs(m.getCenter().lat - w[1]) < 1e-6 && Math.abs(m.getZoom() - w[2]) < 1e-6; })()",
+        timeout=5_000,
+    )
