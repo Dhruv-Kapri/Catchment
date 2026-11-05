@@ -91,8 +91,8 @@ def test_panning_or_zooming_either_map_moves_the_other(base_url: str) -> None:
         page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         page.mouse.wheel(0, -300)
         page.wait_for_function(f"Math.abs(window.catchment.a.map.getZoom() - {before[2]}) > 0.01", timeout=10_000)
-        page.wait_for_timeout(500)
-        assert camera("b") == pytest.approx(camera("a"), abs=1e-6)
+        page.wait_for_function("!window.catchment.a.map.isMoving()", timeout=10_000)
+        expect_close(page, "b", camera("a"))
         assert camera("b")[2] != pytest.approx(before[2], abs=0.01)
         browser.close()
 

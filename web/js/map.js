@@ -33,8 +33,11 @@ export function linkMaps(a, b) {
   const follow = (from, to) => from.map.on("move", () => {
     if (syncing) return;
     syncing = true;
-    to.map.jumpTo({ center: from.map.getCenter(), zoom: from.map.getZoom(), bearing: from.map.getBearing(), pitch: from.map.getPitch() });
-    syncing = false;
+    try {
+      to.map.jumpTo({ center: from.map.getCenter(), zoom: from.map.getZoom(), bearing: from.map.getBearing(), pitch: from.map.getPitch() });
+    } finally {
+      syncing = false;
+    }
   });
   follow(a, b);
   follow(b, a);
