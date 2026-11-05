@@ -1,5 +1,4 @@
 """Plan new stores for a scenario: the synthetic network, a greedy plan and its metrics. `plan()` is the one entry point."""
-import dataclasses
 import numbers
 import time
 from dataclasses import dataclass
@@ -52,6 +51,7 @@ def load_inputs(res: int = 9, x_pct: float = 30, data_dir: Path = DATA) -> Input
 LEVER_RANGES: dict[str, tuple[float, float]] = {
     "n_new": assumptions.N_RANGE, "promise": assumptions.PROMISE_RANGE, "multiplier": assumptions.MULTIPLIER_RANGE,
     "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
+WHOLE_LEVERS: frozenset[str] = frozenset({"n_new", "promise"})   # levers that take whole numbers
 
 
 def lever_value(lever: str, value: object, whole: bool) -> int | float:
@@ -74,7 +74,7 @@ class Scenario:
 
     def __post_init__(self) -> None:
         for lever in LEVER_RANGES:
-            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
+            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in WHOLE_LEVERS))
         for lever, (low, high) in LEVER_RANGES.items():
             value = getattr(self, lever)
             if not low <= value <= high:
@@ -255,15 +255,15 @@ def int_shares(p: Problem) -> npt.NDArray[np.int64]:
 
 
 @dataclass(frozen=True)
-class Rows:
+class ModelRows:
     """The open sites' pairs grouped by hex (nearest first within a hex) and what the model's loop reads from them, computed vectorised so the
     model's size is known before any Python loop runs."""
-    ps: npt.NDArray[np.intp]               # per pair: site
-    ph: npt.NDArray[np.intp]               # per pair: hex
-    con: npt.NDArray[np.bool_]             # per pair: its site is constrained
+    pair_site: npt.NDArray[np.intp]        # per pair: site
+    pair_hex: npt.NDArray[np.intp]         # per pair: hex
+    pair_constrained: npt.NDArray[np.bool_]   # per pair: its site is constrained
     constrained: npt.NDArray[np.bool_]     # per site: can its catchment exceed capacity
     has_free_op: npt.NDArray[np.bool_]     # per hex: an existing store that cannot hit capacity covers it
-    start: npt.NDArray[np.intp]            # hex h's pairs are ps[start[h]:start[h + 1]]
+    hex_start: npt.NDArray[np.intp]        # hex h's pairs are pair_site[hex_start[h]:hex_start[h + 1]]
     share_int: npt.NDArray[np.int64]
     cap_int: int
     is_new: npt.NDArray[np.bool_]
@@ -271,26 +271,27 @@ class Rows:
     @property
     def n_pairs(self) -> int:
         """The capacity-bound (x) pairs the model gets: constrained pairs in hexes with no free existing store, the loop's bulk."""
-        return int((self.con & ~self.has_free_op[self.ph]).sum())
+        return int((self.pair_constrained & ~self.has_free_op[self.pair_hex]).sum())
 
 
-def model_rows(p: Problem) -> Rows:
+def model_rows(p: Problem) -> ModelRows:
+    """The open sites' pairs grouped by hex, with the per-site and per-hex flags the model reads, so its size is known before the build loop."""
     n_sites, n_hex, reach = len(p.inputs.site_ids), len(p.share), p.reach
     share_int, cap_int = int_shares(p), round(p.capacity * assumptions.SCALE)
     is_new, is_op = p.candidate, np.zeros(n_sites, bool)
     is_op[p.existing] = True
     pos = reach.by_hex[(is_new | is_op)[reach.site][reach.by_hex]]   # open sites' pairs, grouped by hex, nearest first within a hex
-    ps, ph = reach.site[pos], reach.hex[pos]
-    constrained = np.bincount(ps, weights=share_int[ph], minlength=n_sites) > cap_int   # W_s > capacity
-    con = constrained[ps]
-    has_free_op = np.bincount(ph, weights=(~con & is_op[ps]).astype(float), minlength=n_hex) > 0
-    return Rows(ps, ph, con, constrained, has_free_op, np.searchsorted(ph, np.arange(n_hex + 1)), share_int, cap_int, is_new)
+    pair_site, pair_hex = reach.site[pos], reach.hex[pos]
+    constrained = np.bincount(pair_site, weights=share_int[pair_hex], minlength=n_sites) > cap_int   # W_s > capacity
+    pair_constrained = constrained[pair_site]
+    has_free_op = np.bincount(pair_hex, weights=(~pair_constrained & is_op[pair_site]).astype(float), minlength=n_hex) > 0
+    return ModelRows(pair_site, pair_hex, pair_constrained, constrained, has_free_op, np.searchsorted(pair_hex, np.arange(n_hex + 1)), share_int, cap_int, is_new)
 
 
-def build_model(p: Problem, rows: Rows) -> Model:
+def build_model(p: Problem, rows: ModelRows) -> Model:
     """The tighter model of 03-area: x_{s,h} only at sites whose catchment can exceed capacity, a new site's capacity row tied to
     the site being chosen, and the existing operator stores in the same at-most-one row per hex."""
-    ps, ph, con, has_free_op, start, share_int, cap_int, is_new = rows.ps, rows.ph, rows.con, rows.has_free_op, rows.start, rows.share_int, rows.cap_int, rows.is_new
+    has_free_op, hex_start, share_int, cap_int, is_new = rows.has_free_op, rows.hex_start, rows.share_int, rows.cap_int, rows.is_new
     model = cp_model.CpModel()
     y = {int(s): model.NewBoolVar(f"y{s}") for s in np.flatnonzero(is_new)}
     model.Add(sum(y.values()) == p.scenario.n_new)
@@ -299,19 +300,20 @@ def build_model(p: Problem, rows: Rows) -> Model:
     x: list[tuple[int, int, cp_model.IntVar]] = []
     covered: list[tuple[int, cp_model.IntVar]] = []
     row_of: dict[int, list[tuple[cp_model.IntVar, int]]] = {}
-    ps_l, con_l, share_l = ps.tolist(), con.tolist(), share_int.tolist()
-    const = int(share_int[np.unique(ph[has_free_op[ph]])].sum())
-    for h in np.flatnonzero(np.diff(start) > 0).tolist():
+    site_l, constrained_l, share_l = rows.pair_site.tolist(), rows.pair_constrained.tolist(), share_int.tolist()
+    const = int(share_int[np.unique(rows.pair_hex[has_free_op[rows.pair_hex]])].sum())
+    for h in np.flatnonzero(np.diff(hex_start) > 0).tolist():
         if has_free_op[h]:
             continue
         w, row = share_l[h], []
-        free = [s for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]) if not c]
+        lo, hi = hex_start[h], hex_start[h + 1]
+        free = [s for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]) if not c]
         if free:
             cover = model.NewBoolVar("")
             model.AddBoolOr([y[s] for s in free]).OnlyEnforceIf(cover)
             covered.append((h, cover))
             row.append(cover)
-        for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]):
+        for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]):
             if c:
                 xv = model.NewBoolVar("")
                 if is_new[s]:
@@ -364,7 +366,7 @@ class Solved:
     owner: npt.NDArray[np.intp]
     status: Status
     objective: float | None          # orders a day; None when CP-SAT found no plan
-    bound: float | None
+    solver_bound: float | None       # the solver's own bound, None when it has none
     search_start: float              # perf_counter when the search began
 
 
@@ -411,12 +413,23 @@ def capacity_bound(p: Problem) -> float:
     is_open[p.existing] = True
     reached = np.zeros(len(p.share), bool)
     reached[reach.hex[is_open[reach.site]]] = True
-    serves = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
-    best_new = np.sort(serves[p.candidate])[::-1][:p.scenario.n_new]
-    return float(min(p.share[reached].sum(), serves[p.existing].sum() + best_new.sum()))
+    served_if_open = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
+    best_new = np.sort(served_if_open[p.candidate])[::-1][:p.scenario.n_new]
+    return float(min(p.share[reached].sum(), served_if_open[p.existing].sum() + best_new.sum()))
 
 
-def relative_gap(objective: float, bound: float, status: str) -> float | None:
+def stated_bound(p: Problem, method: Method, solved: Solved) -> float | None:
+    """The bound a plan states: None for greedy and when there is no objective. CP-SAT's plans always state one: the lower of the solver's bound and
+    `capacity_bound` (the fallback alone where the solver has none), and never under the objective: it is on the solver's integer scale, the fallback
+    in float shares, so rounding must not put the bound under the plan's own claim."""
+    if method == "greedy" or solved.objective is None:
+        return None
+    fallback = capacity_bound(p)
+    bound = fallback if solved.solver_bound is None else min(solved.solver_bound, fallback)
+    return max(bound, solved.objective)
+
+
+def relative_gap(objective: float, bound: float, status: Status) -> float | None:
     """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; None for a zero objective under a positive bound
     (no finite ratio, and JSON has no infinity). Never negative: a greedy plan kept in place of the solver's can sit a rounding hair above the integer-scale bound."""
     if status == "OPTIMAL" or bound <= objective:
@@ -439,15 +452,12 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
-    if method != "greedy" and solved.objective is not None:   # CP-SAT's plans always state a bound: the solver's where it has one, the fallback where it is none or looser
-        fallback = capacity_bound(p)
-        bound = fallback if solved.bound is None else min(solved.bound, fallback)
-        solved = dataclasses.replace(solved, bound=max(bound, solved.objective))   # the objective is on the solver's integer scale, the fallback in float shares: rounding must not put the bound under the plan's own claim
-    gap = None if solved.bound is None or solved.objective is None else relative_gap(solved.objective, solved.bound, solved.status)
+    bound = stated_bound(p, method, solved)
+    gap = None if bound is None or solved.objective is None else relative_gap(solved.objective, bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, bound, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
 
 
