@@ -18,7 +18,7 @@ def inputs() -> Inputs:
 
 @pytest.fixture(scope="module")
 def client(inputs: Inputs) -> TestClient:
-    return TestClient(create_app(inputs))
+    return TestClient(create_app(inputs), raise_server_exceptions=False)   # a server error is a response to assert on, as a browser sees it
 
 
 def untimed(body: dict[str, Any]) -> dict[str, Any]:
@@ -38,3 +38,15 @@ def test_the_root_serves_the_page_with_its_plan_button(client: TestClient) -> No
     response = client.get("/")
     assert response.status_code == 200
     assert 'data-testid="plan-button"' in response.text
+
+
+@pytest.mark.parametrize("levers, message", [
+    ({"n_new": 99}, "n_new 99 is outside the lever range 1-20"),
+    ({"n_new": 2.5}, "n_new 2.5 must be a whole number"),
+    ({"seed": 1}, "seed is not a lever"),
+    ({"colour": "red"}, "colour"),
+])
+def test_a_bad_scenario_is_a_422_that_states_why(client: TestClient, levers: dict[str, Any], message: str) -> None:
+    response = client.post("/plan", json=levers)
+    assert response.status_code == 422
+    assert message in str(response.json()["detail"])

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from catchment.planning import Inputs, Scenario, load_inputs, plan
@@ -20,7 +20,13 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     @app.post("/plan")
     def post_plan(levers: dict[str, Any]) -> dict[str, Any]:
         """Plan the scenario the six levers describe; an omitted lever takes its default. The seed is not a lever."""
-        return plan_json(plan(inputs, Scenario(**levers), method="cpsat-from-greedy"))
+        try:
+            if "seed" in levers:
+                raise TypeError("seed is not a lever")
+            scenario = Scenario(**levers)
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return plan_json(plan(inputs, scenario, method="cpsat-from-greedy"))
 
     app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app
