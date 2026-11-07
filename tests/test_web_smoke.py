@@ -359,6 +359,52 @@ def test_the_difference_table_shows_no_minus_zero(base_url: str, greedy_plan: Pl
         browser.close()
 
 
+@pytest.mark.parametrize(
+    ("source_a", "source_b", "cell_a", "cell_b", "delta"),
+    [
+        ("capacity", "solver", "12.5% (capacity bound)", "10.0%", "–"),   # two different bounds: no honest difference
+        ("capacity", "capacity", "12.5% (capacity bound)", "10.0% (capacity bound)", "−2.5 pp"),
+        ("solver", "solver", "12.5%", "10.0%", "−2.5 pp"),
+    ],
+)
+def test_the_difference_table_marks_a_capacity_bound_gap(
+    base_url: str, greedy_plan: Plan, source_a: str, source_b: str, cell_a: str, cell_b: str, delta: str
+) -> None:
+    a: dict[str, Any] = plan_json(dataclasses.replace(greedy_plan, gap=0.125, bound_source=source_a))
+    b: dict[str, Any] = plan_json(dataclasses.replace(greedy_plan, gap=0.1, bound_source=source_b))
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        rows: list[dict[str, str]] = page.evaluate("async ([a, b]) => (await import('/js/compare.js')).diffRows(a, b)", [a, b])
+        gap: dict[str, str] = next(r for r in rows if r["key"] == "gap")
+        assert (gap["a"], gap["b"], gap["delta"]) == (cell_a, cell_b, delta)
+        browser.close()
+
+
+def test_the_difference_table_greys_while_either_scenario_is_stale(base_url: str) -> None:
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(base_url)
+        a, b = page.get_by_test_id("scenario-a"), page.get_by_test_id("scenario-b")
+        diff = page.get_by_test_id("diff")
+        for side in (a, b):
+            side.get_by_test_id("lever-n_new").fill("4")
+            side.get_by_test_id("plan-button").click()
+            expect(side.get_by_test_id("elapsed")).to_have_text(re.compile("^Planned in"), timeout=60_000)   # the stores draw before the metrics; a lever moved before them greys nothing
+        expect(diff).not_to_have_class(re.compile("stale"))
+        a.get_by_test_id("lever-promise").fill("12")
+        expect(diff).to_have_class(re.compile("stale"))
+        b.get_by_test_id("lever-promise").fill("12")
+        a.get_by_test_id("plan-button").click()
+        expect(a.locator(".metrics")).not_to_have_class(re.compile("stale"), timeout=60_000)
+        expect(diff).to_have_class(re.compile("stale"))   # B is still stale
+        b.get_by_test_id("plan-button").click()
+        expect(diff).not_to_have_class(re.compile("stale"), timeout=60_000)
+        browser.close()
+
+
 def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -374,7 +420,9 @@ def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str)
         b.get_by_test_id("lever-n_new").fill("5")
         b.get_by_test_id("plan-button").click()
         expect(b.locator(".store-new")).to_have_count(5, timeout=15_000)
-        for key in DIFF_KEYS:   # the table waits for both maps' basemap load (view.ready), which can trail the markers by seconds
+        for side in (a, b):   # the markers draw before the metrics and the table
+            expect(side.get_by_test_id("elapsed")).to_have_text(re.compile("^Planned in"), timeout=60_000)
+        for key in DIFF_KEYS:   # the table also waits for both maps' basemap load (view.ready), which can trail the markers by seconds
             expect(page.get_by_test_id(f"diff-row-{key}")).to_be_visible(timeout=15_000)
         expect(page.get_by_test_id("diff-row-new_stores")).to_contain_text("+1")
         expect(page.get_by_test_id("diff-row-demand_covered")).to_contain_text(re.compile(r"[+−]\d"))

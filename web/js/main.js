@@ -11,6 +11,7 @@ import { showCatchment, showServiceAreas } from "./planLayers.js";
 
 const plans = { a: null, b: null };   // the last plan of each scenario
 const diff = document.getElementById("diff");
+const refreshDiffStale = () => diff.classList.toggle("stale", document.querySelector(".metrics.stale") !== null);   // the table greys while either scenario's metrics are grey
 
 // One scenario: its panel (cloned from the template) and its map. The state is its own: what is on screen, and whether a lever has moved since.
 function mountScenario(testid, title, side) {
@@ -30,6 +31,7 @@ function mountScenario(testid, title, side) {
   const markChanged = () => {
     changedSincePlan = true;
     if (scenario.planOnScreen) metrics.classList.add("stale");
+    refreshDiffStale();
   };
   form.addEventListener("submit", (event) => event.preventDefault());   // Enter plans nothing and reloads nothing
   form.addEventListener("input", markChanged);
@@ -57,6 +59,7 @@ function mountScenario(testid, title, side) {
       showMetrics(panel, plan);
       scenario.planOnScreen = true;
       metrics.classList.toggle("stale", changedSincePlan);
+      refreshDiffStale();
       plans[side] = plan;
       if (plans.a && plans.b) showDiff(diff, plans.a, plans.b);
       elapsed.textContent = `Planned in ${seconds()} s`;
