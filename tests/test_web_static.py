@@ -71,3 +71,35 @@ def test_a_lever_reset_to_its_default_recolours_the_demand_layer(static_url: str
         expect(a.get_by_test_id("lever-capture")).to_have_value("1")
         expect(total).to_have_text(at_default)
         browser.close()
+
+
+def test_the_bundle_index_is_fetched_when_plan_is_first_pressed_not_on_load(static_url: str) -> None:
+    requested: list[str] = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.on("request", lambda request: requested.append(request.url))
+        page.goto(static_url)
+        a = page.get_by_test_id("scenario-a")
+        expect(a.get_by_test_id("market-demand-total")).to_have_text(re.compile(r"^[\d,]+$"), timeout=15_000)
+        assert [url for url in requested if url.endswith("bundle/index.json")] == []
+        a.get_by_test_id("plan-button").click()
+        expect(a.locator(".store-new")).to_have_count(10, timeout=15_000)
+        assert len([url for url in requested if url.endswith("bundle/index.json")]) == 1
+        browser.close()
+
+
+def test_a_missing_bundle_index_is_an_error_and_never_a_post_to_the_service(static_url: str) -> None:
+    posted: list[str] = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.route("**/bundle/index.json", lambda route: route.fulfill(status=500))
+        page.on("request", lambda request: posted.append(request.url) if request.method == "POST" else None)
+        page.goto(static_url)
+        a = page.get_by_test_id("scenario-a")
+        expect(page.get_by_test_id("static-notice")).to_be_visible()
+        a.get_by_test_id("plan-button").click()
+        expect(a.get_by_test_id("error")).not_to_have_text("", timeout=15_000)
+        assert posted == []
+        browser.close()

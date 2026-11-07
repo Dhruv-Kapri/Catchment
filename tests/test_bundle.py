@@ -5,9 +5,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from catchment.bundle import READ_ONLY, build_bundle
+from catchment.bundle import READ_ONLY, build_bundle, mark_static
 from catchment.planning import Inputs
-from catchment.service import create_app
+from catchment.service import WEB, create_app
 from service_inputs import service_inputs
 
 TIMING: tuple[str, ...] = ("seconds", "build_seconds", "solve_seconds")
@@ -89,3 +89,15 @@ def test_the_bundle_carries_the_odbl_notice_and_the_provenance(site: Path) -> No
     assert meta["overture"]["release"] == "2026-10-21.0"
     assert meta["worldpop"]["product"] == PROVENANCE["worldpop"]["source"]
     assert meta["osrm"]["image"] == "ghcr.io/project-osrm/osrm-backend:v26.10.0-debian"   # the pin in osrm/osrm.sh
+
+
+def test_the_built_page_declares_the_static_source_and_the_template_the_live_one(site: Path) -> None:
+    assert '<meta name="catchment-source" content="static">' in read_text(site / "index.html")
+    assert '<meta name="catchment-source" content="service">' in read_text(WEB / "index.html")
+
+
+def test_marking_a_page_without_the_source_marker_fails_loudly(tmp_path: Path) -> None:
+    page: Path = tmp_path / "index.html"
+    page.write_text("<!doctype html><head></head>")
+    with pytest.raises(ValueError, match="catchment-source"):
+        mark_static(page)

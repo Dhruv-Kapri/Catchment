@@ -312,6 +312,19 @@ def test_the_levers_demand_network_and_assumptions_are_fetched_once_for_both_sce
         browser.close()
 
 
+def test_the_live_page_makes_no_request_for_the_static_bundle(base_url: str) -> None:
+    """The live service decides its data source from the page, not by probing for bundle/ (a 404 on every load)."""
+    requested: list[str] = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.on("request", lambda request: requested.append(request.url))
+        page.goto(base_url)
+        expect(page.get_by_test_id("scenario-a").get_by_test_id("market-demand-total")).to_have_text(re.compile(r"^[\d,]+$"), timeout=15_000)
+        browser.close()
+    assert [url for url in requested if "bundle/" in url] == []
+
+
 def test_the_assumptions_the_spot_check_and_the_credits_are_visible(base_url: str) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch()
