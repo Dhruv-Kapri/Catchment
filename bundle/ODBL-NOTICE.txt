@@ -1,0 +1,9 @@
+The JSON in this bundle (plans/, data/, index.json, metadata.json) is a Derivative Database of OpenStreetMap data, made available
+under the Open Database License (ODbL) 1.0: https://opendatacommons.org/licenses/odbl/1-0/
+
+Contains information from OpenStreetMap: (c) OpenStreetMap contributors. https://www.openstreetmap.org/copyright
+
+The plans were computed from travel times routed on OpenStreetMap roads. The travel-time table is not published here. It
+is supplied under the ODbL to anyone the plans reach who asks for it.
+
+Other sources and their licences are in metadata.json.

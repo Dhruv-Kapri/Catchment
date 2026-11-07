@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="catchment-source" content="static">
+  <title>Catchment</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <script type="importmap">{ "imports": { "h3-js": "https://esm.sh/h3-js@4" } }</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="app-header">
+    <div class="brand">
+      <h1>Catchment</h1>
+      <p class="tagline">Plan the next N dark stores</p>
+    </div>
+    <nav class="header-actions">
+      <button id="assumptions-button" class="btn" type="button" data-testid="assumptions-button">Assumptions</button>
+      <a class="btn" href="https://github.com/Dhruv-Kapri/Catchment" target="_blank" rel="noopener">Source</a>
+    </nav>
+  </header>
+  <p id="static-notice" data-testid="static-notice" hidden>Public demo: plans are solved ahead of time for the default scenario and for each lever moved on its own. Moving one lever resets the others to the default.</p>
+  <main>
+    <section data-testid="scenario-a"><div class="map" data-testid="map"></div></section>
+    <section data-testid="scenario-b"><div class="map" data-testid="map"></div></section>
+  </main>
+  <div id="compare">
+    <div class="compare-head">
+      <h2>B &minus; A</h2>
+      <button id="copy-a-to-b" class="btn" type="button" data-testid="copy-a-to-b">Copy A &rarr; B</button>
+      <button id="compare-toggle" class="btn quiet" type="button" aria-expanded="true" aria-controls="compare-body">Hide</button>
+    </div>
+    <div id="compare-body">
+      <table id="diff" data-testid="diff"></table>
+      <p class="compare-hint">Plan both scenarios to compare them.</p>
+    </div>
+  </div>
+  <aside id="assumptions-drawer" data-testid="assumptions-drawer" hidden>
+    <button class="btn quiet drawer-close" type="button" aria-label="Close the assumptions">Close</button>
+    <div class="drawer-body"></div>
+  </aside>
+  <footer id="credits" data-testid="credits"></footer>
+  <template id="panel">
+    <div class="panel">
+      <h2 class="title"></h2>
+      <form class="levers" data-testid="levers"></form>
+      <p class="market">Market demand (orders a day, both brands, before the brand split) <strong data-testid="market-demand-total">-</strong></p>
+      <button class="plan" type="button" data-testid="plan-button">Plan</button>
+      <div class="elapsed" data-testid="elapsed"></div>
+      <div class="error" data-testid="error"></div>
+      <h3 class="metrics-heading" data-testid="metrics-heading">Operator's plan</h3>
+      <dl class="metrics">
+        <div class="metric hero"><dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd></div>
+        <div class="metric"><dt>Households covered</dt><dd data-testid="metric-households">-</dd></div>
+        <div class="metric"><dt>Lost to capacity</dt><dd data-testid="metric-lost">-</dd></div>
+        <div class="metric"><dt>Unreached</dt><dd data-testid="metric-unreached">-</dd></div>
+        <div class="metric"><dt>Slow-traffic coverage</dt><dd data-testid="metric-slow">-</dd></div>
+        <div class="metric wide"><dt>Gap to the bound</dt><dd data-testid="metric-gap">-</dd></div>
+        <div class="metric"><dt>Greedy baseline's demand covered</dt><dd data-testid="metric-greedy">-</dd></div>
+        <div class="metric"><dt>Gain over the greedy baseline</dt><dd data-testid="metric-gain">-</dd></div>
+      </dl>
+      <p class="plan-note" data-testid="plan-note"></p>
+      <table class="new-stores" data-testid="new-stores"></table>
+      <div class="map-key">
+        <div class="demand-legend">Market demand per hex
+          <span class="ramp"></span>
+          <small class="ramp-ends"><span>none</span><span>busiest hex</span></small>
+        </div>
+        <ul class="store-key">
+          <li><span class="swatch store-operator-colour"></span>Operator</li>
+          <li><span class="swatch store-competitor-colour"></span>Competitor</li>
+          <li><span class="swatch store-new-colour"></span>New store</li>
+        </ul>
+      </div>
+    </div>
+  </template>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
