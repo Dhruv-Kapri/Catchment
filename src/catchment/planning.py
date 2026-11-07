@@ -49,44 +49,67 @@ def load_inputs(res: int = 9, x_pct: float = 30, data_dir: Path = DATA) -> Input
     return Inputs.from_frames(pd.read_parquet(data_dir / demand_name(res)), pd.read_parquet(data_dir / candidates), pd.read_parquet(data_dir / table))
 
 
-LEVER_RANGES: dict[str, tuple[float, float]] = {
-    "n_new": assumptions.N_RANGE, "promise": assumptions.PROMISE_RANGE, "multiplier": assumptions.MULTIPLIER_RANGE,
-    "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
-LEVER_STEPS: dict[str, float] = {
-    "n_new": assumptions.N_STEP, "promise": assumptions.PROMISE_STEP, "multiplier": assumptions.MULTIPLIER_STEP,
-    "capacity": assumptions.CAPACITY_STEP, "capture": assumptions.CAPTURE_STEP, "competitor_density": assumptions.COMPETITOR_DENSITY_STEP}
-WHOLE_LEVERS: frozenset[str] = frozenset({"n_new", "promise"})   # levers that take whole numbers
+@dataclass(frozen=True)
+class Lever:
+    """One lever: its range, step, default, whether it takes whole numbers, and the label the page shows."""
+    low: float
+    high: float
+    step: float
+    default: int | float
+    whole: bool
+    label: str
+
+    def values(self) -> list[int | float]:
+        """Every step of the range, low to high inclusive."""
+        steps: list[int | float] = [round(self.low + k * self.step, 10) for k in range(round((self.high - self.low) / self.step) + 1)]
+        return [int(v) for v in steps] if self.whole else steps
 
 
-def lever_value(lever: str, value: object, whole: bool) -> int | float:
+LEVERS: dict[str, Lever] = {
+    "n_new": Lever(*assumptions.N_RANGE, assumptions.N_STEP, assumptions.N_AREA, True, "New stores"),
+    "promise": Lever(*assumptions.PROMISE_RANGE, assumptions.PROMISE_STEP, assumptions.PROMISE, True, "Promise (min)"),
+    "multiplier": Lever(*assumptions.MULTIPLIER_RANGE, assumptions.MULTIPLIER_STEP, assumptions.MULTIPLIER, False, "Congestion multiplier"),
+    "capacity": Lever(*assumptions.CAPACITY_RANGE, assumptions.CAPACITY_STEP, 1.0, False, "Capacity (x)"),
+    "capture": Lever(*assumptions.CAPTURE_RANGE, assumptions.CAPTURE_STEP, 1.0, False, "Capture share (x)"),
+    "competitor_density": Lever(*assumptions.COMPETITOR_DENSITY_RANGE, assumptions.COMPETITOR_DENSITY_STEP, 1.0, False, "Competitor density (x)"),
+}
+
+
+def lever_value(lever: str, value: object) -> int | float:
     """A lever's value as a plain int (whole levers) or float, refusing bools and non-numbers; -0.0 becomes 0.0, so it prints as 0.0."""
-    if not isinstance(value, numbers.Integral if whole else numbers.Real) or isinstance(value, bool | np.bool_):
-        low, high = LEVER_RANGES[lever]
-        raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'} (lever range {low:g}-{high:g})")
-    return int(value) if whole else float(value) + 0.0   # type: ignore[call-overload]
+    spec = LEVERS[lever]
+    if not isinstance(value, numbers.Integral if spec.whole else numbers.Real) or isinstance(value, bool | np.bool_):
+        raise TypeError(f"{lever} {value!r} must be a {'whole number' if spec.whole else 'number'} (lever range {spec.low:g}-{spec.high:g})")
+    return int(value) if spec.whole else float(value) + 0.0   # type: ignore[call-overload]
 
 
 @dataclass(frozen=True)
 class Scenario:
     """One set of lever values, plus the network seed."""
-    n_new: int = assumptions.N_AREA
-    promise: int = assumptions.PROMISE
-    multiplier: float = assumptions.MULTIPLIER
-    capacity: float = 1.0           # x the default capacity
-    capture: float = 1.0            # x the default capture share
-    competitor_density: float = 1.0
+    n_new: int = int(LEVERS["n_new"].default)
+    promise: int = int(LEVERS["promise"].default)
+    multiplier: float = LEVERS["multiplier"].default
+    capacity: float = LEVERS["capacity"].default             # x the default capacity
+    capture: float = LEVERS["capture"].default               # x the default capture share
+    competitor_density: float = LEVERS["competitor_density"].default
     seed: int = assumptions.SEED
 
     def __post_init__(self) -> None:
-        for lever in LEVER_RANGES:
-            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in WHOLE_LEVERS))
-        for lever, (low, high) in LEVER_RANGES.items():
+        for lever in LEVERS:
+            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever)))
+        for lever, spec in LEVERS.items():
             value = getattr(self, lever)
-            if not low <= value <= high:
-                raise ValueError(f"{lever} {value:g} is outside the lever range {low:g}-{high:g}")
-            step = LEVER_STEPS[lever]
-            if value != round(round(value / step) * step, 10):   # float-safe: 1.4 is a tenth step, 1.45 is not
-                raise ValueError(f"{lever} {value!r} is not in steps of {step:g} (lever range {low:g}-{high:g})")
+            if not spec.low <= value <= spec.high:
+                raise ValueError(f"{lever} {value:g} is outside the lever range {spec.low:g}-{spec.high:g}")
+            if value != round(round(value / spec.step) * spec.step, 10):   # float-safe: 1.4 is a tenth step, 1.45 is not
+                raise ValueError(f"{lever} {value!r} is not in steps of {spec.step:g} (lever range {spec.low:g}-{spec.high:g})")
+
+    def moved(self) -> str | None:
+        """The one lever whose value differs from its default, or None for the default scenario; more than one is an error."""
+        off_default: list[str] = [lever for lever, spec in LEVERS.items() if getattr(self, lever) != spec.default]
+        if len(off_default) > 1:
+            raise ValueError(f"{', '.join(off_default)} all differ from their defaults; moved() names one lever")
+        return off_default[0] if off_default else None
 
 
 @dataclass(frozen=True)

@@ -732,3 +732,16 @@ def test_service_areas_hold_when_the_model_is_over_the_size_cap(monkeypatch: pyt
     assert p.service_areas == expected
     assert sum(hexes[h] for h in chain.from_iterable(p.service_areas.values())) == pytest.approx(p.demand_covered)
     assert all(set(area) <= set(p.catchments[store]) for store, area in p.service_areas.items())
+
+
+def test_moved_names_the_one_lever_off_its_default() -> None:
+    assert Scenario().moved() is None
+    assert Scenario(capacity=1.5).moved() == "capacity"
+    with pytest.raises(ValueError, match="n_new, capacity"):
+        Scenario(n_new=12, capacity=1.5).moved()
+
+
+def test_every_scenario_field_but_the_seed_is_a_lever_in_order_with_its_default() -> None:
+    """A lever added to Scenario but not to LEVERS would go unvalidated and unpublished; this catches the drift."""
+    fields: list[dataclasses.Field[object]] = [f for f in dataclasses.fields(Scenario) if f.name != "seed"]
+    assert [(f.name, f.default) for f in fields] == [(name, lever.default) for name, lever in planning.LEVERS.items()]
