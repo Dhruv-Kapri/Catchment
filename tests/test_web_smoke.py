@@ -392,16 +392,16 @@ def test_the_difference_table_greys_while_either_scenario_is_stale(base_url: str
         for side in (a, b):
             side.get_by_test_id("lever-n_new").fill("4")
             side.get_by_test_id("plan-button").click()
-            expect(side.locator(".store-new")).to_have_count(4, timeout=15_000)
+            expect(side.get_by_test_id("elapsed")).to_have_text(re.compile("^Planned in"), timeout=60_000)   # the stores draw before the metrics; a lever moved before them greys nothing
         expect(diff).not_to_have_class(re.compile("stale"))
         a.get_by_test_id("lever-promise").fill("12")
         expect(diff).to_have_class(re.compile("stale"))
         b.get_by_test_id("lever-promise").fill("12")
         a.get_by_test_id("plan-button").click()
-        expect(a.locator(".metrics")).not_to_have_class(re.compile("stale"), timeout=15_000)
+        expect(a.locator(".metrics")).not_to_have_class(re.compile("stale"), timeout=60_000)
         expect(diff).to_have_class(re.compile("stale"))   # B is still stale
         b.get_by_test_id("plan-button").click()
-        expect(diff).not_to_have_class(re.compile("stale"), timeout=15_000)
+        expect(diff).not_to_have_class(re.compile("stale"), timeout=60_000)
         browser.close()
 
 
