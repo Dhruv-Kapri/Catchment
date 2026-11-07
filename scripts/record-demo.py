@@ -89,7 +89,7 @@ def drive(page: Page, url: str, levers: dict[str, dict[str, float]], out: Path) 
     pause(page, 9)
     drawer.evaluate("(el) => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })")   # down to the synthetic network's note
     pause(page, 9)
-    page.get_by_test_id("assumptions-button").click()   # closes it
+    page.keyboard.press("Escape")   # closes it (the drawer covers the header button)
     expect(drawer).to_be_hidden()
     pause(page, 8)   # both scenarios, side by side, once more
     return loaded

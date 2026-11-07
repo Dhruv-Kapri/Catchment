@@ -39,7 +39,7 @@ def run_steps(page: Page, url: str, errors: list[str], failed: list[str]) -> lis
         state["demand_a"] = a.get_by_test_id("metric-demand").inner_text()
         gap: str = a.get_by_test_id("metric-gap").inner_text()
         assert gap not in ("", "-"), f"A's gap is not filled (shows {gap!r})"
-        expect(a.get_by_test_id("new-stores").locator("li")).to_have_count(default, timeout=TIMEOUT_MS)
+        expect(a.get_by_test_id("new-stores").locator("tbody tr")).to_have_count(default, timeout=TIMEOUT_MS)
 
     def plan_b() -> None:
         n_new: int = int(state["default"]) + 5
@@ -50,7 +50,7 @@ def run_steps(page: Page, url: str, errors: list[str], failed: list[str]) -> lis
         expect(b.get_by_test_id("metric-demand")).to_have_text(NUMBER, timeout=TIMEOUT_MS)
         demand_b: str = b.get_by_test_id("metric-demand").inner_text()
         assert demand_b != state["demand_a"], f"B's demand ({demand_b}) equals A's with {n_new} new stores against {state['default']}"
-        expect(b.get_by_test_id("new-stores").locator("li")).to_have_count(n_new, timeout=TIMEOUT_MS)
+        expect(b.get_by_test_id("new-stores").locator("tbody tr")).to_have_count(n_new, timeout=TIMEOUT_MS)
         rows: int = page.get_by_test_id("diff").locator("tr[data-testid^=diff-row-]").count()
         assert rows > 0, "the B - A table has no rows"
 

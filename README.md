@@ -12,7 +12,7 @@ and each lever moved on its own. Run `uv run catchment-serve` locally for any co
 
 [![Scenario A (10 new stores) and B (15 stores, 12-minute promise) on linked maps, with the B − A table](docs/media/screenshot.png)](docs/media/demo.mp4)
 
-**[Watch the 90 s recording](docs/media/demo.mp4)** of the main flow against the live service: the demand layer and the existing
+**[Watch the 80 s recording](docs/media/demo.mp4)** of the main flow against the live service: the demand layer and the existing
 stores, a plan, a store's catchment, a second scenario, the B − A table and the assumptions.
 
 ## Getting started
