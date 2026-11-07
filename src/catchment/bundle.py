@@ -65,6 +65,8 @@ WORLDPOP_CITATION: str = (
     "Brinkhoff T., Tatem A., Sorichetta A.. 2025 Constrained estimates of 2015-2030 total number of people per grid square at a resolution "
     "of 3 arc (approximately 100m at the equator) R2025A version v1. Global Demographic Data Project - Funded by The Bill and Melinda Gates "
     "Foundation (INV-045237). WorldPop - School of Geography and Environmental Science, University of Southampton. DOI:10.5258/SOTON/WP00839")
+SOURCE_META: str = '<meta name="catchment-source" content="service">'   # in web/index.html: the page's data source, read by api.js
+STATIC_SOURCE_META: str = '<meta name="catchment-source" content="static">'
 OSRM_SH: Path = Path(__file__).resolve().parents[2] / "osrm" / "osrm.sh"
 
 
@@ -72,6 +74,14 @@ def osrm_image() -> str:
     """The OSRM image, read from osrm.sh so the pin lives in one place."""
     line: str = next(line for line in OSRM_SH.read_text().splitlines() if line.startswith("IMAGE="))
     return line.split('"')[1]
+
+
+def mark_static(page: Path) -> None:
+    """Rewrite the page's data-source meta from the live service to the static bundle; a template without it must not ship."""
+    html: str = page.read_text()
+    if SOURCE_META not in html:
+        raise ValueError(f"{page} lacks {SOURCE_META}: the static site would not know it is static")
+    page.write_text(html.replace(SOURCE_META, STATIC_SOURCE_META))
 
 
 def metadata(provenance: dict[str, Any], solve: dict[str, Any]) -> dict[str, Any]:
@@ -114,6 +124,7 @@ def build_bundle(app: FastAPI, out: Path, provenance: dict[str, Any]) -> dict[st
     write_json(bundle / "metadata.json", metadata(provenance, solve))
     (bundle / "ODBL-NOTICE.txt").write_text(ODBL_NOTICE)
     shutil.copytree(WEB, out, dirs_exist_ok=True)
+    mark_static(out / "index.html")
     return solve
 
 

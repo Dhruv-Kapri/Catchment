@@ -1,10 +1,13 @@
 // The data source: the only module that knows URLs (the service or the static bundle, and the basemap style the map draws on).
 export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
-// The public demo has no service: plans solved ahead of time sit in bundle/. On the live service this URL is a 404.
-const indexResponse = await fetch("bundle/index.json").catch(() => null);
-export const STATIC = Boolean(indexResponse?.ok);
-const bundleIndex = STATIC ? await indexResponse.json() : [];
+// Where the page runs is declared by the page itself: the live service serves the template (content="service"), the bundle build rewrites it (content="static").
+const SOURCE = document.querySelector('meta[name="catchment-source"]')?.content;
+if (SOURCE !== "static" && SOURCE !== "service") throw new Error('index.html must declare <meta name="catchment-source" content="static|service">');
+export const STATIC = SOURCE === "static";
+
+// The public demo has no service: plans solved ahead of time sit in bundle/. Its index is fetched on the first plan and kept.
+let bundleIndex = null;
 
 async function getJson(url) {
   const response = await fetch(url);
@@ -14,7 +17,8 @@ async function getJson(url) {
 
 export async function planScenario(levers) {
   if (STATIC) {
-    const entry = bundleIndex.find((e) => Object.keys(levers).every((name) => e.levers[name] === levers[name]));
+    bundleIndex ??= getJson("bundle/index.json").catch((e) => { bundleIndex = null; throw e; });   // a failed fetch is tried again on the next plan, never answered by the service
+    const entry = (await bundleIndex).find((e) => Object.keys(levers).every((name) => e.levers[name] === levers[name]));
     if (!entry) throw new Error("The static demo only has plans with one lever moved from its default.");
     return getJson(`bundle/${entry.plan}`);
   }
