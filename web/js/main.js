@@ -23,7 +23,17 @@ const showError = (e) => scenarios.forEach((s) => s.showError(e.message));   // 
 
 renderCredits(document.getElementById("credits"));
 const drawer = document.getElementById("assumptions-drawer");
-document.getElementById("assumptions-button").addEventListener("click", () => { drawer.hidden = !drawer.hidden; });
+const toggleDrawer = (open = drawer.hidden) => { drawer.hidden = !open; };
+document.getElementById("assumptions-button").addEventListener("click", () => toggleDrawer());
+drawer.querySelector(".drawer-close").addEventListener("click", () => toggleDrawer(false));
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") toggleDrawer(false); });
+const compare = document.getElementById("compare");
+const compareToggle = document.getElementById("compare-toggle");
+compareToggle.addEventListener("click", () => {   // collapsing hides the table, not the Copy A to B button
+  const collapsed = compare.classList.toggle("collapsed");
+  compareToggle.textContent = collapsed ? "Show" : "Hide";
+  compareToggle.setAttribute("aria-expanded", String(!collapsed));
+});
 document.getElementById("static-notice").hidden = !STATIC;
 document.getElementById("copy-a-to-b").addEventListener("click", () => b.setLevers(a.readLevers()));   // B starts as a copy of A: both open on the defaults
 

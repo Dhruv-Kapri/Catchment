@@ -1,5 +1,5 @@
 // The data source: the only module that knows URLs (the service or the static bundle, and the basemap style the map draws on).
-export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
 // Where the page runs is declared by the page itself: the live service serves the template (content="service"), the bundle build rewrites it (content="static").
 const SOURCE = document.querySelector('meta[name="catchment-source"]')?.content;

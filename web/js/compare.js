@@ -44,6 +44,7 @@ export function showDiff(table, a, b) {
     const tr = document.createElement("tr");
     tr.dataset.testid = `diff-row-${row.key}`;
     for (const text of [row.label, row.a, row.b, row.delta]) tr.append(Object.assign(document.createElement("td"), { textContent: text }));
+    tr.lastElementChild.className = { "+": "up", [MINUS]: "down" }[row.delta[0]] ?? "";   // tints the difference by its sign
     return tr;
   });
   table.replaceChildren(head, ...rows);

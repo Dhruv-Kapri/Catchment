@@ -2,11 +2,11 @@
 import { cellToLatLng } from "h3-js";
 import { BASEMAP_STYLE, CREDITS } from "./api.js";
 
-const CENTRE = [77.10, 28.48];   // lng, lat: Gurugram / South Delhi
+const BOUNDS = [[76.90, 28.36], [77.27, 28.60]];   // lng/lat corners of where the stores are (Gurugram / South Delhi); the map fits to it, whatever its width
 
 export function createMap(container) {
   // The plans are routed on OpenStreetMap roads (ODbL, ADR 0003), so the corner credits OSM's contributors (in CREDITS) as well as the basemap.
-  const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, center: CENTRE, zoom: 11,
+  const map = new maplibregl.Map({ container, style: BASEMAP_STYLE, bounds: BOUNDS, fitBoundsOptions: { padding: 6 },
     attributionControl: { customAttribution: CREDITS.map(({ text }) => text) } });
   map.addControl(new maplibregl.NavigationControl());
   // ready resolves once the style has loaded, and stays resolved: isStyleLoaded() goes false again while tiles load, after "load" has fired.

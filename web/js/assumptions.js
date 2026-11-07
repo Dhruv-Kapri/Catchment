@@ -38,7 +38,7 @@ export function renderCredits(footer) {
 export async function renderAssumptions(drawer) {
   const { table, spot_check: spot, network } = await fetchAssumptions();
   const { Operator, Competitor } = network.stores;
-  drawer.replaceChildren(
+  drawer.querySelector(".drawer-body").replaceChildren(
     element("h2", "Assumptions"),
     element("p", `The existing network is synthetic, not real stores: placed by seed ${network.seed} (fixed, not a lever). At the default competitor density it has ${Operator} Operator and ${Competitor} Competitor stores.`, "network-seed"),
     renderTable(table),

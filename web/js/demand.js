@@ -4,11 +4,11 @@ import { cellToBoundary } from "h3-js";
 import { integer } from "./format.js";
 
 const LAYER = "market-demand";   // the id of both the source and the layer
-const RAMP = ["#ffffcc", "#fd8d3c", "#800026"];   // low to high, as the legend in index.html; the top is the busiest hex at the highest capture share
+const RAMP = ["#f4e4c8", "#dd9a63", "#a3431f"];   // sand to terracotta, low to high, as the legend in css/style.css; the top is the busiest hex at the highest capture share
 
 function fillColour(capture, top) {
   return ["interpolate", ["linear"], ["*", ["get", "demand"], capture],
-    0, "rgba(255, 255, 204, 0)", top / 2, RAMP[1], top, RAMP[2]];
+    0, "rgba(244, 228, 200, 0)", top / 2, RAMP[1], top, RAMP[2]];
 }
 
 // Draws the layer once the basemap style has loaded (view.ready); returns setCapture(capture) to recolour it and update the total.
