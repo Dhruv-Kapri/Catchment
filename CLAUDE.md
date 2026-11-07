@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Stages 0, 0.5, 1 and 2 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: the `04-plan` benchmark, CP-SAT from greedy
-served); next is stage 3 (compare and ship: the
-FastAPI service and the web map). Results and "done when" notes are in
+Stages 0, 0.5, 1, 2 and 3 are done (stage 1 on 2026-10-31, stage 2 on 2026-11-03: the `04-plan` benchmark, CP-SAT from greedy
+served; stage 3 on 2026-11-07: the FastAPI service, the web map and the static demo at https://dhruv-kapri.github.io/Catchment/).
+The first cut is due 25 Nov 2026; what comes after is under "Later" in the roadmap. Results and "done when" notes are in
 `docs/roadmap.md`, the decisions behind them in `docs/decisions.md`. The code is `src/catchment/` (`area.py`,
 `fetch.py`, `load.py`, `assumptions.py`, `demand.py`, `reach.py`, `build.py`, `spotcheck.py`, `explore.py`, `planning.py`, `serialize.py`, `service.py`, `bundle.py`); `planning.plan()` is the stage 2 entry point, and `explore.py` keeps the
 notebooks' placeholder plan model. The repo also holds the
@@ -30,6 +30,9 @@ uv run pytest -m "not browser"           # skip the Playwright smoke test (headl
 uv run catchment-serve [--port 8000]     # the live service: loads the inputs once, POST /plan, GET /levers (ranges, steps, defaults, labels), and the web map at / (also --res, --x-pct, --host)
 uv run catchment-bundle [--out outputs/site] [--res 9] [--x-pct 30]   # the static demo site (ADR 0003): solves the 61-plan sweep at 8 workers, writes the plans, read-only data, ODbL notice and metadata, and copies web/ (run on an idle machine; the load is recorded)
 scripts/deploy-pages.sh                  # builds the site with catchment-bundle, then force-pushes it as an orphan gh-pages branch to origin
+uv run python scripts/time-service.py [--url http://127.0.0.1:8000]   # POST /plan over HTTP for the 04-plan grid and the 64 lever corners against a running catchment-serve; CSV with each request's seconds and load in outputs/; exits 1 if any takes over 10 s
+uv run python scripts/check-public.py [--url https://dhruv-kapri.github.io/Catchment/]   # the public static site end to end in a fresh headless Chromium (notice, plan A, plan B with N + 5, B − A table, drawer, no failed request); PASS/FAIL per step to outputs/check-public.log; exits 1 on any FAIL
+uv run python scripts/record-demo.py [--url http://127.0.0.1:8000]    # the ~90 s recording and screenshot of the main flow against a running catchment-serve (Playwright, ffmpeg); writes outputs/demo/, copy to docs/media/ by hand
 ```
 
 ## What gets built
@@ -51,7 +54,8 @@ web map with levers). Python for the pipeline and service; the web map is JavaSc
   `osmium` before running OSRM; keep the travel-time table sparse.
 - **Never commit data.** `data/`, `outputs/`, `.osm.pbf`, OSRM graphs, rasters and parquet are
   gitignored; datasets keep their own licences. The one exception is `docs/spot-check.csv`, spot-check
-  map-app times ([ADR 0002](docs/adr/0002-spot-check-times-in-repo.md)).
+  map-app times ([ADR 0002](docs/adr/0002-spot-check-times-in-repo.md)). The README's recording and screenshot in `docs/media/` are
+  product media, not data.
 - **No scraping of operator apps and no stored Google Places content.** Existing stores (the operator's and
   competitors') come only from the synthetic network; record the source and date of every reported count it uses.
 - **Demand is a model, not a forecast.** Every factor stays visible as a lever or labelled assumption;
