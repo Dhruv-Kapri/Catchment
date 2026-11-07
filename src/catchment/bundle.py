@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from catchment import assumptions
 from catchment.fetch import DATA
-from catchment.planning import LEVER_RANGES, LEVER_STEPS, WHOLE_LEVERS, Scenario, load_inputs
+from catchment.planning import LEVERS, Scenario, load_inputs
 from catchment.service import WEB, create_app
 
 READ_ONLY: tuple[str, ...] = ("demand", "network", "levers", "assumptions")   # the read-only data the page reads
@@ -24,22 +24,18 @@ def sweep() -> list[Scenario]:
     """The default scenario, then each lever at every step of its range with the others at the default."""
     default = Scenario()
     scenarios: list[Scenario] = [default]
-    for lever, (low, high) in LEVER_RANGES.items():
-        step = LEVER_STEPS[lever]
-        for k in range(round((high - low) / step) + 1):
-            value = round(low + k * step, 10)
-            value = int(value) if lever in WHOLE_LEVERS else value
-            if value != getattr(default, lever):
-                scenarios.append(Scenario(**{lever: value}))
+    for name, lever in LEVERS.items():
+        for value in lever.values():
+            if value != getattr(default, name):
+                scenarios.append(Scenario(**{name: value}))
     return scenarios
 
 
 def plan_file(scenario: Scenario) -> str:
     """Where a scenario's plan lives under bundle/: default.json, or <lever>-<value>.json for the one lever moved."""
-    for lever in LEVER_RANGES:
-        if getattr(scenario, lever) != getattr(Scenario(), lever):
-            return f"plans/{lever}-{getattr(scenario, lever):g}.json"
-    return "plans/default.json"
+    if (lever := scenario.moved()) is None:
+        return "plans/default.json"
+    return f"plans/{lever}-{getattr(scenario, lever):g}.json"
 
 
 def write_json(path: Path, body: object) -> None:
@@ -107,7 +103,7 @@ def build_bundle(app: FastAPI, out: Path, provenance: dict[str, Any]) -> dict[st
     load_before: tuple[float, float, float] = os.getloadavg()
     started = time.perf_counter()
     for scenario in sweep():
-        levers: dict[str, float] = {lever: getattr(scenario, lever) for lever in LEVER_RANGES}
+        levers: dict[str, float] = {lever: getattr(scenario, lever) for lever in LEVERS}
         response = client.post("/plan", json=levers)
         response.raise_for_status()
         file = plan_file(scenario)

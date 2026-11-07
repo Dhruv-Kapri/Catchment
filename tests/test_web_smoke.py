@@ -374,8 +374,8 @@ def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str)
         b.get_by_test_id("lever-n_new").fill("5")
         b.get_by_test_id("plan-button").click()
         expect(b.locator(".store-new")).to_have_count(5, timeout=15_000)
-        for key in DIFF_KEYS:
-            expect(page.get_by_test_id(f"diff-row-{key}")).to_be_visible()
+        for key in DIFF_KEYS:   # the table waits for both maps' basemap load (view.ready), which can trail the markers by seconds
+            expect(page.get_by_test_id(f"diff-row-{key}")).to_be_visible(timeout=15_000)
         expect(page.get_by_test_id("diff-row-new_stores")).to_contain_text("+1")
         expect(page.get_by_test_id("diff-row-demand_covered")).to_contain_text(re.compile(r"[+−]\d"))
         browser.close()

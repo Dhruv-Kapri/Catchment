@@ -1,6 +1,5 @@
 """The live service: POST /plan and the web map."""
 import argparse
-import dataclasses
 import threading
 from collections import OrderedDict
 from pathlib import Path
@@ -10,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
-from catchment.planning import LEVER_RANGES, LEVER_STEPS, Inputs, Scenario, load_inputs, plan
+from catchment.planning import LEVERS, Inputs, Scenario, load_inputs, plan
 from catchment.serialize import assumptions_json, demand_json, network_json, plan_json
 
 CACHE_SIZE: int = 64   # plans remembered per service
@@ -23,12 +22,11 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     planning = threading.Lock()                               # one plan at a time; sync endpoints run in a threadpool
     cache_lock = threading.Lock()                             # held only to read or write the cache, so a cached plan never waits for a solve
     cache: OrderedDict[Scenario, dict[str, Any]] = OrderedDict()   # the most recent CACHE_SIZE plans, by scenario
-    defaults: dict[str, Any] = {f.name: f.default for f in dataclasses.fields(Scenario)}
 
     @app.get("/levers")
-    def get_levers() -> dict[str, dict[str, float]]:
-        """Each lever's range, step and default."""
-        return {lever: {"min": low, "max": high, "step": LEVER_STEPS[lever], "default": defaults[lever]} for lever, (low, high) in LEVER_RANGES.items()}
+    def get_levers() -> dict[str, dict[str, float | str]]:
+        """Each lever's range, step, default and label."""
+        return {name: {"min": lever.low, "max": lever.high, "step": lever.step, "default": lever.default, "label": lever.label} for name, lever in LEVERS.items()}
 
     assumed: dict[str, Any] = assumptions_json(inputs)
 
@@ -36,7 +34,7 @@ def create_app(inputs: Inputs, web_dir: Path = WEB) -> FastAPI:
     def post_plan(levers: dict[str, Any]) -> dict[str, Any]:
         """Plan the scenario the six levers describe; an omitted lever takes its default. The seed is not a lever."""
         for key in levers:
-            if key not in LEVER_RANGES:
+            if key not in LEVERS:
                 raise HTTPException(status_code=422, detail=f"{key} is not a lever")
         try:
             scenario = Scenario(**levers)

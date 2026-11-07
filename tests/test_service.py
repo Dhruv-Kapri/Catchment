@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from catchment import assumptions
-from catchment.planning import LEVER_RANGES, Inputs, Method, Plan, Scenario, plan
+from catchment.planning import LEVERS, Inputs, Method, Plan, Scenario, plan
 from catchment.serialize import plan_json
 from catchment.service import create_app
 from service_inputs import service_inputs
@@ -84,18 +84,18 @@ def test_a_bad_scenario_is_a_422_that_names_the_lever_and_its_range(client: Test
     assert response.json()["detail"] == message
 
 
-def test_the_levers_endpoint_publishes_the_ranges_steps_and_defaults(client: TestClient) -> None:
+def test_the_levers_endpoint_publishes_the_ranges_steps_defaults_and_labels(client: TestClient) -> None:
     response = client.get("/levers")
     assert response.status_code == 200
     assert response.json() == {
-        "n_new": {"min": 1, "max": 20, "step": 1, "default": 10},
-        "promise": {"min": 8, "max": 16, "step": 1, "default": 10},
-        "multiplier": {"min": 1.0, "max": 2.5, "step": 0.1, "default": 1.8},
-        "capacity": {"min": 0.5, "max": 2.0, "step": 0.25, "default": 1.0},
-        "capture": {"min": 0.5, "max": 1.5, "step": 0.25, "default": 1.0},
-        "competitor_density": {"min": 0.0, "max": 2.0, "step": 0.25, "default": 1.0},
+        "n_new": {"min": 1, "max": 20, "step": 1, "default": 10, "label": "New stores"},
+        "promise": {"min": 8, "max": 16, "step": 1, "default": 10, "label": "Promise (min)"},
+        "multiplier": {"min": 1.0, "max": 2.5, "step": 0.1, "default": 1.8, "label": "Congestion multiplier"},
+        "capacity": {"min": 0.5, "max": 2.0, "step": 0.25, "default": 1.0, "label": "Capacity (x)"},
+        "capture": {"min": 0.5, "max": 1.5, "step": 0.25, "default": 1.0, "label": "Capture share (x)"},
+        "competitor_density": {"min": 0.0, "max": 2.0, "step": 0.25, "default": 1.0, "label": "Competitor density (x)"},
     }
-    assert list(response.json()) == list(LEVER_RANGES)
+    assert list(response.json()) == list(LEVERS)
 
 
 @contextmanager
