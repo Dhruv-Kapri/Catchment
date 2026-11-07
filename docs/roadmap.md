@@ -123,7 +123,7 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
 - **If it overruns, cut in this order:** the catchment outline; the sweep coarsened to 04-plan's 31 scenarios; two maps
   replaced by one map with an A/B toggle.
 - **Done 2026-11-07:** nothing cut. The service runs from `uv run catchment-serve`; `scripts/time-service.py` sent the 04-plan grid
-  (seed rows dropped: the seed is not a lever) and all 64 corners, 91 scenarios, to it over HTTP. Every one returned within 10 s, twice:
+  (seed rows dropped: the seed is not a lever) and all 64 corners, 91 scenarios, to it over HTTP. Every one returned within 10 s in each of four runs. The first two:
   slowest 9.48 s (multiplier 1.0, FEASIBLE, 17.0% gap) at load 12.5, median load 15.9, in the first run; slowest 8.38 s (N 20, promise 16,
   multiplier 2.5, capacity 0.5×, capture 1.5×, density 0) with a median load of 12.1 in the second (8 CPUs; CP-SAT's own 8 workers are about 8
   of it). Other sessions ran tests alongside both. A third run started on a quiet machine (load 2.4, no other test runs): all 91 within 10 s,
@@ -138,8 +138,8 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   headless Chromium context (2026-11-07, 14:44 IST) it plans the default, plans B with a lever moved, fills the B − A table and opens the drawer, with no failed request; `scripts/check-public.py` repeats the check (5 of 5 steps passed,
   2026-11-07 10:12 UTC, Chromium 156).
   The README shows the screenshot, the link and the 90 s recording (`docs/media/`, made with `scripts/record-demo.py` against the live
-  service). The B − A table's stale state and bound source (#53) were still open when the site was published, so they need a re-publish
-  (`scripts/deploy-pages.sh`) once they land.
+  service). The B − A table's stale state and bound source (#53), the shared number formatter and server-side plan note (#54), the one lever spec (#55)
+  and the page's declared data source (#56) landed after the site was published, so it needs a re-publish (`scripts/deploy-pages.sh`).
 
 ## Later (after 25 Nov)
 

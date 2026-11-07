@@ -12,10 +12,10 @@ from typing import Any
 
 import httpx
 
-from catchment.planning import LEVER_RANGES, LEVER_STEPS, WHOLE_LEVERS
+from catchment.planning import LEVERS as SPECS
 
 BAR_S: float = 10.0
-LEVERS: list[str] = list(LEVER_RANGES)
+LEVERS: list[str] = list(SPECS)
 DEFAULTS: dict[str, float] = {}   # empty: the service fills in each lever's default
 SWEEPS: dict[str, list[float]] = {   # copied from notebooks/04-plan.ipynb, cell 4
     "n_new": [1, 5, 15, 20],
@@ -30,11 +30,7 @@ FIELDS: list[str] = [*LEVERS, "http_status", "status", "gap", "bound_source", "p
 
 def random_scenario(rng: random.Random) -> dict[str, float]:
     """Every lever at a uniformly drawn step of its range."""
-    scenario: dict[str, float] = {}
-    for lever, (low, high) in LEVER_RANGES.items():
-        value: float = round(low + rng.randint(0, round((high - low) / LEVER_STEPS[lever])) * LEVER_STEPS[lever], 10)
-        scenario[lever] = int(value) if lever in WHOLE_LEVERS else value
-    return scenario
+    return {lever: rng.choice(spec.values()) for lever, spec in SPECS.items()}
 
 
 def scenarios(n_random: int = 0, seed: int = 0) -> list[dict[str, float]]:
@@ -43,8 +39,8 @@ def scenarios(n_random: int = 0, seed: int = 0) -> list[dict[str, float]]:
     for lever, points in SWEEPS.items():
         found += [{lever: value} for value in points]
     found += [{"n_new": 20, "capacity": 0.5}, {"capture": 1.5, "competitor_density": 0.0}]
-    for ends in itertools.product(*(LEVER_RANGES[lever] for lever in LEVERS)):
-        found.append({lever: int(v) if lever in WHOLE_LEVERS else float(v) for lever, v in zip(LEVERS, ends)})
+    for ends in itertools.product(*((SPECS[lever].low, SPECS[lever].high) for lever in LEVERS)):
+        found.append({lever: int(v) if SPECS[lever].whole else float(v) for lever, v in zip(LEVERS, ends)})
     rng = random.Random(seed)
     found += [random_scenario(rng) for _ in range(n_random)]
     unique: dict[frozenset[tuple[str, float]], dict[str, float]] = {}
