@@ -8,6 +8,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -52,9 +53,9 @@ def scenarios(n_random: int = 0, seed: int = 0) -> list[dict[str, float]]:
     return list(unique.values())
 
 
-def time_one(client: httpx.Client, scenario: dict[str, float]) -> dict[str, object]:
+def time_one(client: httpx.Client, scenario: dict[str, float]) -> dict[str, Any]:
     """POST one scenario; the row has the load before, the wall-clock seconds and the plan's own status, gap, bound_source and seconds."""
-    row: dict[str, object] = {lever: scenario.get(lever, "") for lever in LEVERS}
+    row: dict[str, Any] = {lever: scenario.get(lever, "") for lever in LEVERS}
     row["load_before"] = round(os.getloadavg()[0], 2)
     start = time.perf_counter()
     try:
@@ -79,7 +80,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=0, help="the random scenarios' seed")
     args = parser.parse_args()
     todo = scenarios(args.random, args.seed)[: args.limit]
-    rows: list[dict[str, object]] = []
+    rows: list[dict[str, Any]] = []
     with httpx.Client(base_url=args.url, timeout=120.0) as client:
         for i, scenario in enumerate(todo, 1):
             row = time_one(client, scenario)
@@ -91,9 +92,9 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
     ok = [r for r in rows if r["http_status"] == 200]
-    fast = [r for r in ok if float(r["request_seconds"]) <= BAR_S]   # type: ignore[arg-type]
-    slowest = max(rows, key=lambda r: float(r["request_seconds"]))   # type: ignore[arg-type]
-    loads: list[float] = [float(r["load_before"]) for r in rows]   # type: ignore[arg-type]
+    fast = [r for r in ok if float(r["request_seconds"]) <= BAR_S]
+    slowest = max(rows, key=lambda r: float(r["request_seconds"]))
+    loads: list[float] = [float(r["load_before"]) for r in rows]
     print(f"{len(rows)} plans, {len(ok)} answered 200, {len(fast)} within {BAR_S:g} s")
     print(f"slowest {slowest['request_seconds']} s at {({k: slowest[k] for k in LEVERS})}, load {slowest['load_before']}")
     print(f"load before: median {statistics.median(loads):.1f}, max {max(loads):.1f}; written to {args.out}")
