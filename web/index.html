@@ -8,99 +8,75 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <script type="importmap">{ "imports": { "h3-js": "https://esm.sh/h3-js@4" } }</script>
-  <style>
-    html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; }
-    body { position: relative; display: flex; flex-direction: column; }
-    main { flex: 1; min-height: 0; display: flex; }
-    section { position: relative; flex: 1; min-width: 0; }
-    section + section { border-left: 2px solid #fff; }
-    .map { position: absolute; inset: 0; }
-    .panel { position: absolute; top: 10px; left: 10px; width: 264px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 1; box-sizing: border-box; max-height: calc(100% - 50px); overflow-y: auto; }   /* leaves room for the map attribution along the bottom */
-    .panel .title { margin: 0 0 6px; font-size: 16px; }
-    .panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
-    .panel input { width: 70px; }
-    .panel button { width: 100%; margin-top: 8px; padding: 6px; }
-    .metrics-heading { margin: 10px 0 0; font-size: 14px; }
-    .plan-note { color: #555; }
-    .new-stores { padding-left: 20px; }
-    .metrics { margin: 10px 0 0; }
-    .metrics dt { color: #555; }
-    .metrics dd { margin: 0 0 6px; font-weight: 600; font-size: 16px; }
-    .metrics.stale, #diff.stale { opacity: .4; color: #999; }
-    .elapsed { color: #555; margin-top: 6px; }
-    #static-notice { margin: 0; padding: 4px 10px; font-size: 12px; color: #555; background: #fff; border-bottom: 1px solid #ddd; }
-    .error { color: #b00020; margin-top: 6px; }
-    .demand-legend { margin: 10px 0 0; }
-    .ramp { display: block; height: 8px; margin-top: 4px; background: linear-gradient(to right, #ffffcc, #fd8d3c, #800026); }   /* demand.js RAMP */
-    .ramp-ends { display: flex; justify-content: space-between; color: #555; }
-    .store-key { list-style: none; margin: 8px 0 0; padding: 0; display: flex; gap: 10px; }
-    .store-key li { display: flex; align-items: center; gap: 4px; }
-    .swatch { width: 10px; height: 10px; border-radius: 50%; }
-    .panel [data-testid=spot-check-note] { margin: 2px 0 6px; font-size: 11px; color: #555; }
-    #compare { flex: none; display: flex; align-items: flex-start; gap: 16px; padding: 6px 10px; max-height: 35vh; overflow-y: auto; background: #fff; border-top: 1px solid #ddd; }
-    #copy-a-to-b { padding: 6px 10px; }
-    #diff { border-collapse: collapse; font-size: 12px; }
-    #diff th, #diff td { padding: 1px 10px; text-align: right; }
-    #diff th:first-child, #diff td:first-child { text-align: left; }
-    #assumptions-button { position: absolute; top: 10px; right: 50px; z-index: 1; padding: 6px 10px; }
-    #assumptions-drawer { position: absolute; top: 46px; right: 10px; bottom: 40px; width: 640px; max-width: calc(100% - 20px); overflow: auto; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, .3); z-index: 2; font-size: 12px; }
-    #assumptions-drawer h2 { margin: 0 0 6px; font-size: 16px; }
-    #assumptions-drawer table { border-collapse: collapse; width: 100%; }
-    #assumptions-drawer td:nth-child(3) { overflow-wrap: anywhere; }
-    #assumptions-drawer th, #assumptions-drawer td { border-bottom: 1px solid #ddd; padding: 3px 4px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
-    #assumptions-drawer td:nth-child(1) { min-width: 110px; }
-    #assumptions-drawer td:nth-child(4), #assumptions-drawer td:nth-child(5) { white-space: nowrap; }
-    #credits { flex: none; height: 24px; line-height: 24px; padding: 0 10px; font-size: 11px; background: #fff; border-top: 1px solid #ddd; }
-    .store { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0, 0, 0, .6); }
-    .store-new, .store-new-colour { background: #1b9e77; }
-    .store-operator, .store-operator-colour { background: #7570b3; }
-    .store-competitor, .store-competitor-colour { background: #d95f02; }
-    .store-selected { outline: 3px solid #111; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <header id="app-header">
+    <div class="brand">
+      <h1>Catchment</h1>
+      <p class="tagline">Plan the next N dark stores</p>
+    </div>
+    <nav class="header-actions">
+      <button id="assumptions-button" class="btn" type="button" data-testid="assumptions-button">Assumptions</button>
+      <a class="btn" href="https://github.com/Dhruv-Kapri/Catchment" target="_blank" rel="noopener">Source</a>
+    </nav>
+  </header>
   <p id="static-notice" data-testid="static-notice" hidden>Public demo: plans are solved ahead of time for the default scenario and for each lever moved on its own. Moving one lever resets the others to the default.</p>
   <main>
     <section data-testid="scenario-a"><div class="map" data-testid="map"></div></section>
     <section data-testid="scenario-b"><div class="map" data-testid="map"></div></section>
   </main>
   <div id="compare">
-    <button id="copy-a-to-b" type="button" data-testid="copy-a-to-b">Copy A &rarr; B</button>
-    <table id="diff" data-testid="diff"></table>
+    <div class="compare-head">
+      <h2>B &minus; A</h2>
+      <button id="copy-a-to-b" class="btn" type="button" data-testid="copy-a-to-b">Copy A &rarr; B</button>
+      <button id="compare-toggle" class="btn quiet" type="button" aria-expanded="true" aria-controls="compare-body">Hide</button>
+    </div>
+    <div id="compare-body">
+      <table id="diff" data-testid="diff"></table>
+      <p class="compare-hint">Plan both scenarios to compare them.</p>
+    </div>
   </div>
-  <button id="assumptions-button" type="button" data-testid="assumptions-button">Assumptions</button>
-  <aside id="assumptions-drawer" data-testid="assumptions-drawer" hidden></aside>
+  <aside id="assumptions-drawer" data-testid="assumptions-drawer" hidden>
+    <button class="btn quiet drawer-close" type="button" aria-label="Close the assumptions">Close</button>
+    <div class="drawer-body"></div>
+  </aside>
   <footer id="credits" data-testid="credits"></footer>
   <template id="panel">
     <div class="panel">
       <h2 class="title"></h2>
       <form class="levers" data-testid="levers"></form>
+      <p class="market">Market demand (orders a day, both brands, before the brand split) <strong data-testid="market-demand-total">-</strong></p>
       <button class="plan" type="button" data-testid="plan-button">Plan</button>
       <div class="elapsed" data-testid="elapsed"></div>
+      <div class="error" data-testid="error"></div>
       <h3 class="metrics-heading" data-testid="metrics-heading">Operator's plan</h3>
-      <p class="demand-legend">Market demand (orders a day, both brands, before the brand split):
-        <strong data-testid="market-demand-total">-</strong>
-        <span class="ramp"></span>
-        <small class="ramp-ends"><span>none</span><span>busiest hex</span></small>
-      </p>
-      <ul class="store-key">
-        <li><span class="swatch store-operator-colour"></span>Operator</li>
-        <li><span class="swatch store-competitor-colour"></span>Competitor</li>
-        <li><span class="swatch store-new-colour"></span>New store</li>
-      </ul>
       <dl class="metrics">
-        <dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd>
-        <dt>Households covered</dt><dd data-testid="metric-households">-</dd>
-        <dt>Lost to capacity</dt><dd data-testid="metric-lost">-</dd>
-        <dt>Unreached</dt><dd data-testid="metric-unreached">-</dd>
-        <dt>Slow-traffic coverage</dt><dd data-testid="metric-slow">-</dd>
-        <dt>Gap to the bound</dt><dd data-testid="metric-gap">-</dd>
-        <dt>Greedy baseline's demand covered</dt><dd data-testid="metric-greedy">-</dd>
-        <dt>Gain over the greedy baseline</dt><dd data-testid="metric-gain">-</dd>
+        <div class="metric hero"><dt>Demand covered (orders a day)</dt><dd data-testid="metric-demand">-</dd></div>
+        <div class="metric"><dt>Households covered</dt><dd data-testid="metric-households">-</dd></div>
+        <div class="metric"><dt>Lost to capacity</dt><dd data-testid="metric-lost">-</dd></div>
+        <div class="metric"><dt>Unreached</dt><dd data-testid="metric-unreached">-</dd></div>
+        <div class="metric"><dt>Slow-traffic coverage</dt><dd data-testid="metric-slow">-</dd></div>
+        <div class="metric wide"><dt>Gap to the bound</dt><dd data-testid="metric-gap">-</dd></div>
+        <div class="metric"><dt>Greedy baseline's demand covered</dt><dd data-testid="metric-greedy">-</dd></div>
+        <div class="metric"><dt>Gain over the greedy baseline</dt><dd data-testid="metric-gain">-</dd></div>
       </dl>
       <p class="plan-note" data-testid="plan-note"></p>
-      <ol class="new-stores" data-testid="new-stores"></ol>
-      <div class="error" data-testid="error"></div>
+      <table class="new-stores" data-testid="new-stores"></table>
+      <div class="map-key">
+        <div class="demand-legend">Market demand per hex
+          <span class="ramp"></span>
+          <small class="ramp-ends"><span>none</span><span>busiest hex</span></small>
+        </div>
+        <ul class="store-key">
+          <li><span class="swatch store-operator-colour"></span>Operator</li>
+          <li><span class="swatch store-competitor-colour"></span>Competitor</li>
+          <li><span class="swatch store-new-colour"></span>New store</li>
+        </ul>
+      </div>
     </div>
   </template>
   <script type="module" src="js/main.js"></script>

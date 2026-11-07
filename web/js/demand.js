@@ -3,12 +3,13 @@
 import { cellToBoundary } from "h3-js";
 import { integer } from "./format.js";
 
+const OPACITY = ["interpolate", ["linear"], ["zoom"], 10, 0.85, 13, 0.55];   // stronger at the overview, where a hex is a few pixels
 const LAYER = "market-demand";   // the id of both the source and the layer
-const RAMP = ["#ffffcc", "#fd8d3c", "#800026"];   // low to high, as the legend in index.html; the top is the busiest hex at the highest capture share
+const RAMP = ["#f4e4c8", "#dd9a63", "#a3431f"];   // sand to terracotta, low to high, as the legend in css/style.css; the top is the busiest hex at the highest capture share
 
 function fillColour(capture, top) {
   return ["interpolate", ["linear"], ["*", ["get", "demand"], capture],
-    0, "rgba(255, 255, 204, 0)", top / 2, RAMP[1], top, RAMP[2]];
+    0, "rgba(244, 228, 200, 0)", top / 2, RAMP[1], top, RAMP[2]];
 }
 
 // Draws the layer once the basemap style has loaded (view.ready); returns setCapture(capture) to recolour it and update the total.
@@ -30,7 +31,7 @@ export function showDemand(view, records, capture, totalElement, captureMax) {
   const draw = () => {
     view.map.addSource(LAYER, { type: "geojson", data: { type: "FeatureCollection", features } });
     view.map.addLayer({ id: LAYER, type: "fill", source: LAYER,
-      paint: { "fill-color": fillColour(current, top), "fill-opacity": 0.6 } });
+      paint: { "fill-color": fillColour(current, top), "fill-opacity": OPACITY } });
   };
   view.ready.then(draw);   // not isStyleLoaded(), which goes false again while tiles load
   setCapture(capture);

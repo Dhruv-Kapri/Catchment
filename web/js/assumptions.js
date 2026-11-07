@@ -10,19 +10,35 @@ function element(tag, text, testid) {
   return node;
 }
 
+// The note by the congestion lever: a one-line summary, and the full text it expands to.
 function spotCheckText(s) {
   const f = (x) => x.toFixed(2);
   const to = s.looked_up_to.split(" ").pop();   // the time only: every route was looked up the same evening
-  return `Spot check: ${s.routes} routes in ${s.app}, one evening's live estimates (${s.looked_up_from}-${to}). ` +
+  const detail = `Spot check: ${s.routes} routes in ${s.app}, one evening's live estimates (${s.looked_up_from}-${to}). ` +
     `The app times imply a congestion multiplier of ${f(s.implied_median)} (25th-75th percentile ${f(s.implied_q25)}-${f(s.implied_q75)}); ` +
     `at the default ×${s.multiplier} the app took a median ${f(s.ratio_median)}× the modelled time (${f(s.ratio_q25)}-${f(s.ratio_q75)}).`;
+  return { summary: `Spot check at ×${s.multiplier}: app times ${f(s.ratio_median)}× the model`, detail };
+}
+
+// A source's long URLs become links named by their host, with the full URL behind them.
+function linkify(text) {
+  return text.split(/(https?:\/\/\S+)/).flatMap((part, i) => {
+    if (i % 2 === 0) return part ? [part] : [];
+    const [, url, tail] = part.match(/^(.*?)([.,;)]*)$/);   // punctuation after the URL is the sentence's
+    const link = Object.assign(element("a", `${new URL(url).hostname.replace(/^www\./, "")} ↗`), { href: url, target: "_blank", rel: "noopener" });
+    return [link, tail];
+  });
 }
 
 function renderTable(rows) {
   const table = element("table");
   table.createTHead().insertRow().append(...COLUMNS.map((c) => element("th", c)));
   const body = table.createTBody();
-  for (const row of rows) body.insertRow().append(...COLUMNS.map((c) => element("td", row[c])));
+  for (const row of rows) {
+    const cells = COLUMNS.map((c) => element("td", c === "Source" ? undefined : row[c]));
+    cells[COLUMNS.indexOf("Source")].append(...linkify(row.Source));
+    body.insertRow().append(...cells);
+  }
   return table;
 }
 
@@ -34,11 +50,11 @@ export function renderCredits(footer) {
   });
 }
 
-// Fetches the assumptions once and fills the drawer; returns the spot-check note's text for addSpotCheckNote, once per lever form.
+// Fetches the assumptions once and fills the drawer; returns the spot-check note ({ summary, detail }) for addSpotCheckNote, once per lever form.
 export async function renderAssumptions(drawer) {
   const { table, spot_check: spot, network } = await fetchAssumptions();
   const { Operator, Competitor } = network.stores;
-  drawer.replaceChildren(
+  drawer.querySelector(".drawer-body").replaceChildren(
     element("h2", "Assumptions"),
     element("p", `The existing network is synthetic, not real stores: placed by seed ${network.seed} (fixed, not a lever). At the default competitor density it has ${Operator} Operator and ${Competitor} Competitor stores.`, "network-seed"),
     renderTable(table),
@@ -46,6 +62,9 @@ export async function renderAssumptions(drawer) {
   return spotCheckText(spot);
 }
 
-export function addSpotCheckNote(form, text) {
-  form.elements.multiplier?.closest("label").after(element("p", text, "spot-check-note"));
+export function addSpotCheckNote(form, { summary, detail }) {
+  const note = element("details", undefined, "spot-check-note");
+  note.className = "spot-check";
+  note.append(element("summary", summary), element("p", detail));
+  form.elements.multiplier?.closest("label").after(note);
 }

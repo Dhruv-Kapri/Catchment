@@ -64,8 +64,9 @@ def test_pressing_plan_draws_the_stores_and_shows_every_operator_metric(base_url
         for metric in ("metric-demand", "metric-households", "metric-lost", "metric-unreached", "metric-slow", "metric-greedy", "metric-gain"):
             expect(a.get_by_test_id(metric)).to_have_text(re.compile(r"^[\d,]+$"), timeout=15_000)
         expect(a.get_by_test_id("metric-gap")).to_have_text("0.0%")
-        expect(a.get_by_test_id("new-stores").locator("li")).to_have_count(10)
-        expect(a.get_by_test_id("new-stores").locator("li").first).to_have_text(re.compile(r"^fresh [\d,]+, cannibalised [\d,]+$"))   # the <ol> numbers the stores
+        expect(a.get_by_test_id("new-stores").locator("thead th")).to_have_text(["Store", "Fresh", "Cannibalised"])
+        expect(a.get_by_test_id("new-stores").locator("tbody tr")).to_have_count(10)
+        expect(a.get_by_test_id("new-stores").locator("tbody tr").first.locator("td")).to_have_text(["1", re.compile(r"^[\d,]+$"), re.compile(r"^[\d,]+$")])   # the store's number, then its fresh and cannibalised demand
         # service areas: one fill feature per assigned hex, none for unserved hexes, one colour per store
         served: dict[str, str] = {cell: store for store, cells in body["service_areas"].items() for cell in cells}
         fills: list[dict[str, Any]] = wait_for_features(page, "service-areas")
@@ -75,10 +76,11 @@ def test_pressing_plan_draws_the_stores_and_shows_every_operator_metric(base_url
         for f in fills:
             colours.setdefault(f["properties"]["store"], set()).add(f["properties"]["colour"])
         assert all(len(c) == 1 for c in colours.values())
-        assert len({c for cs in colours.values() for c in cs}) == len(colours)   # no two stores share a colour
+        assert len({c for cs in colours.values() for c in cs}) >= min(len(colours), 8)   # a cycled palette (#58): stores share a colour only once it runs out
         # selecting a new store outlines its catchment
         assert source_features(page, "catchment-outline") == []
         site: str = body["sites"][0]
+        page.evaluate("window.catchment.a.map.jumpTo({ center: [77.10, 28.48], zoom: 14 })")   # the synthetic stores sit within a few pixels at the default zoom (the map fits the whole area, #58), so zoom in for a click that hits one marker
         a.locator(".store-new").first.click()
         outline: list[dict[str, Any]] = wait_for_features(page, "catchment-outline")
         vertices: set[tuple[float, float]] = {(round(lng, 5), round(lat, 5)) for ring in (r for f in outline for poly in f["geometry"]["coordinates"] for r in poly) for lng, lat in ring}
