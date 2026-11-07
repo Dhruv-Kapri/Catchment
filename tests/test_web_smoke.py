@@ -396,8 +396,12 @@ def test_the_difference_table_greys_while_either_scenario_is_stale(base_url: str
         expect(diff).not_to_have_class(re.compile("stale"))
         a.get_by_test_id("lever-promise").fill("12")
         expect(diff).to_have_class(re.compile("stale"))
+        b.get_by_test_id("lever-promise").fill("12")
         a.get_by_test_id("plan-button").click()
-        expect(diff).not_to_have_class(re.compile("stale"), timeout=15_000)   # B was never touched
+        expect(a.locator(".metrics")).not_to_have_class(re.compile("stale"), timeout=15_000)
+        expect(diff).to_have_class(re.compile("stale"))   # B is still stale
+        b.get_by_test_id("plan-button").click()
+        expect(diff).not_to_have_class(re.compile("stale"), timeout=15_000)
         browser.close()
 
 
