@@ -1,11 +1,10 @@
 // The market demand layer: every hex coloured by orders a day, both brands, before the brand split.
 // Market demand = the stored demand x the capture lever, so the layer follows the lever without a refetch.
 import { cellToBoundary } from "h3-js";
+import { integer } from "./format.js";
 
 const LAYER = "market-demand";   // the id of both the source and the layer
 const RAMP = ["#ffffcc", "#fd8d3c", "#800026"];   // low to high, as the legend in index.html; the top is the busiest hex at the highest capture share
-
-const format = (value) => Math.round(value).toLocaleString("en-IN");
 
 function fillColour(capture, top) {
   return ["interpolate", ["linear"], ["*", ["get", "demand"], capture],
@@ -25,7 +24,7 @@ export function showDemand(view, records, capture, totalElement, captureMax) {
   let current = capture;   // the lever may move before the style loads; draw with its latest value
   const setCapture = (value) => {
     current = value;
-    totalElement.textContent = format(stored * value);
+    totalElement.textContent = integer(stored * value);
     if (view.map.getLayer(LAYER)) view.map.setPaintProperty(LAYER, "fill-color", fillColour(value, top));
   };
   const draw = () => {
