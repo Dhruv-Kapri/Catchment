@@ -31,6 +31,7 @@ uv run catchment-serve [--port 8000]     # the live service: loads the inputs on
 uv run catchment-bundle [--out outputs/site] [--res 9] [--x-pct 30]   # the static demo site (ADR 0003): solves the 61-plan sweep at 8 workers, writes the plans, read-only data, ODbL notice and metadata, and copies web/ (run on an idle machine; the load is recorded)
 scripts/deploy-pages.sh                  # builds the site with catchment-bundle, then force-pushes it as an orphan gh-pages branch to origin
 uv run python scripts/time-service.py [--url http://127.0.0.1:8000]   # POST /plan over HTTP for the 04-plan grid and the 64 lever corners against a running catchment-serve; CSV with each request's seconds and load in outputs/; exits 1 if any takes over 10 s
+uv run python scripts/check-public.py [--url https://dhruv-kapri.github.io/Catchment/]   # the public static site end to end in a fresh headless Chromium (notice, plan A, plan B with N + 5, B − A table, drawer, no failed request); PASS/FAIL per step to outputs/check-public.log; exits 1 on any FAIL
 uv run python scripts/record-demo.py [--url http://127.0.0.1:8000]    # the ~90 s recording and screenshot of the main flow against a running catchment-serve (Playwright, ffmpeg); writes outputs/demo/, copy to docs/media/ by hand
 ```
 

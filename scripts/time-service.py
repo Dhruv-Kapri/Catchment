@@ -1,8 +1,9 @@
-"""Time POST /plan over HTTP on the 04-plan grid and the 64 lever corners: uv run python scripts/time-service.py [--url U] [--out CSV] [--limit N]."""
+"""Time POST /plan over HTTP on the 04-plan grid, the 64 lever corners and N random scenarios: uv run python scripts/time-service.py [--url U] [--out CSV] [--limit N] [--random N --seed S]."""
 import argparse
 import csv
 import itertools
 import os
+import random
 import statistics
 import sys
 import time
@@ -10,11 +11,10 @@ from pathlib import Path
 
 import httpx
 
-from catchment.planning import LEVER_RANGES
+from catchment.planning import LEVER_RANGES, LEVER_STEPS, WHOLE_LEVERS
 
 BAR_S: float = 10.0
 LEVERS: list[str] = list(LEVER_RANGES)
-WHOLE: tuple[str, ...] = ("n_new", "promise")
 DEFAULTS: dict[str, float] = {}   # empty: the service fills in each lever's default
 SWEEPS: dict[str, list[float]] = {   # copied from notebooks/04-plan.ipynb, cell 4
     "n_new": [1, 5, 15, 20],
@@ -27,14 +27,25 @@ SWEEPS: dict[str, list[float]] = {   # copied from notebooks/04-plan.ipynb, cell
 FIELDS: list[str] = [*LEVERS, "http_status", "status", "gap", "bound_source", "plan_seconds", "request_seconds", "load_before"]
 
 
-def scenarios() -> list[dict[str, float]]:
-    """The 04-plan grid (no seed rows), then the 64 corners, without repeats (a repeat would hit the service's cache)."""
+def random_scenario(rng: random.Random) -> dict[str, float]:
+    """Every lever at a uniformly drawn step of its range."""
+    scenario: dict[str, float] = {}
+    for lever, (low, high) in LEVER_RANGES.items():
+        value: float = round(low + rng.randint(0, round((high - low) / LEVER_STEPS[lever])) * LEVER_STEPS[lever], 10)
+        scenario[lever] = int(value) if lever in WHOLE_LEVERS else value
+    return scenario
+
+
+def scenarios(n_random: int = 0, seed: int = 0) -> list[dict[str, float]]:
+    """The 04-plan grid (no seed rows), the 64 corners, then n_random random scenarios, without repeats (a repeat would hit the service's cache)."""
     found: list[dict[str, float]] = [DEFAULTS]
     for lever, points in SWEEPS.items():
         found += [{lever: value} for value in points]
     found += [{"n_new": 20, "capacity": 0.5}, {"capture": 1.5, "competitor_density": 0.0}]
     for ends in itertools.product(*(LEVER_RANGES[lever] for lever in LEVERS)):
-        found.append({lever: int(v) if lever in WHOLE else float(v) for lever, v in zip(LEVERS, ends)})
+        found.append({lever: int(v) if lever in WHOLE_LEVERS else float(v) for lever, v in zip(LEVERS, ends)})
+    rng = random.Random(seed)
+    found += [random_scenario(rng) for _ in range(n_random)]
     unique: dict[frozenset[tuple[str, float]], dict[str, float]] = {}
     for scenario in found:
         unique.setdefault(frozenset(scenario.items()), scenario)
@@ -64,8 +75,10 @@ def main() -> int:
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--out", type=Path, default=Path("outputs/service-timing.csv"))
     parser.add_argument("--limit", type=int, default=None, help="time only the first N scenarios")
+    parser.add_argument("--random", type=int, default=0, help="also time N random scenarios, each lever at a random step")
+    parser.add_argument("--seed", type=int, default=0, help="the random scenarios' seed")
     args = parser.parse_args()
-    todo = scenarios()[: args.limit]
+    todo = scenarios(args.random, args.seed)[: args.limit]
     rows: list[dict[str, object]] = []
     with httpx.Client(base_url=args.url, timeout=120.0) as client:
         for i, scenario in enumerate(todo, 1):
