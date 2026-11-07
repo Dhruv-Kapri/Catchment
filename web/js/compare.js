@@ -1,12 +1,10 @@
 // B - A: one row per scalar metric of the plan, with the signed difference.
+import { integer, percent, points } from "./format.js";
+
 const MINUS = "−";
 const count = (plan) => plan.sites.length;
 
 // key, label, how to format it, and how to read it from a plan when it isn't the plan's field of that name. Only gap can be null.
-const integer = (value) => (Math.round(value) || 0).toLocaleString("en-IN");   // || 0: a hair under zero rounds to -0
-const percent = (value) => `${(value * 100).toFixed(1)}%`;
-const points = (value) => `${(value * 100).toFixed(1)} pp`;   // a difference of two percentages
-
 const METRICS = [
   { key: "demand_covered", label: "Demand covered", format: integer },
   { key: "households_covered", label: "Households covered", format: integer },

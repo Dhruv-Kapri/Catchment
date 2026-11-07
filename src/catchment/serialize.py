@@ -9,6 +9,9 @@ from catchment.planning import Inputs, Plan, Scenario, place_network
 from catchment.spotcheck import SPOT_CHECK_SHEET, compare
 
 
+NO_PLAN_CLAUSE: str = "CP-SAT found none, or the model was over the size cap"   # shared by gap_reason and plan_note
+
+
 def gap_reason(plan: Plan) -> str | None:
     """Why the plan has no gap, as a short sentence; None when it has one."""
     if plan.gap is not None:
@@ -16,13 +19,24 @@ def gap_reason(plan: Plan) -> str | None:
     if plan.method == "greedy":
         return "greedy states no bound"
     if plan.status == "UNKNOWN":
-        return "no plan: CP-SAT found none, or the model was over the size cap"
+        return f"no plan: {NO_PLAN_CLAUSE}"
     return "the plan covers no orders, so the gap has no finite ratio"
+
+
+def plan_note(plan: Plan) -> str:
+    """The sentence the panel shows under the metrics when the plan is not a solved CP-SAT one; "" otherwise."""
+    if plan.method == "greedy":
+        return "This is the greedy plan."
+    if plan.status == "UNKNOWN":
+        return f"No plan: {NO_PLAN_CLAUSE}. The metrics are the existing network's."
+    if plan.status == "HEURISTIC":
+        return "Greedy's plan kept: CP-SAT found nothing better in time, or the model was over the size cap, so the gain over greedy is 0."
+    return ""
 
 
 def plan_json(plan: Plan) -> dict[str, Any]:
     """The plan's fields, with the scenario and new stores nested. Site and hex ids stay H3 strings."""
-    return {**dataclasses.asdict(plan), "gap_reason": gap_reason(plan)}
+    return {**dataclasses.asdict(plan), "gap_reason": gap_reason(plan), "plan_note": plan_note(plan)}
 
 
 def demand_json(inputs: Inputs) -> list[dict[str, Any]]:
