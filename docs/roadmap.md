@@ -96,7 +96,7 @@ Scope set in the stage 2 grill, 2026-11-01 (see [decisions](decisions.md)).
   corner included, also return within 10 s (at most 8.63 s) with a gap (#33's model size cap; a capacity bound when CP-SAT has
   none). All 64 corners of the box return within 10 s (slowest 8.60 s) with a gap stated. #34 lowered `PLAN_BUDGET` from 9 to 8 s
   so the bar keeps 2 s for the metrics and CP-SAT's overshoot (the earlier run had one 11.3 s corner); the re-run was under heavy
-  load from other sessions (median 18 on the grid, up to 64 on the corners), not on an idle machine. CP-SAT from greedy is served.
+  load from other work on the machine (median 18 on the grid, up to 64 on the corners), not on an idle machine. CP-SAT from greedy is served.
   The promise range is narrowed to 8-16 ([cuts](cuts.md)); see [decisions](decisions.md).
 
 ## 3. Compare and ship (week 4, to 25 Nov)
@@ -126,11 +126,11 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   (seed rows dropped: the seed is not a lever) and all 64 corners, 91 scenarios, to it over HTTP. Every one returned within 10 s in each of four runs. The first two:
   slowest 9.48 s (multiplier 1.0, FEASIBLE, 17.0% gap) at load 12.5, median load 15.9, in the first run; slowest 8.38 s (N 20, promise 16,
   multiplier 2.5, capacity 0.5×, capture 1.5×, density 0) with a median load of 12.1 in the second (8 CPUs; CP-SAT's own 8 workers are about 8
-  of it). Other sessions ran tests alongside both. A third run started on a quiet machine (load 2.4, no other test runs): all 91 within 10 s,
+  of it). Other work ran on the machine alongside both. A third run started on a quiet machine (load 2.4, no other test runs): all 91 within 10 s,
   slowest 8.37 s (the same corner as the second run), multiplier 1.0 at 7.15 s (OPTIMAL); the load during it (median 11.8) is mostly the
   service's own CP-SAT workers. A fourth run waited for 3 minutes under load 2 (15:50 IST), then sent the 91 and 200 random
   scenarios (each lever at a random step, `--random 200 --seed 51`): all 291 within 10 s. The 91 ran on an idle machine (load before each
-  request median 6.5, max 8.7, about CP-SAT's own 8 workers), slowest 8.46 s; the random 200 slowest 8.60 s (median 0.39 s; other sessions
+  request median 6.5, max 8.7, about CP-SAT's own 8 workers), slowest 8.46 s; the random 200 slowest 8.60 s (median 0.39 s; other work
   returned during it, load up to 36). The lever box holds about 900 k scenarios; no random scenario was slower than the grid and corners by
   more than 0.14 s, so they stand in for "any scenario", as in 04-plan. The random sample found wider gaps than the grid: 22 of 200 above 10%,
   up to 52%, all from the capacity bound (the map labels them, #52). `catchment-bundle` solved the 61 plans in 89 s at 8 workers, load 8.9
@@ -141,6 +141,7 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   service). The B − A table's stale state and bound source (#53), the shared number formatter and server-side plan note (#54), the one lever spec (#55)
   and the page's declared data source (#56) landed after the site was published. It was re-published with them (`scripts/deploy-pages.sh`, 61 plans in 83 s, load 5.9 before and
   16.6 after; `scripts/check-public.py` 5 of 5, 2026-11-07 11:26 UTC), and the recording and screenshot were re-made against the live service.
+  Next is "Later" below; the first cut is due 25 Nov 2026.
 
 ## Later (after 25 Nov)
 

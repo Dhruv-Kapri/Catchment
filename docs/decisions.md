@@ -6,7 +6,7 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 ## 2026-11-07: Compare and ship (stage 3) closed (#51)
 
 - **Stage 3 is done with nothing cut** (roadmap, "Done 2026-11-07"). The live service returned all 91 scenarios it was sent (the 04-plan grid
-  and the 64 lever corners) within 10 s over HTTP, in four runs: slowest 9.48 s and 8.38 s with other sessions' tests running (1-minute loads of 12.5 and 13.0 just before those requests), 8.37 s in a run that started on a quiet machine (load 2.4), and 8.46 s on an idle machine, where 200 random scenarios also returned within 10 s
+  and the 64 lever corners) within 10 s over HTTP, in four runs: slowest 9.48 s and 8.38 s with other work running on the machine (1-minute loads of 12.5 and 13.0 just before those requests), 8.37 s in a run that started on a quiet machine (load 2.4), and 8.46 s on an idle machine, where 200 random scenarios also returned within 10 s
   (slowest 8.60 s). The grid and the corners stand in for the box's ~900 k scenarios: no random one was slower by more than 0.14 s.
   The static demo is published on GitHub Pages from the 61-plan sweep (89 s at 8 workers, load 8.9-15.6).
   - Why it holds: `PLAN_BUDGET` is 8 s, which leaves 2 s for the metrics and CP-SAT running past its limit. The slowest request ran 1.48 s past the budget under load; on an idle machine, 0.46 s. That margin is thin under load. A change to the solver,
@@ -54,7 +54,7 @@ Set in the stage 3 grill.
     2026-11-05), and Render's free tier has 0.1 CPU. Paid compute was declined for a demo.
 - **The 10 s bar stays measured on the dev machine.** With fewer workers, plans still return within the budget, but
   quality drops.
-  - Measured 2026-11-05, cpsat-from-greedy, one run each, load about 5-6 from other sessions:
+  - Measured 2026-11-05, cpsat-from-greedy, one run each, load about 5-6 from other work on the machine:
     - Every run, at 1, 2, 4 or 8 workers, returned within 8.1 s.
     - The default scenario proved optimal in 0.26 s at 8 workers. At 1-4 workers it stopped at the limit: the same
       plan, with a 48% stated gap.
@@ -100,7 +100,7 @@ Set in the stage 3 grill.
 - **Ruled out:** 4 solver workers instead of 8 (no clear difference in the overshoot at load 31-36); keeping 9 s and re-running only on an
   idle machine (it would have hidden the overshoot, not removed it).
 - **Result (`04-plan` re-run, 2026-11-03 10:43-10:50 IST, not on an idle machine: load 2.4 at the start, then 16.7-64.0 before each plan
-  from other sessions).** All 64 corners return within 10 s, slowest 8.60 s, every gap stated; the 11.28 s corner took 8.11 s. The grid
+  from other work on the machine).** All 64 corners return within 10 s, slowest 8.60 s, every gap stated; the 11.28 s corner took 8.11 s. The grid
   passes too (slowest 8.46 s). The bar held under load, not only on a quiet machine. A lower budget leaves CP-SAT less time, so
   more time-limited plans end on a gap; see the #30 entry for the numbers.
 
@@ -112,7 +112,7 @@ Set in the stage 3 grill.
   0.03-0.19 s); none ended UNKNOWN. CP-SAT from greedy was never below greedy and proved optimality in 25 of 31 (CP-SAT on its own: 25);
   the other 6 (promise 16, multiplier 1.0, capacity 0.5×, capture 1.5×, and the two corners) stopped at the budget with gaps of 0.3-2.7%.
   Its gain over greedy: median 0.14%, 0 in 11 scenarios, 3.9-4.7% where capacity binds or the market is largest. Load: not an idle
-  machine. It was 2.4 at the start, then other sessions loaded it: median 18.0 and maximum 20.8 before each plan (8 CPUs), and the bar
+  machine. It was 2.4 at the start, then other work loaded it: median 18.0 and maximum 20.8 before each plan (8 CPUs), and the bar
   held anyway. Slow-traffic coverage never exceeded demand covered (0 of 93 plans before #33's clamp, too).
 - **CP-SAT from greedy is the served variant.** The stage 2 rule serves CP-SAT on its own only if it is never worse on demand
   covered and is faster. In this run it is below greedy in 2 scenarios (promise 16 by 1,493 orders a day, capacity 0.5× by 1,269) and

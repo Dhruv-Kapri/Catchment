@@ -5,7 +5,7 @@ the dev machine: the default scenario and each lever swept on its own (about 61 
 demand and the candidate sites as JSON. The JSON is committed to an orphan `gh-pages` branch, the second deliberate
 exception to "never commit data" after [ADR 0002](0002-spot-check-times-in-repo.md). `main` and the stage branches
 still hold no data. The live FastAPI service (`POST /plan`, any scenario in the lever ranges) runs locally only. The
-~90 s recording is made against it.
+~90 s recording is made against it. The public site is <https://dhruv-kapri.github.io/Catchment/>.
 
 The plans are computed from travel times routed on OpenStreetMap roads, so the published JSON is treated as a
 Derivative Database under the ODbL 1.0 (share-alike), not only a Produced Work. The branch carries an ODbL notice
