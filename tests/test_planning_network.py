@@ -95,10 +95,17 @@ def test_every_density_step_is_accepted(density: float) -> None:
     assert Scenario(competitor_density=density).competitor_density == density
 
 
-@pytest.mark.parametrize("density", [0.3, 1.1, 0.01])
-def test_an_off_step_density_is_refused_naming_the_lever_and_the_step(density: float) -> None:
-    with pytest.raises(ValueError, match=f"competitor_density {density:g} is not in steps of 0.25"):
-        Scenario(competitor_density=density)
+@pytest.mark.parametrize("lever,value,step,span", [
+    ("competitor_density", 0.3, "0.25", "0-2"), ("competitor_density", 0.01, "0.25", "0-2"), ("multiplier", 1.45, "0.1", "1-2.5"),
+    ("capacity", 0.6, "0.25", "0.5-2"), ("capture", 1.1, "0.25", "0.5-1.5")])
+def test_an_off_step_lever_is_refused_naming_the_lever_its_step_and_its_range(lever: str, value: float, step: str, span: str) -> None:
+    with pytest.raises(ValueError, match=rf"{lever} {value:g} is not in steps of {step} \(lever range {span}\)"):
+        Scenario(**{lever: value})
+
+
+@pytest.mark.parametrize("value", [1.4, 2.2, 1.1, 2.5])
+def test_a_multiplier_on_its_tenth_step_is_accepted_despite_float_noise(value: float) -> None:
+    assert Scenario(multiplier=value).multiplier == value
 
 
 @pytest.mark.parametrize("lever", ["multiplier", "capacity", "capture", "competitor_density"])

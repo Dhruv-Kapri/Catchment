@@ -3,11 +3,17 @@
 *Where should a quick-commerce operator open its next N dark stores, and what does each one win, or
 take from the stores it already has?*
 
-> **Status: stage 2 done** (2026-11-03). `planning.plan()` (`src/catchment/planning.py`) returns a plan for any
-> scenario in the lever ranges within 10 s, its gap stated: greedy and two CP-SAT variants on a 57-store two-brand
-> network, with slow-traffic coverage and a competitor-density lever. The benchmark is `notebooks/04-plan.ipynb`;
-> CP-SAT from greedy is served. Next: stage 3, the FastAPI service and the web map. The
-> [roadmap](docs/roadmap.md) says what gets built and in what order.
+> **Status: stage 3 done** (2026-11-07). Pick N new dark stores for any scenario in the lever ranges and compare two
+> scenarios side by side on a web map, each plan within 10 s with its gap and its result against a greedy baseline. The
+> [roadmap](docs/roadmap.md) says what was built and in what order, and what comes later.
+
+**Try it:** <https://dhruv-kapri.github.io/Catchment/>. This public demo serves plans solved ahead of time: the default scenario,
+and each lever moved on its own. Run `uv run catchment-serve` locally for any combination of levers.
+
+[![Scenario A (10 new stores) and B (15 stores, 12-minute promise) on linked maps, with the B − A table](docs/media/screenshot.png)](docs/media/demo.mp4)
+
+**[Watch the 90 s recording](docs/media/demo.mp4)** of the main flow against the live service: the demand layer and the existing
+stores, a plan, a store's catchment, a second scenario, the B − A table and the assumptions.
 
 ## Getting started
 
@@ -21,6 +27,7 @@ cp .env.example .env             # then set LAADS_TOKEN (needed for the night-li
 uv run catchment-fetch           # fetch every source for the area into data/ (idempotent)
 uv run catchment-build           # build data/demand-r9.parquet, then the candidate sites and travel-time table (candidates-r9-x30, table-r9-x30)
 uv run pytest
+uv run catchment-serve           # the live service and web map at http://127.0.0.1:8000
 ```
 
 `LAADS_TOKEN` is a LAADS DAAC token: log in at <https://ladsweb.modaps.eosdis.nasa.gov> with an

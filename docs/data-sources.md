@@ -7,10 +7,10 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 
 | Data | Use | Licence |
 | --- | --- | --- |
-| OpenStreetMap (Geofabrik India extract, clipped to the area) | road network for OSRM travel times | ODbL |
-| Overture Maps Places (release 2026-10-21.0) | activity and affluence proxy; candidate sites | CDLA-Permissive-2.0 |
-| Overture Maps buildings (release 2026-10-21.0) / Google Open Buildings | built-up density | Overture buildings: ODbL; Google Open Buildings: CC BY 4.0 |
-| WorldPop, India 2025 constrained 100 m, R2025A v1 (`ind_pop_2025_CN_100m_R2025A_v1.tif`) | base demand | CC BY 4.0 |
+| OpenStreetMap (Geofabrik India extract, clipped to the area) | road network for OSRM travel times | ODbL 1.0, share-alike; credit "© OpenStreetMap contributors". **Verified 2026-11-05** (osmfoundation.org Licence FAQ) |
+| Overture Maps Places (release 2026-10-21.0) | activity and affluence proxy; candidate sites | per source, no theme licence: CDLA-Permissive-2.0, Apache 2.0 (Foursquare), CC0 (AllThePlaces); each source's attribution required. **Verified 2026-11-05** (docs.overturemaps.org/attribution, full page, last updated 15 May 2026): "Data from X. Available under CDLA Permissive 2.0" for Meta, Microsoft, PinMeTo, Krick, RenderSEO, DAC, BrightQuery, Birdeye, Uberall and OpenTravel Alliance; "Data from Foursquare. Copyright 2024 Foursquare Labs, Inc. All rights reserved. Available under Apache 2.0" (transformed to the Overture schema, with a NOTICE.txt); "Data from AllThePlaces. Available under CC0 1.0". Overture's suggested citation: "Overture Maps Foundation, overturemaps.org" |
+| Overture Maps buildings (release 2026-10-21.0) / Google Open Buildings | fetched, not used by `src/` (no demand factor reads it) | Overture buildings: ODbL; Google Open Buildings: CC BY 4.0 |
+| WorldPop, India 2025 constrained 100 m, R2025A v1 (`ind_pop_2025_CN_100m_R2025A_v1.tif`) | base demand | CC BY 4.0. **Verified 2026-11-05** on the dataset's own page (hub.worldpop.org/geodata/summary?id=73807, India 2025, category "Individual countries 2015-2030 (100m resolution) R2025A v1", an alpha product), whose licence link is hub.worldpop.org/data/licence.txt (CC BY 4.0). DOI 10.5258/SOTON/WP00839. Recommended citation: Bondarenko M., Priyatikanto R., Tejedor-Garavito N., Zhang W., McKeen T., Cunningham A., Woods T., Hilton J., Cihan D., Nosatiuk B., Brinkhoff T., Tatem A., Sorichetta A.. 2025 Constrained estimates of 2015-2030 total number of people per grid square at a resolution of 3 arc (approximately 100m at the equator) R2025A version v1. Global Demographic Data Project - Funded by The Bill and Melinda Gates Foundation (INV-045237). WorldPop - School of Geography and Environmental Science, University of Southampton. DOI:10.5258/SOTON/WP00839 |
 | NASA Black Marble VNP46A4 (annual VIIRS night-time lights, collection 5200, 2025, tile h25v06) | affluence proxy | CC0 (most NASA mission data); NASA asks to be cited. **Verified 2026-10-29** (Earthdata data use guidance) |
 
 - **Verified 2026-10-28:** EOG (Colorado School of Mines) scripted access to VIIRS products became
@@ -34,6 +34,18 @@ Facts are marked **Verified** (with date, read from the source or measured) or l
 - **Verified 2026-10-29:** OSRM ships car, bicycle and foot profiles only, with no two-wheeler profile,
   and no maintained community motorcycle profile was found; the official Docker image
   (`ghcr.io/project-osrm/osrm-backend`) has a linux/arm64 build. `osmium-tool` is in Homebrew for arm64.
+
+## Publishing (stage 3)
+
+- **Verified 2026-11-05** (OSMF Licence FAQ and Produced Work guideline): data that can be read back as data is a
+  database, not a Produced Work; a Derivative Database made public must stay under the ODbL; anyone a Produced Work
+  reaches may ask for the Derivative Database behind it. Routing engines and apps using them must credit OSM. Whether
+  an OSRM travel-time table counts as a Derivative Database is not settled on those pages; this project treats the
+  published plan JSON as one ([ADR 0003](adr/0003-static-demo-on-gh-pages.md)).
+- **Verified 2026-11-05:** OpenFreeMap's public tiles are free, commercial use allowed, attribution required (MapLibre
+  adds it; video: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"). MapLibre GL JS is BSD-3-Clause.
+- **Verified 2026-11-05:** Hugging Face Docker and Gradio Spaces need a paid plan to create (PRO for personal
+  accounts); free accounts can host static Spaces. The free CPU basic tier is 2 vCPU, 16 GB.
 
 ## Checked and not usable for competitor stores
 

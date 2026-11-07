@@ -3,6 +3,92 @@
 Newest first. One entry per decision: what was decided, why, and what it rules out. Big or
 hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first one is needed).
 
+## 2026-11-07: Compare and ship (stage 3) closed (#51)
+
+- **Stage 3 is done with nothing cut** (roadmap, "Done 2026-11-07"). The live service returned all 91 scenarios it was sent (the 04-plan grid
+  and the 64 lever corners) within 10 s over HTTP, in four runs: slowest 9.48 s and 8.38 s with other work running on the machine (1-minute loads of 12.5 and 13.0 just before those requests), 8.37 s in a run that started on a quiet machine (load 2.4), and 8.46 s on an idle machine, where 200 random scenarios also returned within 10 s
+  (slowest 8.60 s). The grid and the corners stand in for the box's ~900 k scenarios: no random one was slower by more than 0.14 s.
+  The static demo is published on GitHub Pages from the 61-plan sweep (89 s at 8 workers, load 8.9-15.6).
+  - Why it holds: `PLAN_BUDGET` is 8 s, which leaves 2 s for the metrics and CP-SAT running past its limit. The slowest request ran 1.48 s past the budget under load; on an idle machine, 0.46 s. That margin is thin under load. A change to the solver,
+    a range or the plan's metrics re-runs `scripts/time-service.py` before it lands.
+  - The timing and recording scripts live in `scripts/`, not the package: they drive a running service from the outside and are not part of
+    the product.
+  - The recording (90 s) and screenshot are committed under `docs/media/` (2.2 MB and 0.6 MB). They show the product, not data, and the README
+    links them. Re-record with `scripts/record-demo.py` when the UI changes.
+  - Rules out: nothing new. A live public host stays under Later (ADR 0003).
+
+## 2026-11-05: The assumptions drawer names brands only in its sources (#44, #48)
+
+- **The assumptions table's inputs and values say Operator and Competitor; the Source column keeps the filing it cites, by name and URL.**
+  "Blinkit orders, Q2 FY27" and "Blinkit stores" became "Operator orders, Q2 FY27" and "Operator stores", and the split's value says
+  "operator 2,751". The drawer (#48) shows the table as served, so it was the one part of the UI naming a real brand (spec #41: Operator and
+  Competitor are the only brand names shown).
+  - Why: a citation is provenance, not a brand label; dropping it would break "record the source and date of every reported count".
+  - Rules out: renaming the sources. The constants in `assumptions.py` (`BLINKIT_ORDERS_Q2`, `BLINKIT_STORES`) and `explore.py`'s
+    notebook table keep their names: neither reaches the UI.
+
+## 2026-11-05: A plan states where its bound came from (#52)
+
+- **A plan carries `bound_source`: "solver" (CP-SAT's own bound) or "capacity" (`capacity_bound`), None when there is no bound.** The source
+  is whichever gave the lower of the two (the solver on a tie); the clamp to the objective does not change it.
+  - Why: the 04-plan re-run (4bd0611) found the widest gap at 62.5% (N 1, promise 8, multiplier 1.0, capacity 2x, capture 1.5x, density 0), and 9 of
+    the 64 corners above 10%, 8 of them at capacity 0.5x. Those gaps come from the cheap capacity bound, not the solver. The web map shows each
+    plan's gap (spec #41, story 23), so a planner would read a capacity-bound gap as a solver gap.
+  - Rules out: nothing yet. Tightening the bound (shared hexes, an LP relaxation) is not done: each candidate must re-measure the 64 corners
+    against the 10 s bar. The label costs no solve time.
+  - The web map's gap reads "12.5% (from the capacity bound, which can be loose)" when `bound_source` is "capacity"; the panel's label is
+    "Gap to the bound". The B − A table's Gap row does not say the source yet (#53).
+
+## 2026-11-05: Compare and ship (stage 3) scope (spec #41; tickets #35, #42-#51)
+
+Set in the stage 3 grill.
+
+- **The live service runs locally; the public URL is a static site** ([ADR 0003](adr/0003-static-demo-on-gh-pages.md)).
+  - FastAPI `POST /plan` takes any scenario in the lever ranges; the read-only endpoints serve the assumptions, the lever
+    ranges and demand. It starts from one command and runs one plan at a time, with a small cache by scenario. Nothing is precomputed at start-up.
+  - The public site is the same web map on GitHub Pages, reading about 61 plans solved on the dev machine at 8 workers:
+    the default plus every UI step of each lever with the others at the default (N 1-20; promise 8-16 by 1; multiplier
+    1.0-2.5 by 0.1; capacity, capture and density by 0.25). On the static site, moving one lever resets the others.
+  - The ~90 s recording is made locally, against the live service.
+  - Rules out: a live public host. Free compute is too thin: Hugging Face Docker Spaces need a paid plan (verified
+    2026-11-05), and Render's free tier has 0.1 CPU. Paid compute was declined for a demo.
+- **The 10 s bar stays measured on the dev machine.** With fewer workers, plans still return within the budget, but
+  quality drops.
+  - Measured 2026-11-05, cpsat-from-greedy, one run each, load about 5-6 from other work on the machine:
+    - Every run, at 1, 2, 4 or 8 workers, returned within 8.1 s.
+    - The default scenario proved optimal in 0.26 s at 8 workers. At 1-4 workers it stopped at the limit: the same
+      plan, with a 48% stated gap.
+    - At capacity 0.5× and N 20, the plan covered 45,693 orders a day with a 1.0% gap at 8 workers. At 1-4 workers it
+      covered 43,406-45,148 with gaps of 23-28%; greedy covered 43,266.
+  - Peak memory was 349 MB, and `load_inputs` took 0.85 s.
+- **Every lever has a step; `GET /levers` publishes them (2026-11-05).**
+  - `Scenario` refuses an off-step value, as it already refused an off-step density (e.g. multiplier 1.45, which `plan()`
+    accepted before). Steps: N 1, promise 1, multiplier 0.1, capacity, capture and density 0.25.
+  - `GET /levers` returns each lever's range, step and default, so the JS no longer hard-codes them. A range, step or type
+    error is a 422 naming the lever and its range.
+- **Web map: plain JavaScript and ES modules, no build step.**
+  - MapLibre with the OpenFreeMap basemap, served by FastAPI locally and from gh-pages publicly.
+  - Two maps with linked pan and zoom: A starts at the default, B starts as a copy of A. A metrics table shows B − A.
+  - A Plan button runs a plan; it does not re-run on every lever change.
+- **What the map shows:**
+  - The demand layer is market demand at the scenario's capture share, before the split between brands; the metrics
+    are the operator's and are labelled so.
+  - Existing stores of both brands, brands generic.
+  - Each operator store's **service area** (new term in CONTEXT.md) as fill, and the selected store's catchment as an outline.
+  - Each plan's gap and its demand covered against greedy's. Where the model is over the size cap (wide reach, e.g.
+    promise 16), the plan is greedy's and the UI says why the gain is 0.
+  - An assumptions drawer generated from `assumptions.table()`, with the spot-check error next to the congestion
+    lever, and the network seed stated (2026, not a control).
+- **`plan()` also returns the hex-to-store assignment, each store's catchment and greedy's demand covered.** Issue #35's
+  cleanup runs in parallel.
+- **Tests:**
+  - API contract tests: request validation and the response shape.
+  - One test that the static bundle uses the API's serializer.
+  - One Playwright smoke test in the browser.
+  - No JS unit tests.
+- **If it overruns, cut in this order:** the catchment outline on a selected store; the sweep coarsened to 04-plan's
+  31 scenarios; two maps replaced by one map with an A/B toggle.
+
 ## 2026-11-03: PLAN_BUDGET 9 → 8 s: the 10 s bar keeps 2 s for the metrics and for CP-SAT running past its time limit (#34)
 
 - **Decided:** `assumptions.PLAN_BUDGET` is 8 s (was 9 s). It covers network, shares, reach, greedy, model and solve; the metrics run
@@ -14,7 +100,7 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 - **Ruled out:** 4 solver workers instead of 8 (no clear difference in the overshoot at load 31-36); keeping 9 s and re-running only on an
   idle machine (it would have hidden the overshoot, not removed it).
 - **Result (`04-plan` re-run, 2026-11-03 10:43-10:50 IST, not on an idle machine: load 2.4 at the start, then 16.7-64.0 before each plan
-  from other sessions).** All 64 corners return within 10 s, slowest 8.60 s, every gap stated; the 11.28 s corner took 8.11 s. The grid
+  from other work on the machine).** All 64 corners return within 10 s, slowest 8.60 s, every gap stated; the 11.28 s corner took 8.11 s. The grid
   passes too (slowest 8.46 s). The bar held under load, not only on a quiet machine. A lower budget leaves CP-SAT less time, so
   more time-limited plans end on a gap; see the #30 entry for the numbers.
 
@@ -26,7 +112,7 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
   0.03-0.19 s); none ended UNKNOWN. CP-SAT from greedy was never below greedy and proved optimality in 25 of 31 (CP-SAT on its own: 25);
   the other 6 (promise 16, multiplier 1.0, capacity 0.5×, capture 1.5×, and the two corners) stopped at the budget with gaps of 0.3-2.7%.
   Its gain over greedy: median 0.14%, 0 in 11 scenarios, 3.9-4.7% where capacity binds or the market is largest. Load: not an idle
-  machine. It was 2.4 at the start, then other sessions loaded it: median 18.0 and maximum 20.8 before each plan (8 CPUs), and the bar
+  machine. It was 2.4 at the start, then other work loaded it: median 18.0 and maximum 20.8 before each plan (8 CPUs), and the bar
   held anyway. Slow-traffic coverage never exceeded demand covered (0 of 93 plans before #33's clamp, too).
 - **CP-SAT from greedy is the served variant.** The stage 2 rule serves CP-SAT on its own only if it is never worse on demand
   covered and is faster. In this run it is below greedy in 2 scenarios (promise 16 by 1,493 orders a day, capacity 0.5× by 1,269) and

@@ -3,6 +3,13 @@
 Newest first. Anything removed from the current scope goes here with the reason, so the README never
 promises more than exists. "Later" means it is on the [roadmap](roadmap.md) after the first cut.
 
+## 2026-11-05, stage 3 scope
+
+| Cut | Why | Status |
+| --- | --- | --- |
+| Live public host for `POST /plan` (one small VM or Fly.io) | no free host runs CP-SAT at usable quality (Hugging Face Docker Spaces need a paid plan; fewer cores leave wide gaps); paid compute declined for a demo. The public URL is a static site of plans solved in advance ([ADR 0003](adr/0003-static-demo-on-gh-pages.md)); the live service runs locally | Later |
+| Any combination of levers on the public site | the static site carries one lever off its default at a time; pairs mean thousands of plans | Later (pairs of levers) |
+
 ## 2026-11-03, stage 2 benchmark (#30)
 
 | Cut | Why | Status |

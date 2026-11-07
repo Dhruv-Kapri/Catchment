@@ -1,5 +1,4 @@
 """Plan new stores for a scenario: the synthetic network, a greedy plan and its metrics. `plan()` is the one entry point."""
-import dataclasses
 import numbers
 import time
 from dataclasses import dataclass
@@ -18,6 +17,7 @@ from catchment.fetch import DATA
 Method = Literal["greedy", "cpsat", "cpsat-from-greedy"]
 METHODS: tuple[Method, ...] = get_args(Method)
 Status = Literal["OPTIMAL", "FEASIBLE", "HEURISTIC", "UNKNOWN"]   # CP-SAT's own plan, proven or stopped early; greedy's plan (also when CP-SAT from greedy keeps it); CP-SAT on its own found none
+BoundSource = Literal["solver", "capacity"]   # CP-SAT's own bound; `capacity_bound`, the cheap fallback
 TOL: float = 1e-9   # reach tolerance, as in 02-plan
 GAIN_DP: int = 6     # greedy compares gains to a millionth of an order, so the incremental update's rounding noise ties like a fresh sum
 
@@ -49,38 +49,67 @@ def load_inputs(res: int = 9, x_pct: float = 30, data_dir: Path = DATA) -> Input
     return Inputs.from_frames(pd.read_parquet(data_dir / demand_name(res)), pd.read_parquet(data_dir / candidates), pd.read_parquet(data_dir / table))
 
 
-LEVER_RANGES: dict[str, tuple[float, float]] = {
-    "n_new": assumptions.N_RANGE, "promise": assumptions.PROMISE_RANGE, "multiplier": assumptions.MULTIPLIER_RANGE,
-    "capacity": assumptions.CAPACITY_RANGE, "capture": assumptions.CAPTURE_RANGE, "competitor_density": assumptions.COMPETITOR_DENSITY_RANGE}
+@dataclass(frozen=True)
+class Lever:
+    """One lever: its range, step, default, whether it takes whole numbers, and the label the page shows."""
+    low: float
+    high: float
+    step: float
+    default: int | float
+    whole: bool
+    label: str
+
+    def values(self) -> list[int | float]:
+        """Every step of the range, low to high inclusive."""
+        steps: list[int | float] = [round(self.low + k * self.step, 10) for k in range(round((self.high - self.low) / self.step) + 1)]
+        return [int(v) for v in steps] if self.whole else steps
 
 
-def lever_value(lever: str, value: object, whole: bool) -> int | float:
+LEVERS: dict[str, Lever] = {
+    "n_new": Lever(*assumptions.N_RANGE, assumptions.N_STEP, assumptions.N_AREA, True, "New stores"),
+    "promise": Lever(*assumptions.PROMISE_RANGE, assumptions.PROMISE_STEP, assumptions.PROMISE, True, "Promise (min)"),
+    "multiplier": Lever(*assumptions.MULTIPLIER_RANGE, assumptions.MULTIPLIER_STEP, assumptions.MULTIPLIER, False, "Congestion multiplier"),
+    "capacity": Lever(*assumptions.CAPACITY_RANGE, assumptions.CAPACITY_STEP, 1.0, False, "Capacity (x)"),
+    "capture": Lever(*assumptions.CAPTURE_RANGE, assumptions.CAPTURE_STEP, 1.0, False, "Capture share (x)"),
+    "competitor_density": Lever(*assumptions.COMPETITOR_DENSITY_RANGE, assumptions.COMPETITOR_DENSITY_STEP, 1.0, False, "Competitor density (x)"),
+}
+
+
+def lever_value(lever: str, value: object) -> int | float:
     """A lever's value as a plain int (whole levers) or float, refusing bools and non-numbers; -0.0 becomes 0.0, so it prints as 0.0."""
-    if not isinstance(value, numbers.Integral if whole else numbers.Real) or isinstance(value, bool | np.bool_):
-        raise TypeError(f"{lever} {value!r} must be a {'whole number' if whole else 'number'}")
-    return int(value) if whole else float(value) + 0.0   # type: ignore[call-overload]
+    spec = LEVERS[lever]
+    if not isinstance(value, numbers.Integral if spec.whole else numbers.Real) or isinstance(value, bool | np.bool_):
+        raise TypeError(f"{lever} {value!r} must be a {'whole number' if spec.whole else 'number'} (lever range {spec.low:g}-{spec.high:g})")
+    return int(value) if spec.whole else float(value) + 0.0   # type: ignore[call-overload]
 
 
 @dataclass(frozen=True)
 class Scenario:
     """One set of lever values, plus the network seed."""
-    n_new: int = assumptions.N_AREA
-    promise: int = assumptions.PROMISE
-    multiplier: float = assumptions.MULTIPLIER
-    capacity: float = 1.0           # x the default capacity
-    capture: float = 1.0            # x the default capture share
-    competitor_density: float = 1.0
+    n_new: int = int(LEVERS["n_new"].default)
+    promise: int = int(LEVERS["promise"].default)
+    multiplier: float = LEVERS["multiplier"].default
+    capacity: float = LEVERS["capacity"].default             # x the default capacity
+    capture: float = LEVERS["capture"].default               # x the default capture share
+    competitor_density: float = LEVERS["competitor_density"].default
     seed: int = assumptions.SEED
 
     def __post_init__(self) -> None:
-        for lever in LEVER_RANGES:
-            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever), whole=lever in ("n_new", "promise")))
-        for lever, (low, high) in LEVER_RANGES.items():
+        for lever in LEVERS:
+            object.__setattr__(self, lever, lever_value(lever, getattr(self, lever)))
+        for lever, spec in LEVERS.items():
             value = getattr(self, lever)
-            if not low <= value <= high:
-                raise ValueError(f"{lever} {value:g} is outside the lever range {low:g}-{high:g}")
-        if self.competitor_density % assumptions.COMPETITOR_DENSITY_STEP:
-            raise ValueError(f"competitor_density {self.competitor_density!r} is not in steps of {assumptions.COMPETITOR_DENSITY_STEP:g}")
+            if not spec.low <= value <= spec.high:
+                raise ValueError(f"{lever} {value:g} is outside the lever range {spec.low:g}-{spec.high:g}")
+            if value != round(round(value / spec.step) * spec.step, 10):   # float-safe: 1.4 is a tenth step, 1.45 is not
+                raise ValueError(f"{lever} {value!r} is not in steps of {spec.step:g} (lever range {spec.low:g}-{spec.high:g})")
+
+    def moved(self) -> str | None:
+        """The one lever whose value differs from its default, or None for the default scenario; more than one is an error."""
+        off_default: list[str] = [lever for lever, spec in LEVERS.items() if getattr(self, lever) != spec.default]
+        if len(off_default) > 1:
+            raise ValueError(f"{', '.join(off_default)} all differ from their defaults; moved() names one lever")
+        return off_default[0] if off_default else None
 
 
 @dataclass(frozen=True)
@@ -104,7 +133,7 @@ class Plan:
     assignment also gives a hex to an open store that cannot reach capacity even where the solver left it uncovered.
     A hinted plan that would fall below greedy keeps greedy's picks (status HEURISTIC, as it is greedy's plan), so it is never below greedy. A model over
     `assumptions.MODEL_PAIR_CAP` is not built, as the build is outside the solver's time limit: from greedy the plan is greedy's (HEURISTIC), on its own it
-    is UNKNOWN. Whenever a CP-SAT method has an objective it states a bound: the solver's, or `capacity_bound` where that is lower or the solver has none."""
+    is UNKNOWN. Whenever a CP-SAT method has an objective it states a bound: the solver's, or `capacity_bound` where that is lower or the solver has none; `bound_source` says which."""
     scenario: Scenario
     method: Method
     sites: list[str]                 # the new sites, in pick order
@@ -115,9 +144,13 @@ class Plan:
     unreached: float                 # reached by no open operator store
     slow_traffic_coverage: float     # demand covered by the same operator stores at SLOW_TRAFFIC_FACTOR x the multiplier, same shares; never above demand_covered: the nearest-first walk covers no more than greedy's or an OPTIMAL plan's assignment, and a FEASIBLE CP-SAT plan's is clamped to it (#33)
     new_stores: list[NewStore]       # in pick order
+    service_areas: dict[str, list[str]]   # every operator store (existing, then new in pick order) -> the hex ids the plan assigns it; [] if none
+    catchments: dict[str, list[str]]      # same keys -> the hex ids it reaches within the promise at the scenario's multiplier, pick-and-pack included
+    greedy_demand_covered: float     # the greedy plan's demand_covered for the same scenario; the plan's own for method greedy, so the gain over greedy is demand_covered minus this
     status: Status                   # CP-SAT's own plan: "OPTIMAL", or "FEASIBLE" (stopped early); "HEURISTIC": greedy's plan, by method or kept by cpsat-from-greedy; "UNKNOWN": CP-SAT on its own found no plan, or the model was over the size cap, so no new sites and the metrics are the existing network's
     objective: float | None          # orders a day: what the method claims (CP-SAT: the solver's, greedy: demand_covered); None when UNKNOWN
     bound: float | None              # upper bound on the objective: the lower of CP-SAT's and `capacity_bound`'s, never under the objective (so on a kept greedy plan or an unbuilt model, the fallback alone); None for greedy and when UNKNOWN
+    bound_source: BoundSource | None   # where `bound` came from: "solver", CP-SAT's own; "capacity", `capacity_bound`, which is cheap and can be loose, so its gap says little about the plan; None when bound is None
     gap: float | None                # (bound - objective) / objective; 0.0 when OPTIMAL; None without a bound, and for a zero objective under a positive bound
     build_seconds: float             # everything before the search: network, shares, reach, greedy hint, model
     solve_seconds: float             # the greedy loop, or CP-SAT's Solve
@@ -255,15 +288,15 @@ def int_shares(p: Problem) -> npt.NDArray[np.int64]:
 
 
 @dataclass(frozen=True)
-class Rows:
+class ModelRows:
     """The open sites' pairs grouped by hex (nearest first within a hex) and what the model's loop reads from them, computed vectorised so the
     model's size is known before any Python loop runs."""
-    ps: npt.NDArray[np.intp]               # per pair: site
-    ph: npt.NDArray[np.intp]               # per pair: hex
-    con: npt.NDArray[np.bool_]             # per pair: its site is constrained
+    pair_site: npt.NDArray[np.intp]        # per pair: site
+    pair_hex: npt.NDArray[np.intp]         # per pair: hex
+    pair_constrained: npt.NDArray[np.bool_]   # per pair: its site is constrained
     constrained: npt.NDArray[np.bool_]     # per site: can its catchment exceed capacity
     has_free_op: npt.NDArray[np.bool_]     # per hex: an existing store that cannot hit capacity covers it
-    start: npt.NDArray[np.intp]            # hex h's pairs are ps[start[h]:start[h + 1]]
+    hex_start: npt.NDArray[np.intp]        # hex h's pairs are pair_site[hex_start[h]:hex_start[h + 1]]
     share_int: npt.NDArray[np.int64]
     cap_int: int
     is_new: npt.NDArray[np.bool_]
@@ -271,26 +304,27 @@ class Rows:
     @property
     def n_pairs(self) -> int:
         """The capacity-bound (x) pairs the model gets: constrained pairs in hexes with no free existing store, the loop's bulk."""
-        return int((self.con & ~self.has_free_op[self.ph]).sum())
+        return int((self.pair_constrained & ~self.has_free_op[self.pair_hex]).sum())
 
 
-def model_rows(p: Problem) -> Rows:
+def model_rows(p: Problem) -> ModelRows:
+    """The open sites' pairs grouped by hex, with the per-site and per-hex flags the model reads, so its size is known before the build loop."""
     n_sites, n_hex, reach = len(p.inputs.site_ids), len(p.share), p.reach
     share_int, cap_int = int_shares(p), round(p.capacity * assumptions.SCALE)
     is_new, is_op = p.candidate, np.zeros(n_sites, bool)
     is_op[p.existing] = True
     pos = reach.by_hex[(is_new | is_op)[reach.site][reach.by_hex]]   # open sites' pairs, grouped by hex, nearest first within a hex
-    ps, ph = reach.site[pos], reach.hex[pos]
-    constrained = np.bincount(ps, weights=share_int[ph], minlength=n_sites) > cap_int   # W_s > capacity
-    con = constrained[ps]
-    has_free_op = np.bincount(ph, weights=(~con & is_op[ps]).astype(float), minlength=n_hex) > 0
-    return Rows(ps, ph, con, constrained, has_free_op, np.searchsorted(ph, np.arange(n_hex + 1)), share_int, cap_int, is_new)
+    pair_site, pair_hex = reach.site[pos], reach.hex[pos]
+    constrained = np.bincount(pair_site, weights=share_int[pair_hex], minlength=n_sites) > cap_int   # W_s > capacity
+    pair_constrained = constrained[pair_site]
+    has_free_op = np.bincount(pair_hex, weights=(~pair_constrained & is_op[pair_site]).astype(float), minlength=n_hex) > 0
+    return ModelRows(pair_site, pair_hex, pair_constrained, constrained, has_free_op, np.searchsorted(pair_hex, np.arange(n_hex + 1)), share_int, cap_int, is_new)
 
 
-def build_model(p: Problem, rows: Rows) -> Model:
+def build_model(p: Problem, rows: ModelRows) -> Model:
     """The tighter model of 03-area: x_{s,h} only at sites whose catchment can exceed capacity, a new site's capacity row tied to
     the site being chosen, and the existing operator stores in the same at-most-one row per hex."""
-    ps, ph, con, has_free_op, start, share_int, cap_int, is_new = rows.ps, rows.ph, rows.con, rows.has_free_op, rows.start, rows.share_int, rows.cap_int, rows.is_new
+    has_free_op, hex_start, share_int, cap_int, is_new = rows.has_free_op, rows.hex_start, rows.share_int, rows.cap_int, rows.is_new
     model = cp_model.CpModel()
     y = {int(s): model.NewBoolVar(f"y{s}") for s in np.flatnonzero(is_new)}
     model.Add(sum(y.values()) == p.scenario.n_new)
@@ -299,19 +333,20 @@ def build_model(p: Problem, rows: Rows) -> Model:
     x: list[tuple[int, int, cp_model.IntVar]] = []
     covered: list[tuple[int, cp_model.IntVar]] = []
     row_of: dict[int, list[tuple[cp_model.IntVar, int]]] = {}
-    ps_l, con_l, share_l = ps.tolist(), con.tolist(), share_int.tolist()
-    const = int(share_int[np.unique(ph[has_free_op[ph]])].sum())
-    for h in np.flatnonzero(np.diff(start) > 0).tolist():
+    site_l, constrained_l, share_l = rows.pair_site.tolist(), rows.pair_constrained.tolist(), share_int.tolist()
+    const = int(share_int[np.unique(rows.pair_hex[has_free_op[rows.pair_hex]])].sum())
+    for h in np.flatnonzero(np.diff(hex_start) > 0).tolist():
         if has_free_op[h]:
             continue
         w, row = share_l[h], []
-        free = [s for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]) if not c]
+        lo, hi = hex_start[h], hex_start[h + 1]
+        free = [s for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]) if not c]
         if free:
             cover = model.NewBoolVar("")
             model.AddBoolOr([y[s] for s in free]).OnlyEnforceIf(cover)
             covered.append((h, cover))
             row.append(cover)
-        for s, c in zip(ps_l[start[h]:start[h + 1]], con_l[start[h]:start[h + 1]]):
+        for s, c in zip(site_l[lo:hi], constrained_l[lo:hi]):
             if c:
                 xv = model.NewBoolVar("")
                 if is_new[s]:
@@ -364,13 +399,15 @@ class Solved:
     owner: npt.NDArray[np.intp]
     status: Status
     objective: float | None          # orders a day; None when CP-SAT found no plan
-    bound: float | None
+    solver_bound: float | None       # the solver's own bound, None when it has none
     search_start: float              # perf_counter when the search began
+    greedy_owner: npt.NDArray[np.intp] | None = None   # the greedy plan's owner per hex when the method computed one (greedy, CP-SAT from greedy)
 
 
 def kept_greedy(start: tuple[list[int], npt.NDArray[np.intp]], share_int: npt.NDArray[np.int64], bound: float | None, search_start: float) -> Solved:
     """Greedy's plan kept by CP-SAT from greedy: status HEURISTIC, objective greedy's orders on the solver's integer scale."""
-    return Solved(start[0], start[1], "HEURISTIC", int(share_int[start[1] >= 0].sum()) / assumptions.SCALE, bound, search_start)
+    return Solved(picked=start[0], owner=start[1], status="HEURISTIC", objective=int(share_int[start[1] >= 0].sum()) / assumptions.SCALE,
+                  solver_bound=bound, search_start=search_start, greedy_owner=start[1])
 
 
 def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
@@ -399,7 +436,8 @@ def cpsat(p: Problem, t0: float, from_greedy: bool) -> Solved:
             return kept_greedy(start, m.share_int, solver.BestObjectiveBound() / assumptions.SCALE if found else None, search_start)
     picked = sorted(s for s, v in m.y.items() if solver.Value(v))
     proven: Status = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
-    return Solved(picked, assignment(p, m, picked, solver), proven, solver.ObjectiveValue() / assumptions.SCALE, solver.BestObjectiveBound() / assumptions.SCALE, search_start)
+    return Solved(picked=picked, owner=assignment(p, m, picked, solver), status=proven, objective=solver.ObjectiveValue() / assumptions.SCALE,
+                  solver_bound=solver.BestObjectiveBound() / assumptions.SCALE, search_start=search_start, greedy_owner=None if start is None else start[1])
 
 
 def capacity_bound(p: Problem) -> float:
@@ -411,12 +449,27 @@ def capacity_bound(p: Problem) -> float:
     is_open[p.existing] = True
     reached = np.zeros(len(p.share), bool)
     reached[reach.hex[is_open[reach.site]]] = True
-    serves = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
-    best_new = np.sort(serves[p.candidate])[::-1][:p.scenario.n_new]
-    return float(min(p.share[reached].sum(), serves[p.existing].sum() + best_new.sum()))
+    served_if_open = np.minimum(np.bincount(reach.site, weights=p.share[reach.hex], minlength=n_sites), p.capacity)
+    best_new = np.sort(served_if_open[p.candidate])[::-1][:p.scenario.n_new]
+    return float(min(p.share[reached].sum(), served_if_open[p.existing].sum() + best_new.sum()))
 
 
-def relative_gap(objective: float, bound: float, status: str) -> float | None:
+def stated_bound(p: Problem, method: Method, solved: Solved) -> tuple[float | None, BoundSource | None]:
+    """The bound a plan states, and where it came from: (None, None) for greedy and when there is no objective. CP-SAT's plans always state one: the lower of
+    the solver's bound and `capacity_bound` (the fallback alone where the solver has none; "solver" on a tie), and never under the objective: it is on the
+    solver's integer scale, the fallback in float shares, so rounding must not put the bound under the plan's own claim. That clamp leaves the source as it was."""
+    if method == "greedy" or solved.objective is None:
+        return None, None
+    fallback = capacity_bound(p)
+    source: BoundSource
+    if solved.solver_bound is None or fallback < solved.solver_bound:
+        bound, source = fallback, "capacity"
+    else:
+        bound, source = solved.solver_bound, "solver"
+    return max(bound, solved.objective), source
+
+
+def relative_gap(objective: float, bound: float, status: Status) -> float | None:
     """(bound - objective) / objective, as 03-area defined it: 0 when proven optimal or the bound is no higher; None for a zero objective under a positive bound
     (no finite ratio, and JSON has no infinity). Never negative: a greedy plan kept in place of the solver's can sit a rounding hair above the integer-scale bound."""
     if status == "OPTIMAL" or bound <= objective:
@@ -435,20 +488,39 @@ def plan(inputs: Inputs | None = None, scenario: Scenario | None = None, method:
     if method == "greedy":
         search_start = time.perf_counter()
         picked, owner = greedy(p)
-        solved = Solved(picked, owner, "HEURISTIC", float(p.share[owner >= 0].sum()), None, search_start)
+        solved = Solved(picked=picked, owner=owner, status="HEURISTIC", objective=float(p.share[owner >= 0].sum()), solver_bound=None,
+                        search_start=search_start, greedy_owner=owner)
     else:
         solved = cpsat(p, t0, method == "cpsat-from-greedy")
     searched = time.perf_counter()
-    if method != "greedy" and solved.objective is not None:   # CP-SAT's plans always state a bound: the solver's where it has one, the fallback where it is none or looser
-        fallback = capacity_bound(p)
-        bound = fallback if solved.bound is None else min(solved.bound, fallback)
-        solved = dataclasses.replace(solved, bound=max(bound, solved.objective))   # the objective is on the solver's integer scale, the fallback in float shares: rounding must not put the bound under the plan's own claim
-    gap = None if solved.bound is None or solved.objective is None else relative_gap(solved.objective, solved.bound, solved.status)
+    bound, bound_source = stated_bound(p, method, solved)
+    gap = None if bound is None or solved.objective is None else relative_gap(solved.objective, bound, solved.status)
     covered, households, lost, unreached, slow, new_stores = metrics(p, solved.picked, solved.owner)
+    greedy_owner = solved.greedy_owner if solved.greedy_owner is not None else greedy(p)[1]   # CP-SAT on its own: greedy runs here, after the search, so the solver's budget and search are unchanged
     return Plan(p.scenario, method, [str(inputs.site_ids[s]) for s in solved.picked],
                 {b: [str(inputs.site_ids[s]) for s in ss] for b, ss in p.network.items()},
-                covered, households, lost, unreached, slow, new_stores, solved.status, solved.objective, solved.bound, gap,
+                covered, households, lost, unreached, slow, new_stores, service_areas(p, p.existing + solved.picked, solved.owner),
+                catchments(p, p.existing + solved.picked), float(p.share[greedy_owner >= 0].sum()), solved.status, solved.objective, bound, bound_source, gap,
                 solved.search_start - t0, searched - solved.search_start, time.perf_counter() - t0)
+
+
+def hex_ids_by_store(p: Problem, stores: list[int], site: npt.NDArray[np.intp], hexes: npt.NDArray[np.intp]) -> dict[str, list[str]]:
+    """Each store's hex ids, in hex position order, from (site, hex) position pairs."""
+    order = np.lexsort((hexes, site))
+    site, hexes = site[order], hexes[order]
+    return {str(p.inputs.site_ids[s]): p.inputs.hex_ids[hexes[np.searchsorted(site, s):np.searchsorted(site, s, "right")]].tolist() for s in stores}
+
+
+def service_areas(p: Problem, stores: list[int], owner: npt.NDArray[np.intp]) -> dict[str, list[str]]:
+    """Each store's service area: the hexes `owner` (the store's site position per hex, -1 for none) assigns it."""
+    assigned = np.flatnonzero(owner >= 0)
+    return hex_ids_by_store(p, stores, owner[assigned], assigned)
+
+
+def catchments(p: Problem, stores: list[int]) -> dict[str, list[str]]:
+    """Each store's catchment: the pairs already in `p.reach`, within the promise at the multiplier, pick-and-pack included."""
+    keep = np.isin(p.reach.site, stores)
+    return hex_ids_by_store(p, stores, p.reach.site[keep], p.reach.hex[keep])
 
 
 def metrics(p: Problem, picked: list[int], owner: npt.NDArray[np.intp]) -> tuple[float, float, float, float, float, list[NewStore]]:

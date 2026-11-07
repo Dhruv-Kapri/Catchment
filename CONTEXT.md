@@ -28,7 +28,7 @@ _Avoid_: location, site (alone), store (before it is chosen)
 
 **Demand**:
 Expected orders per day from one hex: households × affluence multiplier × capture share. A model,
-never observed data.
+never observed data. The map labels it **market demand**: every brand's orders, before the overlap split.
 _Avoid_: orders (alone, implies real data), sales, forecast
 
 **Households**:
@@ -63,6 +63,11 @@ _Avoid_: SLA (in the UI), delivery radius
 **Catchment**:
 The set of hexes a store can reach within the promise.
 _Avoid_: radius, coverage area, polygon (a catchment is not a circle)
+
+**Service area**:
+The hexes a plan assigns to one operator store: part of its catchment, never overlapping another operator
+store's service area. A hex reached by none of the operator's stores, or left over when capacity runs out, is in no service area.
+_Avoid_: catchment (for the assigned hexes), territory, zone
 
 **Congestion multiplier**:
 A factor applied to free-flow OSRM times to stand in for traffic. A lever, not a traffic model.
