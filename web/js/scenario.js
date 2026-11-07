@@ -13,6 +13,7 @@ export function mountScenario(testid, title, onPlanned, onStaleChange) {
   const panel = document.getElementById("panel").content.firstElementChild.cloneNode(true);
   panel.querySelector(".title").textContent = title;
   section.append(panel);
+  section.append(panel.querySelector(".map-key"));   // the key is a card over the map, in the map's grid cell
   const form = panel.querySelector(".levers");
   const error = panel.querySelector(".error");
   const button = panel.querySelector(".plan");
@@ -77,11 +78,11 @@ export function mountScenario(testid, title, onPlanned, onStaleChange) {
       syncCapture();
       markChanged();
     },
-    addSpotCheckNote: (text) => addSpotCheckNote(form, text),
+    addSpotCheckNote: (note) => addSpotCheckNote(form, note),
     // After the levers: the market demand layer, which the capture lever recolours at once.
     showDemand(demand, levers) {
       const capture = () => Number(form.elements.capture?.value ?? 1);   // 1: the default share, when the levers failed to load
-      const setCapture = showDemand(view, demand, capture(), panel.querySelector('[data-testid="market-demand-total"]'), levers?.capture.max ?? 1);
+      const setCapture = showDemand(view, demand, capture(), section.querySelector('[data-testid="market-demand-total"]'), levers?.capture.max ?? 1);
       syncCapture = () => setCapture(capture());
       form.elements.capture?.addEventListener("input", syncCapture);
     },

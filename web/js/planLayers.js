@@ -5,8 +5,12 @@ import { markSelected } from "./map.js";
 // One colour per store, cycled through a muted categorical palette: neighbouring areas stay apart without one loud hue per store.
 const PALETTE = ["#7a9bbf", "#e0a06a", "#7fb08f", "#cf7f80", "#a692c2", "#c2a679", "#dd9fb8", "#98a0a8", "#bdbd6c", "#72b5bd"];
 const colour = (index) => PALETTE[index % PALETTE.length];
-const OPACITY = 0.38;   // the service areas' fill; a selected store's own area keeps it and the others dim
-const DIMMED = 0.08;
+// Fill opacity at zoom 10 (overview, where hexes are a few pixels) and at zoom 13: all areas, the selected store's own area, and the others dimmed.
+const OPACITY = { all: [0.6, 0.38], selected: [0.72, 0.5], dimmed: [0.15, 0.08] };
+const opacity = (store) => {
+  const at = (i) => (store === null ? OPACITY.all[i] : ["case", ["==", ["get", "store"], store], OPACITY.selected[i], OPACITY.dimmed[i]]);
+  return ["interpolate", ["linear"], ["zoom"], 10, at(0), 13, at(1)];
+};
 const EMPTY = { type: "FeatureCollection", features: [] };
 
 // Sources and layers can be added only once the style has loaded (view.ready).
@@ -15,7 +19,7 @@ async function ensureLayers(view) {
   const { map } = view;
   if (map.getSource("service-areas")) return;
   map.addSource("service-areas", { type: "geojson", data: EMPTY });
-  map.addLayer({ id: "service-areas", type: "fill", source: "service-areas", paint: { "fill-color": ["get", "colour"], "fill-opacity": OPACITY, "fill-outline-color": "#ffffff" } });
+  map.addLayer({ id: "service-areas", type: "fill", source: "service-areas", paint: { "fill-color": ["get", "colour"], "fill-opacity": opacity(null), "fill-outline-color": "rgba(255, 255, 255, 0.6)" } });
   map.addSource("catchment-outline", { type: "geojson", data: EMPTY });
   map.addLayer({ id: "catchment-outline", type: "line", source: "catchment-outline", paint: { "line-color": "#123b39", "line-width": 3 } });
 }
@@ -38,6 +42,6 @@ export async function showCatchment(view, plan, store) {
   const cells = plan.catchments[store];
   markSelected(view, cells ? store : null);
   const features = cells ? [{ type: "Feature", properties: { store }, geometry: { type: "MultiPolygon", coordinates: cellsToMultiPolygon(cells, true) } }] : [];
-  view.map.setPaintProperty("service-areas", "fill-opacity", cells ? ["case", ["==", ["get", "store"], store], OPACITY + 0.12, DIMMED] : OPACITY);
+  view.map.setPaintProperty("service-areas", "fill-opacity", opacity(cells ? store : null));
   view.map.getSource("catchment-outline").setData({ type: "FeatureCollection", features });
 }

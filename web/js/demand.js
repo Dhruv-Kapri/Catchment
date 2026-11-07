@@ -3,6 +3,7 @@
 import { cellToBoundary } from "h3-js";
 import { integer } from "./format.js";
 
+const OPACITY = ["interpolate", ["linear"], ["zoom"], 10, 0.85, 13, 0.55];   // stronger at the overview, where a hex is a few pixels
 const LAYER = "market-demand";   // the id of both the source and the layer
 const RAMP = ["#f4e4c8", "#dd9a63", "#a3431f"];   // sand to terracotta, low to high, as the legend in css/style.css; the top is the busiest hex at the highest capture share
 
@@ -30,7 +31,7 @@ export function showDemand(view, records, capture, totalElement, captureMax) {
   const draw = () => {
     view.map.addSource(LAYER, { type: "geojson", data: { type: "FeatureCollection", features } });
     view.map.addLayer({ id: LAYER, type: "fill", source: LAYER,
-      paint: { "fill-color": fillColour(current, top), "fill-opacity": 0.6 } });
+      paint: { "fill-color": fillColour(current, top), "fill-opacity": OPACITY } });
   };
   view.ready.then(draw);   // not isStyleLoaded(), which goes false again while tiles load
   setCapture(capture);

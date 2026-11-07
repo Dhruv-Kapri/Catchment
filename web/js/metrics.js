@@ -15,9 +15,14 @@ export function showMetrics(root, plan) {
   field("metric-greedy").textContent = integer(plan.greedy_demand_covered);
   field("metric-gain").textContent = unknown ? "no plan" : integer(plan.demand_covered - plan.greedy_demand_covered);
   field("plan-note").textContent = plan.plan_note;
-  field("new-stores").replaceChildren(...plan.new_stores.map((store) => {
-    const item = document.createElement("li");
-    item.textContent = `fresh ${integer(store.fresh)}, cannibalised ${integer(store.cannibalised)}`;
-    return item;
-  }));
+  const row = (tag, texts) => {
+    const tr = document.createElement("tr");
+    tr.append(...texts.map((textContent) => Object.assign(document.createElement(tag), { textContent })));
+    return tr;
+  };
+  const head = document.createElement("thead");
+  head.append(row("th", ["Store", "Fresh", "Cannibalised"]));
+  const body = document.createElement("tbody");
+  body.append(...plan.new_stores.map((store, i) => row("td", [String(i + 1), integer(store.fresh), integer(store.cannibalised)])));
+  field("new-stores").replaceChildren(head, body);
 }
