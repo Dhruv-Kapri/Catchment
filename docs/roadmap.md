@@ -139,7 +139,8 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   2026-11-07 10:12 UTC, Chromium 156).
   The README shows the screenshot, the link and the 90 s recording (`docs/media/`, made with `scripts/record-demo.py` against the live
   service). The B − A table's stale state and bound source (#53), the shared number formatter and server-side plan note (#54), the one lever spec (#55)
-  and the page's declared data source (#56) landed after the site was published, so it needs a re-publish (`scripts/deploy-pages.sh`).
+  and the page's declared data source (#56) landed after the site was published. It was re-published with them (`scripts/deploy-pages.sh`, 61 plans in 83 s, load 5.9 before and
+  16.6 after; `scripts/check-public.py` 5 of 5, 2026-11-07 11:26 UTC), and the recording and screenshot were re-made against the live service.
 
 ## Later (after 25 Nov)
 
