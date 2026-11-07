@@ -42,7 +42,7 @@ main > section + section { border-left: 1px solid var(--line-2); }
 .panel input { width: 76px; padding: 3px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--bg); color: var(--text); font: 500 13px var(--sans); font-variant-numeric: tabular-nums; text-align: right; }
 .panel input:hover { border-color: var(--accent-2); }
 .spot-check { margin: 4px 0 6px; font-size: 11px; line-height: 1.4; color: var(--muted); }
-.spot-check summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; background: var(--soft); cursor: pointer; list-style: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spot-check summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; background: var(--soft); cursor: pointer; list-style: none; }
 .spot-check summary::-webkit-details-marker, .spot-check summary::marker { display: none; content: ""; }
 .spot-check summary::after { content: "ⓘ"; flex: none; font-size: 13px; color: var(--accent-2); }
 .spot-check summary:hover { color: var(--text); }
@@ -72,11 +72,12 @@ main > section + section { border-left: 1px solid var(--line-2); }
 .new-stores th:first-child, .new-stores td:first-child { text-align: left; color: var(--muted); }
 
 /* the key: a card over the map's bottom-left corner (the attribution is bottom-right) */
-.map-key { grid-column: 2; grid-row: 1; align-self: end; justify-self: start; z-index: 2; width: 232px; margin: 0 0 12px 10px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: rgba(255, 255, 255, .94); box-shadow: var(--shadow); font-size: 11px; line-height: 1.35; color: var(--muted); }
-.demand-legend strong { display: block; margin-top: 1px; font: 500 16px/1.2 var(--serif); color: var(--accent); }
+.map-key { grid-column: 2; grid-row: 1; align-self: end; justify-self: start; z-index: 2; width: 168px; margin: 0 0 12px 10px; padding: 7px 9px; border: 1px solid var(--line-2); border-radius: 8px; background: rgba(255, 255, 255, .94); box-shadow: var(--shadow); font-size: 11px; line-height: 1.35; color: var(--muted); }
+.market { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 10px 0 12px; font-size: 11.5px; line-height: 1.35; color: var(--muted); }
+.market strong { flex: none; font: 500 16px/1.2 var(--serif); color: var(--accent); font-variant-numeric: tabular-nums; }
 .ramp { display: block; height: 7px; margin-top: 5px; border-radius: 4px; background: linear-gradient(to right, #f4e4c8, #dd9a63, #a3431f); }   /* demand.js RAMP */
 .ramp-ends { display: flex; justify-content: space-between; margin-top: 1px; font-size: 10.5px; }
-.store-key { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.store-key { list-style: none; margin: 6px 0 0; padding: 5px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .store-key li { display: flex; align-items: center; gap: 5px; color: var(--text); }
 
 /* markers (and the key's swatches): Operator filled teal, Competitor hollow slate square, New gold with a ring. --zoom-t (map.js) is 0 at the overview and 1 from zoom 13: the markers grow with it. */

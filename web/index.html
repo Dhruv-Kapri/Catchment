@@ -49,6 +49,7 @@
     <div class="panel">
       <h2 class="title"></h2>
       <form class="levers" data-testid="levers"></form>
+      <p class="market">Market demand (orders a day, both brands, before the brand split) <strong data-testid="market-demand-total">-</strong></p>
       <button class="plan" type="button" data-testid="plan-button">Plan</button>
       <div class="elapsed" data-testid="elapsed"></div>
       <div class="error" data-testid="error"></div>
@@ -66,8 +67,7 @@
       <p class="plan-note" data-testid="plan-note"></p>
       <table class="new-stores" data-testid="new-stores"></table>
       <div class="map-key">
-        <div class="demand-legend">Market demand (orders a day, both brands, before the brand split):
-          <strong data-testid="market-demand-total">-</strong>
+        <div class="demand-legend">Market demand per hex
           <span class="ramp"></span>
           <small class="ramp-ends"><span>none</span><span>busiest hex</span></small>
         </div>

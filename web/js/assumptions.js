@@ -17,7 +17,7 @@ function spotCheckText(s) {
   const detail = `Spot check: ${s.routes} routes in ${s.app}, one evening's live estimates (${s.looked_up_from}-${to}). ` +
     `The app times imply a congestion multiplier of ${f(s.implied_median)} (25th-75th percentile ${f(s.implied_q25)}-${f(s.implied_q75)}); ` +
     `at the default ×${s.multiplier} the app took a median ${f(s.ratio_median)}× the modelled time (${f(s.ratio_q25)}-${f(s.ratio_q75)}).`;
-  return { summary: `Spot check: app ${f(s.ratio_median)}× the model`, detail };
+  return { summary: `Spot check at ×${s.multiplier}: app times ${f(s.ratio_median)}× the model`, detail };
 }
 
 // A source's long URLs become links named by their host, with the full URL behind them.
