@@ -128,7 +128,7 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   multiplier 2.5, capacity 0.5×, capture 1.5×, density 0) with a median load of 12.1 in the second (8 CPUs; CP-SAT's own 8 workers are about 8
   of it). Neither was an idle machine: other sessions ran tests alongside. `catchment-bundle` solved the 61 plans in 89 s at 8 workers, load 8.9
   before and 15.6 after; the slowest plan was 8.93 s. The site is on GitHub Pages at <https://dhruv-kapri.github.io/Catchment/>. In a fresh
-  headless Chromium it plans the default, plans B with a lever moved, fills the B − A table and opens the drawer, with no failed request.
+  headless Chromium context (2026-11-07, 14:44 IST) it plans the default, plans B with a lever moved, fills the B − A table and opens the drawer, with no failed request.
   The README shows the screenshot, the link and the 90 s recording (`docs/media/`, made with `scripts/record-demo.py` against the live
   service). The B − A table's stale state and bound source (#53) were still open when the site was published, so they need a re-publish
   (`scripts/deploy-pages.sh`) once they land.
