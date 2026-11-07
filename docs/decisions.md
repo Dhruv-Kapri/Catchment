@@ -6,9 +6,10 @@ hard-to-reverse decisions also get an ADR in `docs/adr/` (created when the first
 ## 2026-11-07: Compare and ship (stage 3) closed (#51)
 
 - **Stage 3 is done with nothing cut** (roadmap, "Done 2026-11-07"). The live service returned all 91 scenarios it was sent (the 04-plan grid
-  and the 64 lever corners) within 10 s over HTTP, in three runs: slowest 9.48 s and 8.38 s with other sessions' tests running (1-minute loads of 12.5 and 13.0 just before those requests), and 8.37 s in a run that started on a quiet machine (load 2.4).
+  and the 64 lever corners) within 10 s over HTTP, in three runs: slowest 9.48 s and 8.38 s with other sessions' tests running (1-minute loads of 12.5 and 13.0 just before those requests), 8.37 s in a run that started on a quiet machine (load 2.4), and 8.46 s on an idle machine, where 200 random scenarios also returned within 10 s
+  (slowest 8.60 s). The grid and the corners stand in for the box's ~900 k scenarios: no random one was slower by more than 0.14 s.
   The static demo is published on GitHub Pages from the 61-plan sweep (89 s at 8 workers, load 8.9-15.6).
-  - Why it holds: `PLAN_BUDGET` is 8 s, which leaves 2 s for the metrics and CP-SAT running past its limit. The slowest request ran 1.48 s past the budget under load; on the quiet start, 0.37 s. That margin is thin under load. A change to the solver,
+  - Why it holds: `PLAN_BUDGET` is 8 s, which leaves 2 s for the metrics and CP-SAT running past its limit. The slowest request ran 1.48 s past the budget under load; on an idle machine, 0.46 s. That margin is thin under load. A change to the solver,
     a range or the plan's metrics re-runs `scripts/time-service.py` before it lands.
   - The timing and recording scripts live in `scripts/`, not the package: they drive a running service from the outside and are not part of
     the product.

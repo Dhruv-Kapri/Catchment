@@ -128,7 +128,12 @@ Scope set in the stage 3 grill, 2026-11-05; spec #41, tickets #35 and #42-#51 (s
   multiplier 2.5, capacity 0.5×, capture 1.5×, density 0) with a median load of 12.1 in the second (8 CPUs; CP-SAT's own 8 workers are about 8
   of it). Other sessions ran tests alongside both. A third run started on a quiet machine (load 2.4, no other test runs): all 91 within 10 s,
   slowest 8.37 s (the same corner as the second run), multiplier 1.0 at 7.15 s (OPTIMAL); the load during it (median 11.8) is mostly the
-  service's own CP-SAT workers. The lever box holds about 900 k scenarios, so the grid and the corners stand in for "any scenario", as in 04-plan. `catchment-bundle` solved the 61 plans in 89 s at 8 workers, load 8.9
+  service's own CP-SAT workers. A fourth run waited for 3 minutes under load 2 (15:50 IST), then sent the 91 and 200 random
+  scenarios (each lever at a random step, `--random 200 --seed 51`): all 291 within 10 s. The 91 ran on an idle machine (load before each
+  request median 6.5, max 8.7, about CP-SAT's own 8 workers), slowest 8.46 s; the random 200 slowest 8.60 s (median 0.39 s; other sessions
+  returned during it, load up to 36). The lever box holds about 900 k scenarios; no random scenario was slower than the grid and corners by
+  more than 0.14 s, so they stand in for "any scenario", as in 04-plan. The random sample found wider gaps than the grid: 22 of 200 above 10%,
+  up to 52%, all from the capacity bound (the map labels them, #52). `catchment-bundle` solved the 61 plans in 89 s at 8 workers, load 8.9
   before and 15.6 after; the slowest plan was 8.93 s. The site is on GitHub Pages at <https://dhruv-kapri.github.io/Catchment/>. In a fresh
   headless Chromium context (2026-11-07, 14:44 IST) it plans the default, plans B with a lever moved, fills the B − A table and opens the drawer, with no failed request; `scripts/check-public.py` repeats the check (5 of 5 steps passed,
   2026-11-07 10:12 UTC, Chromium 156).
