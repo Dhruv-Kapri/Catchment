@@ -420,6 +420,8 @@ def test_copying_a_to_b_and_changing_a_lever_shows_the_difference(base_url: str)
         b.get_by_test_id("lever-n_new").fill("5")
         b.get_by_test_id("plan-button").click()
         expect(b.locator(".store-new")).to_have_count(5, timeout=15_000)
+        for side in (a, b):   # the markers draw before the metrics and the table
+            expect(side.get_by_test_id("elapsed")).to_have_text(re.compile("^Planned in"), timeout=60_000)
         for key in DIFF_KEYS:
             expect(page.get_by_test_id(f"diff-row-{key}")).to_be_visible()
         expect(page.get_by_test_id("diff-row-new_stores")).to_contain_text("+1")
